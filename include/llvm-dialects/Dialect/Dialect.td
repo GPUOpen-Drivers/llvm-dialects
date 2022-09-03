@@ -134,6 +134,8 @@ class BaseCPred<dag arguments_, code pred> : Constraint {
 
 class CPred<code pred> : BaseCPred<(ins $_self), pred>;
 
+def AnyType : CPred<"true">;
+
 def AnyPointerType : CPred<"$_self->isPointerTy()"> {
   let builderArgumentFilter = [{
     if (!$_self->getType()->isOpaquePointerTy()) {

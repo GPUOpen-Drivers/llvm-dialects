@@ -193,6 +193,7 @@ public:
                               + "' which is not a Type");
     }
 
+    m_llvmType = cast<Type>(llvmType);
     m_toLlvmValue = record->getValueAsString("toLlvmValue");
     m_fromLlvmValue = record->getValueAsString("fromLlvmValue");
   }
@@ -213,7 +214,7 @@ public:
 
 private:
   std::string m_cppType;
-  Type* const m_llvmType = nullptr;
+  Type* m_llvmType = nullptr;
   std::string m_toLlvmValue;
   std::string m_fromLlvmValue;
 };
@@ -502,6 +503,7 @@ public:
   std::vector<OpNamedValue> results;
   std::vector<std::unique_ptr<PredicateExpr>> verifier;
   std::vector<OverloadKey> overloadKeys;
+  bool builderHasExplicitResultTypes = false;
 };
 
 class Dialect {
@@ -692,6 +694,8 @@ void DialectsContext::init(RecordKeeper& records,
         report_fatal_error(Twine("Operation '") + op.mnemonic + "' result " + Twine(i) +
                                ": bad type constraint");
       }
+      if (!isa<Attr>(opResult.type) && !isa<Type>(opResult.type))
+        op.builderHasExplicitResultTypes = true;
       op.results.push_back(std::move(opResult));
     }
 
@@ -710,7 +714,7 @@ void DialectsContext::init(RecordKeeper& records,
     // we encounter one whose type isn't fully specified, add it to the overload
     // keys unless an equal type has already been added.
     auto needsOverloadKey = [&](const OpNamedValue &namedValue) -> bool {
-      if (isa<Type>(namedValue.type))
+      if (isa<Type>(namedValue.type) || isa<Attr>(namedValue.type))
         return false;
 
       for (const auto &expr : op.verifier) {
@@ -724,14 +728,14 @@ void DialectsContext::init(RecordKeeper& records,
                         ? op.results[overloadKey.index].name
                         : op.arguments[overloadKey.index].name;
                 if (llvm::is_contained(arguments, name))
-                  return true;
+                  return false;
               }
             }
           }
         }
       }
 
-      return false;
+      return true;
     };
 
     for (const auto result : llvm::enumerate(op.results)) {
@@ -938,13 +942,23 @@ class Builder;
 
     SymbolTable symbols;
     SmallVector<std::string> argNames;
+    SmallVector<std::string> resultNames;
+
+    if (op.builderHasExplicitResultTypes) {
+      for (const auto& result : op.results) {
+        resultNames.push_back(symbols.chooseName(
+            convertToCamelFromSnakeCase(result.name, false) + "Type"));
+      }
+    }
 
     for (const auto& arg : op.arguments)
       argNames.push_back(symbols.chooseName(convertToCamelFromSnakeCase(arg.name, false)));
 
     fmt.withBuilder(symbols.chooseName({"b", "builder"}));
 
-    out << tgfmt("static ::llvm::Value* create(llvm_dialects::Builder& $_builder", &fmt);
+    out << tgfmt("static ::llvm::Value* create(::llvm_dialects::Builder& $_builder", &fmt);
+    for (const auto& resultName : resultNames)
+      out << tgfmt(", ::llvm::Type* $0", &fmt, resultName);
     for (const auto& [argName, arg] : llvm::zip_first(argNames, op.arguments))
       out << tgfmt(", $0 $1", &fmt, arg.type->getCppType(), argName);
     out << ");\n\n";
@@ -1041,8 +1055,16 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
   // Operation class definitions.
   for (Operation& op : dialect->operations) {
     // Emit create() method definition.
+    SmallVector<std::string> resultNames;
     SmallVector<std::string> argNames;
     SymbolTable symbols;
+
+    if (op.builderHasExplicitResultTypes) {
+      for (const auto& result : op.results) {
+        resultNames.push_back(symbols.chooseName(
+            convertToCamelFromSnakeCase(result.name, false) + "Type"));
+      }
+    }
 
     for (const auto& arg : op.arguments) {
       argNames.push_back(symbols.chooseName(convertToCamelFromSnakeCase(arg.name, false)));
@@ -1067,6 +1089,8 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
     )", &fmt);
 
     out << tgfmt("::llvm::Value* $_op::create(llvm_dialects::Builder& $_builder", &fmt);
+    for (const auto& resultName : resultNames)
+      out << tgfmt(", ::llvm::Type* $0", &fmt, resultName);
     for (const auto& [argName, arg] : llvm::zip_first(argNames, op.arguments)) {
       out << tgfmt(", $0 $1", &fmt, arg.type->getCppType(), argName);
     }
@@ -1124,18 +1148,29 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
         argTypes.push_back(argName + "->getType()");
     }
 
-    assert(op.results.size() <= 1);
-    std::string resultType =
-        typeBuilder.build(op.results.empty() ? dialectsContext.getVoidTy()
-                                             : op.results[0].type);
+    std::string resultTypeName;
+    if (op.builderHasExplicitResultTypes) {
+      assert(resultNames.size() == 1);
+      resultTypeName = resultNames[0];
+    } else {
+      assert(op.results.size() <= 1);
+      Constraint *theResultType =
+          op.results.empty() ? dialectsContext.getVoidTy() : op.results[0].type;
+      resultTypeName = typeBuilder.build(theResultType);
+    }
+
     StringRef fnName;
 
     if (!op.overloadKeys.empty()) {
       out << tgfmt("std::string $0 = ::llvm_dialects::getMangledName(s_name, {\n", &fmt,
                    mangledName);
       for (const auto &key : op.overloadKeys) {
-        assert(key.kind == OverloadKey::Argument);
-        out << argNames[key.index] << "->getType(),\n";
+        if (key.kind == OverloadKey::Argument) {
+          out << argNames[key.index] << "->getType(),\n";
+        } else {
+          assert(key.kind == OverloadKey::Result);
+          out << resultNames[key.index] << ",\n";
+        }
       }
       out << "});\n";
 
@@ -1145,7 +1180,7 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
     }
 
     out << tgfmt("\nauto $0 = $_module.getOrInsertFunction($1, $2, $3",
-                 &fmt, fn, fnName, attrs, resultType);
+                 &fmt, fn, fnName, attrs, resultTypeName);
     for (const auto& argType : argTypes) {
       out << ", " << argType;
     }
