@@ -36,6 +36,9 @@ cl::opt<std::string> g_dialect("dialect", cl::desc("the dialect to generate"), c
 class BuiltinType;
 class Constraint;
 class Dialect;
+class OpClass;
+class OpNamedValue;
+class Operation;
 class PredicateExpr;
 class Trait;
 
@@ -45,6 +48,7 @@ public:
 
   Trait* getTrait(Record* traitRec);
   Constraint* getConstraint(Record* constraintRec);
+  OpClass* getOpClass(Record* opClassRec);
   Dialect* getDialect(Record* dialectRec);
 
   BuiltinType* getVoidTy() const {return m_voidTy;}
@@ -52,9 +56,12 @@ public:
   std::unique_ptr<PredicateExpr> parsePredicateExpr(DagInit *dag);
 
 private:
+  std::vector<OpNamedValue> parseArguments(Record* rec);
+
   BuiltinType* m_voidTy = nullptr;
   DenseMap<Record*, std::unique_ptr<Trait>> m_traits;
   DenseMap<Record*, std::unique_ptr<Constraint>> m_constraints;
+  DenseMap<Record*, std::unique_ptr<OpClass>> m_opClasses;
   DenseMap<Record*, std::unique_ptr<Dialect>> m_dialects;
 };
 
@@ -494,16 +501,52 @@ struct OverloadKey {
   unsigned index;
 };
 
+class OpClass {
+public:
+  OpClass* superclass = nullptr;
+  std::string name;
+  std::vector<OpNamedValue> arguments; // does not explicitly list superclass arguments
+  std::vector<OpClass*> subclasses;
+  std::vector<Operation*> operations;
+
+  SmallVector<OpNamedValue> getFullArguments() const {
+    SmallVector<OpNamedValue> args;
+    if (superclass)
+      args = superclass->getFullArguments();
+    args.insert(args.end(), arguments.begin(), arguments.end());
+    return args;
+  }
+  unsigned getNumFullArguments() const {
+    if (superclass)
+      return superclass->getNumFullArguments() + arguments.size();
+    return arguments.size();
+  }
+};
+
 class Operation {
 public:
+  OpClass* superclass = nullptr;
   std::string name;
   std::string mnemonic;
   std::vector<Trait*> traits;
-  std::vector<OpNamedValue> arguments;
+  std::vector<OpNamedValue> arguments; // does not explicitly list superclass arguments
   std::vector<OpNamedValue> results;
   std::vector<std::unique_ptr<PredicateExpr>> verifier;
   std::vector<OverloadKey> overloadKeys;
   bool builderHasExplicitResultTypes = false;
+
+  SmallVector<OpNamedValue> getFullArguments() const {
+    SmallVector<OpNamedValue> args;
+    if (superclass)
+      args = superclass->getFullArguments();
+    args.insert(args.end(), arguments.begin(), arguments.end());
+    return args;
+  }
+  unsigned getNumFullArguments() const {
+    if (superclass)
+      return superclass->getNumFullArguments() + arguments.size();
+    return arguments.size();
+  }
 };
 
 class Dialect {
@@ -513,7 +556,8 @@ public:
   std::string name;
   std::string cppNamespace;
   std::vector<DialectType*> types;
-  std::vector<Operation> operations;
+  std::vector<OpClass*> opClasses;
+  std::vector<std::unique_ptr<Operation>> operations;
 };
 
 /// Helper class for choosing unique variable names.
@@ -631,6 +675,70 @@ Dialect* DialectsContext::getDialect(Record* dialectRec) {
   return it->second.get();
 }
 
+std::vector<OpNamedValue> DialectsContext::parseArguments(Record* rec) {
+  Record* superClassRec = rec->getValueAsDef("superclass");
+  OpClass* superclass = getOpClass(superClassRec);
+  DagInit* argsInit = rec->getValueAsDag("arguments");
+  std::vector<OpNamedValue> arguments;
+
+  if (argsInit->getOperatorAsDef({})->getName() != "ins")
+    report_fatal_error(Twine(rec->getName()) + " argument operator must be 'ins'");
+
+  for (unsigned i = 0; i < argsInit->getNumArgs(); ++i) {
+    if (superclass && i == 0) {
+      if (argsInit->getArgName(0) ||
+          argsInit->getArg(0) != superClassRec->getDefInit())
+        report_fatal_error(Twine(rec->getName()) + ": superclass must be first in arguments list");
+      continue;
+    }
+
+    OpNamedValue opArg;
+    opArg.name = argsInit->getArgNameStr(i);
+    if (auto* arg = dyn_cast_or_null<DefInit>(argsInit->getArg(i)))
+      opArg.type = getConstraint(arg->getDef());
+    if (!opArg.type) {
+      report_fatal_error(Twine(rec->getName()) + " argument " + Twine(i) +
+                            ": bad type constraint");
+    }
+    arguments.push_back(std::move(opArg));
+  }
+
+  return arguments;
+}
+
+OpClass* DialectsContext::getOpClass(Record* opClassRec) {
+  if (opClassRec->getName() == "NoSuperClass")
+    return nullptr;
+
+  if (!opClassRec->isSubClassOf("OpClass"))
+    report_fatal_error(Twine("Trying to use '") + opClassRec->getName()
+                           + "' as operation class, but it is not a subclass of 'OpClass'");
+
+  auto it = m_opClasses.find(opClassRec);
+  if (it != m_opClasses.end()) {
+    if (!it->second)
+      report_fatal_error(Twine("Circular superclass relations involving '")
+                             + opClassRec->getName() + "'");
+    return it->second.get();
+  }
+
+  // Leave a marker in the map to detect recursive superclass relations.
+  m_opClasses.try_emplace(opClassRec);
+
+  Dialect* dialect = getDialect(opClassRec->getValueAsDef("dialect"));
+  auto opClass = std::make_unique<OpClass>();
+  opClass->name = opClassRec->getName();
+  opClass->superclass = getOpClass(opClassRec->getValueAsDef("superclass"));
+  opClass->arguments = parseArguments(opClassRec);
+
+  OpClass* ptr = opClass.get();
+  if (opClass->superclass)
+    opClass->superclass->subclasses.push_back(ptr);
+  dialect->opClasses.push_back(ptr);
+  m_opClasses.find(opClassRec)->second = std::move(opClass);
+  return ptr;
+}
+
 void DialectsContext::init(RecordKeeper& records,
                            const DenseSet<StringRef>& dialects) {
   m_voidTy = cast<BuiltinType>(getConstraint(records.getDef("VoidTy")));
@@ -662,25 +770,16 @@ void DialectsContext::init(RecordKeeper& records,
       continue;
 
     // Extract information from the TableGen record.
-    Operation op;
-    op.name = opRec->getName();
-    op.mnemonic = opRec->getValueAsString("mnemonic");
+    auto op = std::make_unique<Operation>();
+    op->superclass = getOpClass(opRec->getValueAsDef("superclass"));
+    if (op->superclass)
+      op->superclass->operations.push_back(op.get());
+    op->name = opRec->getName();
+    op->mnemonic = opRec->getValueAsString("mnemonic");
     for (Record* traitRec : opRec->getValueAsListOfDefs("traits"))
-      op.traits.push_back(getTrait(traitRec));
+      op->traits.push_back(getTrait(traitRec));
 
-    DagInit* arguments = opRec->getValueAsDag("arguments");
-    assert(arguments->getOperatorAsDef({})->getName() == "ins");
-    for (unsigned i = 0; i < arguments->getNumArgs(); ++i) {
-      OpNamedValue opArg;
-      opArg.name = arguments->getArgNameStr(i);
-      if (auto* arg = dyn_cast_or_null<DefInit>(arguments->getArg(i)))
-        opArg.type = getConstraint(arg->getDef());
-      if (!opArg.type) {
-        report_fatal_error(Twine("Operation '") + op.mnemonic + "' argument " + Twine(i) +
-                               ": bad type constraint");
-      }
-      op.arguments.push_back(std::move(opArg));
-    }
+    op->arguments = parseArguments(opRec);
 
     DagInit* results = opRec->getValueAsDag("results");
     assert(results->getOperatorAsDef({})->getName() == "outs");
@@ -691,23 +790,23 @@ void DialectsContext::init(RecordKeeper& records,
       if (auto* result = dyn_cast_or_null<DefInit>(results->getArg(i)))
         opResult.type = getConstraint(result->getDef());
       if (!opResult.type) {
-        report_fatal_error(Twine("Operation '") + op.mnemonic + "' result " + Twine(i) +
+        report_fatal_error(Twine("Operation '") + op->mnemonic + "' result " + Twine(i) +
                                ": bad type constraint");
       }
       if (!isa<Attr>(opResult.type) && !isa<Type>(opResult.type))
-        op.builderHasExplicitResultTypes = true;
-      op.results.push_back(std::move(opResult));
+        op->builderHasExplicitResultTypes = true;
+      op->results.push_back(std::move(opResult));
     }
 
     ListInit *verifier = opRec->getValueAsListInit("verifier");
     for (Init *ruleInit : *verifier) {
       auto *rule = dyn_cast<DagInit>(ruleInit);
       if (!rule) {
-        report_fatal_error(Twine("Operation '") + op.mnemonic
+        report_fatal_error(Twine("Operation '") + op->mnemonic
                                + "': verifier rules must be dags");
       }
 
-      op.verifier.push_back(parsePredicateExpr(rule));
+      op->verifier.push_back(parsePredicateExpr(rule));
     }
 
     // Derive the overload keys: Scan through results and arguments. Whenever
@@ -717,16 +816,16 @@ void DialectsContext::init(RecordKeeper& records,
       if (isa<Type>(namedValue.type) || isa<Attr>(namedValue.type))
         return false;
 
-      for (const auto &expr : op.verifier) {
+      for (const auto &expr : op->verifier) {
         if (const auto *apply = dyn_cast<PredicateApply>(expr.get())) {
           if (apply->getPredicate()->getKind() == Constraint::Kind::SameTypes) {
             auto arguments = apply->arguments();
             if (llvm::is_contained(arguments, namedValue.name)) {
-              for (const auto &overloadKey : op.overloadKeys) {
+              for (const auto &overloadKey : op->overloadKeys) {
                 StringRef name =
                     overloadKey.kind == OverloadKey::Result
-                        ? op.results[overloadKey.index].name
-                        : op.arguments[overloadKey.index].name;
+                        ? op->results[overloadKey.index].name
+                        : op->arguments[overloadKey.index].name;
                 if (llvm::is_contained(arguments, name))
                   return false;
               }
@@ -738,20 +837,20 @@ void DialectsContext::init(RecordKeeper& records,
       return true;
     };
 
-    for (const auto result : llvm::enumerate(op.results)) {
+    for (const auto result : llvm::enumerate(op->results)) {
       if (needsOverloadKey(result.value())) {
         OverloadKey key;
         key.kind = OverloadKey::Result;
         key.index = result.index();
-        op.overloadKeys.push_back(key);
+        op->overloadKeys.push_back(key);
       }
     }
-    for (const auto arg : llvm::enumerate(op.arguments)) {
+    for (const auto arg : llvm::enumerate(op->getFullArguments())) {
       if (needsOverloadKey(arg.value())) {
         OverloadKey key;
         key.kind = OverloadKey::Argument;
         key.index = arg.index();
-        op.overloadKeys.push_back(key);
+        op->overloadKeys.push_back(key);
       }
     }
 
@@ -919,28 +1018,56 @@ class Builder;
     )", &fmt);
   }
 
+  // Operation class class declarations
+  for (OpClass* opClass : dialect->opClasses) {
+    FmtContextScope scope{fmt};
+    fmt.withOp(opClass->name);
+
+    out << tgfmt(R"(
+      class $_op : public $0 {
+      public:
+        static bool classof(const ::llvm::CallInst* i);
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    )", &fmt, opClass->superclass ? opClass->superclass->name : "::llvm::CallInst");
+
+    for (const auto& arg : opClass->arguments) {
+      out << tgfmt("$0 get$1();\n", &fmt, arg.type->getCppType(),
+                   convertToCamelFromSnakeCase(arg.name, true));
+    }
+
+    out << R"(
+      };
+    )";
+
+  }
+
   // Operation class declarations
-  for (Operation& op : dialect->operations) {
+  for (const auto& opPtr : dialect->operations) {
+    const Operation& op = *opPtr;
     FmtContextScope scope{fmt};
     fmt.withOp(op.name);
     fmt.addSubst("mnemonic", op.mnemonic);
 
     out << tgfmt(R"(
-      class $_op : public llvm::CallInst {
+      class $_op : public $0 {
         static const ::llvm::StringLiteral s_name; //{"$dialect.$mnemonic"};
 
       public:
-        static bool classof(const llvm::CallInst* i) {
-          return llvm_dialects::detail::$0(i, s_name);
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::$1(i, s_name);
         }
-        static bool classof(const llvm::Value* v) {
-          return llvm::isa<llvm::CallInst>(v) &&
-                 classof(llvm::cast<llvm::CallInst>(v));
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    )", &fmt, op.overloadKeys.empty() ? "isSimpleOperation"
-                                      : "isOverloadedOperation");
+    )", &fmt, op.superclass ? op.superclass->name : "::llvm::CallInst",
+    op.overloadKeys.empty() ? "isSimpleOperation" : "isOverloadedOperation");
 
     SymbolTable symbols;
+    SmallVector<OpNamedValue> fullArguments = op.getFullArguments();
     SmallVector<std::string> argNames;
     SmallVector<std::string> resultNames;
 
@@ -951,7 +1078,7 @@ class Builder;
       }
     }
 
-    for (const auto& arg : op.arguments)
+    for (const auto& arg : fullArguments)
       argNames.push_back(symbols.chooseName(convertToCamelFromSnakeCase(arg.name, false)));
 
     fmt.withBuilder(symbols.chooseName({"b", "builder"}));
@@ -959,7 +1086,7 @@ class Builder;
     out << tgfmt("static ::llvm::Value* create(::llvm_dialects::Builder& $_builder", &fmt);
     for (const auto& resultName : resultNames)
       out << tgfmt(", ::llvm::Type* $0", &fmt, resultName);
-    for (const auto& [argName, arg] : llvm::zip_first(argNames, op.arguments))
+    for (const auto& [argName, arg] : llvm::zip_first(argNames, fullArguments))
       out << tgfmt(", $0 $1", &fmt, arg.type->getCppType(), argName);
     out << ");\n\n";
 
@@ -980,7 +1107,6 @@ class Builder;
     out << R"(
       };
     )";
-
   }
 
   if (!dialect->cppNamespace.empty())
@@ -1052,9 +1178,60 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
     )", &fmt);
   }
 
+  // Operation class class definitions.
+  for (const OpClass* opClass : dialect->opClasses) {
+    FmtContextScope scope{fmt};
+    fmt.withOp(opClass->name);
+
+    // Define the classof method.
+    out << tgfmt(R"(
+      bool $_op::classof(const ::llvm::CallInst* i) {
+    )", &fmt);
+
+    for (OpClass* subclass : opClass->subclasses) {
+      out << tgfmt(R"(
+        if ($0::classof(i)) return true;
+      )", &fmt, subclass->name);
+    }
+
+    for (Operation* op : opClass->operations) {
+      out << tgfmt(R"(
+        if ($0::classof(i)) return true;
+      )", &fmt, op->name);
+    }
+
+    out << tgfmt(R"(
+        return false;
+      }
+
+    )", &fmt);
+
+    // Emit argument getters.
+    unsigned numSuperclassArgs = 0;
+    if (opClass->superclass)
+      numSuperclassArgs = opClass->superclass->getNumFullArguments();
+    for (auto indexedArg : llvm::enumerate(opClass->arguments)) {
+      const OpNamedValue& arg = indexedArg.value();
+      std::string value = llvm::formatv("getArgOperand({0})",
+                                        numSuperclassArgs + indexedArg.index());
+      if (auto* attr = dyn_cast<Attr>(arg.type))
+        value = tgfmt(attr->getFromLlvmValue(), &fmt, value);
+      out << tgfmt(R"(
+        $0 $_op::get$1() {
+          return $2;
+        }
+      )", &fmt, arg.type->getCppType(), convertToCamelFromSnakeCase(arg.name, true), value);
+    }
+
+    out << '\n';
+  }
+
   // Operation class definitions.
-  for (Operation& op : dialect->operations) {
+  for (const auto& opPtr : dialect->operations) {
+    const Operation& op = *opPtr;
+
     // Emit create() method definition.
+    SmallVector<OpNamedValue> fullArguments = op.getFullArguments();
     SmallVector<std::string> resultNames;
     SmallVector<std::string> argNames;
     SymbolTable symbols;
@@ -1066,7 +1243,7 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
       }
     }
 
-    for (const auto& arg : op.arguments) {
+    for (const auto& arg : fullArguments) {
       argNames.push_back(symbols.chooseName(convertToCamelFromSnakeCase(arg.name, false)));
     }
 
@@ -1091,7 +1268,7 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
     out << tgfmt("::llvm::Value* $_op::create(llvm_dialects::Builder& $_builder", &fmt);
     for (const auto& resultName : resultNames)
       out << tgfmt(", ::llvm::Type* $0", &fmt, resultName);
-    for (const auto& [argName, arg] : llvm::zip_first(argNames, op.arguments)) {
+    for (const auto& [argName, arg] : llvm::zip_first(argNames, fullArguments)) {
       out << tgfmt(", $0 $1", &fmt, arg.type->getCppType(), argName);
     }
 
@@ -1104,7 +1281,7 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
     // Map TableGen names of arguments to C++ expressions to be used by
     // predicates.
     DenseMap<StringRef, std::string> argToCppExprMap;
-    for (const auto &[arg, argName] : llvm::zip(op.arguments, argNames)) {
+    for (const auto &[arg, argName] : llvm::zip(fullArguments, argNames)) {
       std::string cppExpr;
       if (isa<Attr>(arg.type))
         cppExpr = argName;
@@ -1141,7 +1318,7 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
 
     LlvmTypeBuilder typeBuilder{out, symbols, fmt};
     SmallVector<std::string> argTypes;
-    for (const auto& [arg, argName] : llvm::zip(op.arguments, argNames)) {
+    for (const auto& [arg, argName] : llvm::zip(fullArguments, argNames)) {
       if (isa<Attr>(arg.type))
         argTypes.push_back(typeBuilder.build(arg.type));
       else
@@ -1186,7 +1363,7 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
     }
     out << ");\n\n";
 
-    for (const auto& [name, arg] : llvm::zip_first(argNames, op.arguments)) {
+    for (const auto& [name, arg] : llvm::zip_first(argNames, fullArguments)) {
       if (auto* type = dyn_cast<Type>(arg.type)) {
         StringRef filter = type->getBuilderArgumentFilter();
         if (!filter.empty()) {
@@ -1199,7 +1376,7 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
 
     out << tgfmt("::llvm::Value* const $0[] = {\n", &fmt, args);
     for (const auto& [name, type, arg]
-             : llvm::zip_first(argNames, argTypes, op.arguments)) {
+             : llvm::zip_first(argNames, argTypes, fullArguments)) {
       if (auto* attr = dyn_cast<Attr>(arg.type)) {
         out << tgfmt(attr->getToLlvmValue(), &fmt, name, type);
       } else {
@@ -1213,9 +1390,13 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
     out << "}\n\n";
 
     // Emit argument getters.
+    unsigned numSuperclassArgs = 0;
+    if (op.superclass)
+      numSuperclassArgs = op.superclass->getNumFullArguments();
     for (auto indexedArg : llvm::enumerate(op.arguments)) {
       const OpNamedValue& arg = indexedArg.value();
-      std::string value = llvm::formatv("getArgOperand({0})", indexedArg.index());
+      std::string value = llvm::formatv("getArgOperand({0})",
+                                        numSuperclassArgs + indexedArg.index());
       if (auto* attr = dyn_cast<Attr>(arg.type))
         value = tgfmt(attr->getFromLlvmValue(), &fmt, value);
       out << tgfmt(R"(

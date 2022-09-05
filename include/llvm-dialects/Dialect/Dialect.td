@@ -207,11 +207,37 @@ def WillReturn : LlvmAttributeTrait<"WillReturn">;
 
 
 // ============================================================================
+/// Operation classes
+///
+/// Operations can have an OpClass as a super class (which is *not* a TableGen
+/// super class). This is used to conveniently represent a set of operations
+/// that have a common prefix of arguments: there is a C++ class named after the
+/// OpClass record, and all operations that have this OpClass as a superclass
+/// have their C++ class derived from it.
+// ============================================================================
+
+class OpClassBase;
+
+def NoSuperClass : OpClassBase;
+
+class OpClass<Dialect dialect_> : OpClassBase {
+  Dialect dialect = dialect_;
+  OpClassBase superclass = NoSuperClass;
+
+  dag arguments = ?;
+
+  string summary = ?;
+  string description = ?;
+}
+
+
+// ============================================================================
 /// Operations
 // ============================================================================
 
 class Op<Dialect dialect_, string mnemonic_, list<Trait> traits_> {
   Dialect dialect = dialect_;
+  OpClassBase superclass = NoSuperClass;
   string mnemonic = mnemonic_;
   list<Trait> traits = traits_;
 
