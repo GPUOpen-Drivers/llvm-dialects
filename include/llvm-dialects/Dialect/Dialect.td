@@ -203,6 +203,7 @@ class LlvmAttributeTrait<string llvmEnum_> : Trait {
 
 def NoUnwind : LlvmAttributeTrait<"NoUnwind">;
 def ReadNone : LlvmAttributeTrait<"ReadNone">;
+def ReadOnly : LlvmAttributeTrait<"ReadOnly">;
 def WillReturn : LlvmAttributeTrait<"WillReturn">;
 
 
