@@ -107,7 +107,7 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
 }
 
 std::string llvm_dialects::getMangledName(StringRef name,
-                                 ArrayRef<Type *> overloadTypes) {
+                                          ArrayRef<Type *> overloadTypes) {
   std::string result = name.str();
   for (Type *ty : overloadTypes) {
     result += '.';

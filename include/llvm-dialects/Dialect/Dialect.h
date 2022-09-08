@@ -22,6 +22,7 @@
 
 namespace llvm {
 class CallInst;
+class Function;
 class LLVMContext;
 } // namespace llvm
 
@@ -166,6 +167,9 @@ public:
 };
 
 namespace detail {
+
+bool isSimpleOperationDecl(const llvm::Function *fn, llvm::StringRef name);
+bool isOverloadedOperationDecl(const llvm::Function *fn, llvm::StringRef name);
 
 bool isSimpleOperation(const llvm::CallInst *i, llvm::StringRef name);
 bool isOverloadedOperation(const llvm::CallInst *i, llvm::StringRef name);

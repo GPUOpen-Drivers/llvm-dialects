@@ -105,20 +105,29 @@ DialectContextGuard::~DialectContextGuard() {
   }
 }
 
+bool llvm_dialects::detail::isSimpleOperationDecl(const Function *fn,
+                                                  StringRef name) {
+  return fn->getName() == name;
+}
+
+bool llvm_dialects::detail::isOverloadedOperationDecl(const Function *fn,
+                                                      StringRef name) {
+  StringRef fnName = fn->getName();
+  if (name.size() >= fnName.size())
+    return false;
+  if (!fnName.startswith(name))
+    return false;
+  return fnName[name.size()] == '.';
+}
+
 bool llvm_dialects::detail::isSimpleOperation(const CallInst *i, StringRef name) {
   if (auto* fn = i->getCalledFunction())
-    return fn->getName() == name;
+    return isSimpleOperationDecl(fn, name);
   return false;
 }
 
 bool llvm_dialects::detail::isOverloadedOperation(const CallInst *i, StringRef name) {
-  if (auto *fn = i->getCalledFunction()) {
-    StringRef fnName = fn->getName();
-    if (name.size() >= fnName.size())
-      return false;
-    if (!fnName.startswith(name))
-      return false;
-    return fnName[name.size()] == '.';
-  }
+  if (auto *fn = i->getCalledFunction())
+    return isOverloadedOperationDecl(fn, name);
   return false;
 }

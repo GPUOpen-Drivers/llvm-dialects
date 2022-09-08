@@ -66,7 +66,9 @@ endif()
 target_sources(llvm_dialects PRIVATE
     lib/Dialect/Builder.cpp
     lib/Dialect/Dialect.cpp
-    lib/Dialect/Utils.cpp)
+    lib/Dialect/OpDescription.cpp
+    lib/Dialect/Utils.cpp
+    lib/Dialect/Visitor.cpp)
 
 target_sources(llvm_dialects_tablegen PRIVATE
     lib/TableGen/Common.cpp
