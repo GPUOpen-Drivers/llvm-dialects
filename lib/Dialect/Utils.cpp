@@ -24,7 +24,7 @@ using namespace llvm;
 using namespace llvm_dialects;
 
 bool llvm_dialects::areTypesEqual(ArrayRef<Type *> types) {
-  return llvm::is_splat(types);
+  return llvm::all_equal(types);
 }
 
 // The following function is copied verbatim from
