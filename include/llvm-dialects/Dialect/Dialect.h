@@ -91,6 +91,17 @@ class DialectContext final : private llvm::TrailingObjects<DialectContext, Diale
 public:
   ~DialectContext();
 
+  void operator delete(void *ctx);
+  
+  // Placement deletes are called if the constructor throws (shouldn't happen,
+  // but let's be thorough).
+  void operator delete(void *ctx, unsigned) {
+    DialectContext::operator delete(ctx);
+  }
+  void operator delete(void *ctx, unsigned, unsigned) {
+    DialectContext::operator delete(ctx);
+  }
+
   /// Get the DialectContext associated to the given LLVM context. This fails if no dialect context
   /// was created for the LLVM context.
   static DialectContext& get(llvm::LLVMContext& context);

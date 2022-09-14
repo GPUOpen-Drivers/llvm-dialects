@@ -80,6 +80,8 @@ public:
     BaseCPred_Last = SameTypes,
   };
 
+  virtual ~Constraint() = default;
+
   virtual void init(DialectsContext* context, Record* record) {
     m_record = record;
     m_builderArgumentFilter = record->getValueAsString("builderArgumentFilter");
@@ -336,6 +338,8 @@ public:
     Logic_Last = Not,
     Apply,
   };
+
+  virtual ~PredicateExpr() = default;
 
   Kind getKind() const {return m_kind;}
 
