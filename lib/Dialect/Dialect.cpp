@@ -67,6 +67,8 @@ DialectContext::~DialectContext() {
     delete dialectArray[i]; // may be nullptr
 }
 
+void DialectContext::operator delete(void *ctx) { free(ctx); }
+
 std::unique_ptr<DialectContext> DialectContext::make(LLVMContext& context,
                                                      ArrayRef<DialectDescriptor> dialects) {
   unsigned dialectArraySize = 0;
