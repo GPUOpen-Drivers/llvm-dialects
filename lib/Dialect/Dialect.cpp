@@ -24,7 +24,12 @@ using namespace llvm;
 
 namespace {
 
-thread_local DialectContext* s_currentContext = nullptr;
+struct CurrentContext {
+  DialectContext *ctx = nullptr;
+  unsigned entryCount = 0;
+};
+
+thread_local CurrentContext s_currentContext;
 
 } // anonymous namespace
 
@@ -60,7 +65,7 @@ DialectContext::DialectContext(llvm::LLVMContext& context, unsigned dialectArray
 }
 
 DialectContext::~DialectContext() {
-  assert(s_currentContext != this);
+  assert(s_currentContext.ctx != this);
 
   Dialect** dialectArray = getTrailingObjects<Dialect*>();
   for (unsigned i = 0; i < m_dialectArraySize; ++i)
@@ -87,21 +92,24 @@ std::unique_ptr<DialectContext> DialectContext::make(LLVMContext& context,
 }
 
 DialectContext& DialectContext::get(llvm::LLVMContext& context) {
-  assert(s_currentContext);
-  assert(&s_currentContext->m_llvmContext == &context);
-  return *s_currentContext;
+  assert(s_currentContext.ctx);
+  assert(&s_currentContext.ctx->m_llvmContext == &context);
+  return *s_currentContext.ctx;
 }
 
 DialectContextGuard::DialectContextGuard(DialectContext& dialectContext) {
-  assert(!s_currentContext);
+  assert(!s_currentContext.ctx || s_currentContext.ctx == &dialectContext);
   m_dialectContext = &dialectContext;
-  s_currentContext = m_dialectContext;
+  s_currentContext.ctx = m_dialectContext;
+  s_currentContext.entryCount++;
 }
 
 DialectContextGuard::~DialectContextGuard() {
   if (m_dialectContext) {
-    assert(m_dialectContext == s_currentContext);
-    s_currentContext = nullptr;
+    assert(m_dialectContext == s_currentContext.ctx);
+    assert(s_currentContext.entryCount > 0);
+    if (!--s_currentContext.entryCount)
+      s_currentContext.ctx = nullptr;
   }
 }
 
