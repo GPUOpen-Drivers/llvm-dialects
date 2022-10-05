@@ -63,6 +63,8 @@ else()
     target_link_libraries(llvm-dialects-tblgen PRIVATE llvm_dialects_tablegen ${llvm_libs})
 endif()
 
+target_include_directories(llvm_dialects PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
 target_sources(llvm_dialects PRIVATE
     lib/Dialect/Builder.cpp
     lib/Dialect/Dialect.cpp
