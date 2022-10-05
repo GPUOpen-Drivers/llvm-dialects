@@ -34,9 +34,6 @@ message(STATUS "LLVM includes: ${LLVM_INCLUDE_DIRS}")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-include_directories(${LLVM_INCLUDE_DIRS})
-include_directories(include)
-
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})
 add_definitions("-DHAVE_LLVM_VERSION_MAJOR=${LLVM_VERSION_MAJOR}")
@@ -63,7 +60,11 @@ else()
     target_link_libraries(llvm-dialects-tblgen PRIVATE llvm_dialects_tablegen ${llvm_libs})
 endif()
 
-target_include_directories(llvm_dialects PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(llvm_dialects PUBLIC
+    include)
+
+target_include_directories(llvm_dialects PRIVATE
+    ${LLVM_INCLUDE_DIRS})
 
 target_sources(llvm_dialects PRIVATE
     lib/Dialect/Builder.cpp
@@ -72,10 +73,18 @@ target_sources(llvm_dialects PRIVATE
     lib/Dialect/Utils.cpp
     lib/Dialect/Visitor.cpp)
 
+target_include_directories(llvm_dialects_tablegen PRIVATE
+    include
+    ${LLVM_INCLUDE_DIRS})
+
 target_sources(llvm_dialects_tablegen PRIVATE
     lib/TableGen/Common.cpp
     lib/TableGen/Format.cpp
     lib/TableGen/GenDialect.cpp)
+
+target_include_directories(llvm-dialects-tblgen PRIVATE
+    include
+    ${LLVM_INCLUDE_DIRS})
 
 target_sources(llvm-dialects-tblgen PRIVATE
     utils/llvm-dialects-tblgen.cpp)
