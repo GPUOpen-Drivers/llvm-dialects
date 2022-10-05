@@ -90,7 +90,7 @@ std::unique_ptr<DialectContext> DialectContext::make(LLVMContext& context,
   for (const auto& desc : dialects)
     dialectArray[desc.index] = desc.make(context);
 
-  return std::move(result);
+  return result;
 }
 
 DialectContext& DialectContext::get(llvm::LLVMContext& context) {

@@ -37,7 +37,7 @@ class BuiltinType;
 class Constraint;
 class Dialect;
 class OpClass;
-class OpNamedValue;
+struct OpNamedValue;
 class Operation;
 class PredicateExpr;
 class Trait;
@@ -457,6 +457,8 @@ public:
     LlvmAttributeTrait,
   };
 
+  virtual ~Trait() {}
+
   virtual void init(DialectsContext* context, Record* record) {
     m_record = record;
   }
@@ -841,7 +843,7 @@ void DialectsContext::init(RecordKeeper& records,
       return true;
     };
 
-    for (const auto result : llvm::enumerate(op->results)) {
+    for (const auto &result : llvm::enumerate(op->results)) {
       if (needsOverloadKey(result.value())) {
         OverloadKey key;
         key.kind = OverloadKey::Result;
@@ -849,7 +851,7 @@ void DialectsContext::init(RecordKeeper& records,
         op->overloadKeys.push_back(key);
       }
     }
-    for (const auto arg : llvm::enumerate(op->getFullArguments())) {
+    for (const auto &arg : llvm::enumerate(op->getFullArguments())) {
       if (needsOverloadKey(arg.value())) {
         OverloadKey key;
         key.kind = OverloadKey::Argument;
