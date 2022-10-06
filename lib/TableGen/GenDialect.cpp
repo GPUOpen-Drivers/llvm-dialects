@@ -1379,19 +1379,22 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
       }
     }
 
-    out << tgfmt("::llvm::Value* const $0[] = {\n", &fmt, args);
-    for (const auto& [name, type, arg]
-             : llvm::zip_first(argNames, argTypes, fullArguments)) {
-      if (auto* attr = dyn_cast<Attr>(arg.type)) {
-        out << tgfmt(attr->getToLlvmValue(), &fmt, name, type);
-      } else {
-        out << name;
+    if (!argNames.empty()) {
+      out << tgfmt("::llvm::Value* const $0[] = {\n", &fmt, args);
+      for (const auto& [name, type, arg]
+               : llvm::zip_first(argNames, argTypes, fullArguments)) {
+        if (auto* attr = dyn_cast<Attr>(arg.type)) {
+          out << tgfmt(attr->getToLlvmValue(), &fmt, name, type);
+        } else {
+          out << name;
+        }
+        out << ",\n";
       }
-      out << ",\n";
-    }
-    out << "};\n\n";
+      out << "};\n\n";
 
-    out << tgfmt("return $_builder.CreateCall($0, $1);\n", &fmt, fn, args);
+      out << tgfmt("return $_builder.CreateCall($0, $1);\n", &fmt, fn, args);
+    } else
+      out << tgfmt("return $_builder.CreateCall($0);\n", &fmt, fn);
     out << "}\n\n";
 
     // Emit argument getters.
