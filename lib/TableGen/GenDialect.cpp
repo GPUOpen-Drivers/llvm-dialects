@@ -915,7 +915,7 @@ std::unique_ptr<PredicateExpr> DialectsContext::parsePredicateExpr(DagInit *dag)
 
     if (!argName) {
       report_fatal_error(
-          Twine("Predicate appliation has missing argument name: ")
+          Twine("Predicate application has missing argument name: ")
               + dag->getAsString());
     }
 
