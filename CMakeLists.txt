@@ -60,6 +60,9 @@ else()
     target_link_libraries(llvm-dialects-tblgen PRIVATE llvm_dialects_tablegen ${llvm_libs})
 endif()
 
+# The llvm_dialects library build depends on llvm/IR/Attributes.inc
+add_dependencies(llvm_dialects intrinsics_gen)
+
 target_include_directories(llvm_dialects PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
