@@ -142,8 +142,10 @@ public:
     *this = std::move(rhs);
   }
   DialectContextGuard& operator=(DialectContextGuard&& rhs) {
-    m_dialectContext = rhs.m_dialectContext;
-    rhs.m_dialectContext = nullptr;
+    if (this != &rhs) {
+      m_dialectContext = rhs.m_dialectContext;
+      rhs.m_dialectContext = nullptr;
+    }
     return *this;
   }
 };
