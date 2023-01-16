@@ -74,8 +74,8 @@ public:
   FmtContext &withOp(llvm::Twine subst);
   FmtContext &withSelf(llvm::Twine subst);
 
-  llvm::Optional<llvm::StringRef> getSubstFor(PHKind placeholder) const;
-  llvm::Optional<llvm::StringRef> getSubstFor(llvm::StringRef placeholder) const;
+  std::optional<llvm::StringRef> getSubstFor(PHKind placeholder) const;
+  std::optional<llvm::StringRef> getSubstFor(llvm::StringRef placeholder) const;
 
   static PHKind getPlaceHolderKind(llvm::StringRef str);
 
