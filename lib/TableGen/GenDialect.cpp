@@ -18,7 +18,6 @@
 #include "llvm-dialects/TableGen/Format.h"
 #include "llvm-dialects/TableGen/GenDialect.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -324,7 +323,7 @@ private:
   };
 
   SmallVector<Argument> m_arguments;
-  Optional<Argument> m_variadic;
+  std::optional<Argument> m_variadic;
   std::string m_predExpr;
 };
 
