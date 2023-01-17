@@ -38,14 +38,24 @@ separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})
 add_definitions("-DHAVE_LLVM_VERSION_MAJOR=${LLVM_VERSION_MAJOR}")
 
+set(llvm_deps
+    Support
+    TableGen
+)
+
 if (llvm_dialects_is_in_llvm_build_tree)
-    add_llvm_library(llvm_dialects)
+    add_llvm_library(llvm_dialects
+        LINK_COMPONENTS
+        Core
+        Support
+    )
+    add_llvm_library(llvm_dialects_tablegen
+        LINK_COMPONENTS
+        ${llvm_deps}
+    )
 
-    add_llvm_library(llvm_dialects_tablegen)
-
-    set(LLVM_LINK_COMPONENTS Support TableGen)
+    set(LLVM_LINK_COMPONENTS ${llvm_deps})
     add_llvm_tool(llvm-dialects-tblgen DISABLE_LLVM_LINK_LLVM_DYLIB)
-    target_link_libraries(llvm-dialects-tblgen PRIVATE llvm_dialects_tablegen)
 else()
     add_library(llvm_dialects)
     llvm_update_compile_flags(llvm_dialects)
@@ -56,9 +66,11 @@ else()
     add_executable(llvm-dialects-tblgen)
     llvm_update_compile_flags(llvm-dialects-tblgen)
 
-    llvm_map_components_to_libnames(llvm_libs Support TableGen)
-    target_link_libraries(llvm-dialects-tblgen PRIVATE llvm_dialects_tablegen ${llvm_libs})
+    llvm_map_components_to_libnames(llvm_libs ${llvm_deps})
+    target_link_libraries(llvm-dialects-tblgen PRIVATE ${llvm_libs})
 endif()
+
+target_link_libraries(llvm-dialects-tblgen PRIVATE llvm_dialects_tablegen)
 
 # The llvm_dialects library build depends on llvm/IR/Attributes.inc
 add_dependencies(llvm_dialects intrinsics_gen)
