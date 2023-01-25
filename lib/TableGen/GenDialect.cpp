@@ -299,6 +299,7 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
 #include "llvm-dialects/Dialect/OpDescription.h"
 #include "llvm-dialects/Dialect/Utils.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/Support/ModRef.h"
 #endif // GET_INCLUDES
 
 #ifdef GET_DIALECT_DEFS
@@ -473,18 +474,21 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
     if (op.traits.empty()) {
       out << "const ::llvm::AttributeList " << attrs << ";\n";
     } else {
-      out << tgfmt("const auto $0 = ::llvm::AttributeList::get($_context, "
-                   "::llvm::AttributeList::FunctionIndex, {\n", &fmt, attrs);
+      FmtContextScope scope{fmt};
+      fmt.addSubst("attrBuilder", symbols.chooseName("attrBuilder"));
 
-      for (const Trait* trait : op.traits) {
-        if (auto* llvmAttribute = dyn_cast<LlvmAttributeTrait>(trait)) {
-          out << "::llvm::Attribute::" << llvmAttribute->getLlvmEnum() << ",\n";
+      out << tgfmt("::llvm::AttrBuilder $attrBuilder{$_context};\n", &fmt);
+      for (const Trait *trait : op.traits) {
+        if (auto *llvmAttribute = dyn_cast<LlvmAttributeTrait>(trait)) {
+          llvmAttribute->addAttribute(out, fmt);
         } else {
           llvm_unreachable("unsupported trait kind");
         }
       }
 
-      out << "});\n\n";
+      out << tgfmt("const auto $0 = ::llvm::AttributeList::get($_context, "
+                   "::llvm::AttributeList::FunctionIndex, $attrBuilder);\n",
+                   &fmt, attrs);
     }
 
     LlvmTypeBuilder typeBuilder{out, symbols, fmt};

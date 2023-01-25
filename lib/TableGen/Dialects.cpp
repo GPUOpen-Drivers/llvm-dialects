@@ -33,14 +33,8 @@ Trait *GenDialectsContext::getTrait(Record *traitRec) {
         "' as a constraint, but it is not a subclass of 'Constraint'");
 
   auto &result = m_traits[traitRec];
-  if (!result) {
-    if (traitRec->isSubClassOf("LlvmAttributeTrait")) {
-      result = std::make_unique<LlvmAttributeTrait>();
-    } else {
-      report_fatal_error(Twine("unsupported trait: ") + traitRec->getName());
-    }
-    result->init(this, traitRec);
-  }
+  if (!result)
+    result = Trait::fromRecord(this, traitRec);
   return result.get();
 }
 
