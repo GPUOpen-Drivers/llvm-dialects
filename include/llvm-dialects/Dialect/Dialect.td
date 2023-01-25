@@ -197,15 +197,40 @@ def AttrI64 : IntegerAttr<"uint64_t", I64>;
 
 class Trait;
 
-class LlvmAttributeTrait<string llvmEnum_> : Trait {
+class LlvmEnumAttributeTrait<string llvmEnum_> : Trait {
   string llvmEnum = llvmEnum_;
 }
 
-def NoUnwind : LlvmAttributeTrait<"NoUnwind">;
-def ReadNone : LlvmAttributeTrait<"ReadNone">;
-def ReadOnly : LlvmAttributeTrait<"ReadOnly">;
-def WillReturn : LlvmAttributeTrait<"WillReturn">;
+def NoUnwind : LlvmEnumAttributeTrait<"NoUnwind">;
+def WillReturn : LlvmEnumAttributeTrait<"WillReturn">;
 
+/// Represent the LLVM `memory(...)` attribute as the OR (or union) of memory
+/// effects. An empty effects list means the operation does not access memory
+/// at all. If this trait is missing, it means that there is no bound on the
+/// memory accesses performed by the operation.
+///
+/// Each memory effect is given as a DAG `($modref location, ...)`. If the list
+/// of memory locations is empty, it means all memory may be accessed in this
+/// way.
+///
+/// Example: `Memory<[(ref), (mod ArgMem, InaccessibleMem)]>` means the
+/// operation may read from any kind of memory and write to argument and
+/// inaccessible memory.
+class Memory<list<dag> effects_> : Trait {
+  list<dag> effects = effects_;
+}
+
+def read;
+def write;
+def readwrite;
+
+class LlvmMemoryLocation<string name_> {
+  string name = name_;
+}
+
+def ArgMem : LlvmMemoryLocation<"ArgMem">;
+def InaccessibleMem : LlvmMemoryLocation<"InaccessibleMem">;
+def Other : LlvmMemoryLocation<"Other">;
 
 // ============================================================================
 /// Operation classes

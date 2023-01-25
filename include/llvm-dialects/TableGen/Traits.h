@@ -17,23 +17,32 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <string>
 
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm {
+class raw_ostream;
 class Record;
 }
 
 namespace llvm_dialects {
 
+class FmtContext;
 class GenDialectsContext;
 
 class Trait {
 public:
   enum class Kind : uint8_t {
-    LlvmAttributeTrait,
+    LlvmAttributeTrait_First,
+    LlvmEnumAttributeTrait = LlvmAttributeTrait_First,
+    LlvmMemoryAttributeTrait,
+    LlvmAttributeTrait_Last = LlvmMemoryAttributeTrait,
   };
+
+  static std::unique_ptr<Trait> fromRecord(GenDialectsContext *context,
+                                           llvm::Record *record);
 
   virtual ~Trait() = default;
 
@@ -53,18 +62,14 @@ private:
 
 class LlvmAttributeTrait : public Trait {
 public:
-  LlvmAttributeTrait() : Trait(Kind::LlvmAttributeTrait) {}
+  LlvmAttributeTrait(Kind kind) : Trait(kind) {}
 
-  void init(GenDialectsContext *context, llvm::Record *record) override;
-
-  llvm::StringRef getLlvmEnum() const { return m_llvmEnum; }
+  virtual void addAttribute(llvm::raw_ostream &out, FmtContext &fmt) const = 0;
 
   static bool classof(const Trait *t) {
-    return t->getKind() == Kind::LlvmAttributeTrait;
+    return t->getKind() >= Kind::LlvmAttributeTrait_First &&
+           t->getKind() <= Kind::LlvmAttributeTrait_Last;
   }
-
-private:
-  std::string m_llvmEnum;
 };
 
 } // namespace llvm_dialects
