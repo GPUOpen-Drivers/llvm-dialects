@@ -95,8 +95,13 @@ target_include_directories(llvm_dialects_tablegen PRIVATE
 
 target_sources(llvm_dialects_tablegen PRIVATE
     lib/TableGen/Common.cpp
+    lib/TableGen/Constraints.cpp
+    lib/TableGen/Dialects.cpp
     lib/TableGen/Format.cpp
-    lib/TableGen/GenDialect.cpp)
+    lib/TableGen/GenDialect.cpp
+    lib/TableGen/Predicates.cpp
+    lib/TableGen/Operations.cpp
+    lib/TableGen/Traits.cpp)
 
 target_include_directories(llvm-dialects-tblgen PRIVATE
     include
