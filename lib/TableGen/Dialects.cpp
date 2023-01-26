@@ -26,6 +26,40 @@
 using namespace llvm;
 using namespace llvm_dialects;
 
+void GenDialect::finalize() {
+  // Build the list of different attribute lists.
+  auto traitLess = [](Trait *lhs, Trait *rhs) {
+    return lhs->getName() < rhs->getName();
+  };
+  auto opLess = [traitLess](Operation *lhs, Operation *rhs) {
+    return std::lexicographical_compare(lhs->traits.begin(), lhs->traits.end(),
+                                        rhs->traits.begin(), rhs->traits.end(),
+                                        traitLess);
+  };
+
+  std::vector<Operation *> traitOperations;
+
+  for (const auto &op : operations) {
+    if (op->traits.empty())
+      continue;
+
+    llvm::sort(op->traits, traitLess);
+
+    traitOperations.push_back(op.get());
+  }
+
+  llvm::sort(traitOperations, opLess);
+
+  Operation *current = nullptr;
+  for (Operation *op : traitOperations) {
+    if (!current || opLess(current, op)) {
+      m_attributeLists.push_back(op->traits);
+      current = op;
+    }
+    op->m_attributeListIdx = m_attributeLists.size() - 1;
+  }
+}
+
 Trait *GenDialectsContext::getTrait(Record *traitRec) {
   if (!traitRec->isSubClassOf("Trait"))
     report_fatal_error(
@@ -262,6 +296,9 @@ void GenDialectsContext::init(RecordKeeper &records,
 
     dialectIt->second->operations.push_back(std::move(op));
   }
+
+  for (auto &dialectEntry : m_dialects)
+    dialectEntry.second->finalize();
 }
 
 std::unique_ptr<PredicateExpr>

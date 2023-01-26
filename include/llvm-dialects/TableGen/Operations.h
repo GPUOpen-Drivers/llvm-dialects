@@ -22,6 +22,7 @@
 
 namespace llvm_dialects {
 
+class GenDialect;
 class Constraint;
 class Operation;
 class Trait;
@@ -73,6 +74,15 @@ public:
 
   llvm::SmallVector<OpNamedValue> getFullArguments() const;
   unsigned getNumFullArguments() const;
+
+  int getAttributeListIdx() const { return m_attributeListIdx; }
+
+private:
+  friend class GenDialect;
+
+  /// -1 if the operation has no attribute list / has an empty attribute list.
+  /// Otherwise, an index into the dialect's attribute list array.
+  int m_attributeListIdx = -1;
 };
 
 } // namespace llvm_dialects

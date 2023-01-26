@@ -18,6 +18,7 @@
 
 #include <memory>
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 
@@ -47,6 +48,18 @@ public:
   std::vector<DialectType *> types;
   std::vector<OpClass *> opClasses;
   std::vector<std::unique_ptr<Operation>> operations;
+
+public:
+  void finalize();
+
+  llvm::ArrayRef<std::vector<Trait *>> attribute_lists() const {
+    return m_attributeLists;
+  }
+  bool attribute_lists_empty() const { return m_attributeLists.empty(); }
+  size_t attribute_lists_size() const { return m_attributeLists.size(); }
+
+private:
+  std::vector<std::vector<Trait *>> m_attributeLists;
 };
 
 class GenDialectsContext {
