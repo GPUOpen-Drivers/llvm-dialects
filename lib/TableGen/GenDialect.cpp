@@ -156,11 +156,27 @@ class Builder;
 
       static Key& getKey();
 
+    private:
       $Dialect(::llvm::LLVMContext& context);
 
       static ::llvm_dialects::Dialect* make(::llvm::LLVMContext& context);
-    };
-  )", &fmt);
+  )",
+               &fmt);
+
+  if (!dialect->attribute_lists_empty()) {
+    out << tgfmt(R"(
+      public:
+        ::llvm::AttributeList getAttributeList(size_t index) const {
+          return m_attributeLists[index];
+        }
+
+      private:
+        ::std::array<::llvm::AttributeList, $0> m_attributeLists;
+    )",
+                 &fmt, dialect->attribute_lists_size());
+  }
+
+  out << "};\n";
 
   // Type class declaration
   for (DialectType* type : dialect->types) {
@@ -323,12 +339,36 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
       return s_key;
     }
 
-    $Dialect::$Dialect(::llvm::LLVMContext& context) : DialectImpl(context) {}
-
     ::llvm_dialects::Dialect* $Dialect::make(::llvm::LLVMContext& context) {
       return new $Dialect(context);
     }
-  )", &fmt);
+
+    $Dialect::$Dialect(::llvm::LLVMContext& context) : DialectImpl(context) {
+  )",
+               &fmt);
+
+  if (!dialect->attribute_lists_empty()) {
+    FmtContextScope scope{fmt};
+    fmt.addSubst("attrBuilder", "attrBuilder");
+
+    for (const auto &enumeratedTraits : enumerate(dialect->attribute_lists())) {
+      out << tgfmt("{\n  ::llvm::AttrBuilder $attrBuilder{context};\n", &fmt);
+
+      for (const Trait *trait : enumeratedTraits.value()) {
+        if (auto *llvmAttribute = dyn_cast<LlvmAttributeTrait>(trait)) {
+          llvmAttribute->addAttribute(out, fmt);
+        } else {
+          llvm_unreachable("unsupported trait kind");
+        }
+      }
+
+      out << tgfmt("m_attributeLists[$0] = ::llvm::AttributeList::get(context, "
+                   "::llvm::AttributeList::FunctionIndex, $attrBuilder);\n}\n",
+                   &fmt, enumeratedTraits.index());
+    }
+  }
+
+  out << "}\n\n";
 
   // Type class definitions.
   for (DialectType* type : dialect->types) {
@@ -421,7 +461,6 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
 
     std::string mod = symbols.chooseName("mod");
     std::string fn = symbols.chooseName("fn");
-    std::string attrs = symbols.chooseName("attrs");
     std::string args = symbols.chooseName("args");
     std::string mangledName = symbols.chooseName("mangledName");
 
@@ -431,6 +470,7 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
     fmt.withOp(op.name);
     fmt.addSubst("_module", mod);
     fmt.addSubst("mnemonic", op.mnemonic);
+    fmt.addSubst("attrs", symbols.chooseName("attrs"));
 
     out << tgfmt(R"(
       const ::llvm::StringLiteral $_op::s_name{"$dialect.$mnemonic"};
@@ -471,24 +511,14 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
     }
     out << '\n';
 
-    if (op.traits.empty()) {
-      out << "const ::llvm::AttributeList " << attrs << ";\n";
+    if (op.getAttributeListIdx() < 0) {
+      out << tgfmt("const ::llvm::AttributeList $attrs;\n", &fmt);
     } else {
-      FmtContextScope scope{fmt};
-      fmt.addSubst("attrBuilder", symbols.chooseName("attrBuilder"));
-
-      out << tgfmt("::llvm::AttrBuilder $attrBuilder{$_context};\n", &fmt);
-      for (const Trait *trait : op.traits) {
-        if (auto *llvmAttribute = dyn_cast<LlvmAttributeTrait>(trait)) {
-          llvmAttribute->addAttribute(out, fmt);
-        } else {
-          llvm_unreachable("unsupported trait kind");
-        }
-      }
-
-      out << tgfmt("const auto $0 = ::llvm::AttributeList::get($_context, "
-                   "::llvm::AttributeList::FunctionIndex, $attrBuilder);\n",
-                   &fmt, attrs);
+      out << tgfmt(R"(
+        const ::llvm::AttributeList $attrs
+            = $Dialect::get($_context).getAttributeList($0);
+      )",
+                   &fmt, op.getAttributeListIdx());
     }
 
     LlvmTypeBuilder typeBuilder{out, symbols, fmt};
@@ -532,8 +562,8 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
       fnName = "s_name";
     }
 
-    out << tgfmt("\nauto $0 = $_module.getOrInsertFunction($1, $2, $3",
-                 &fmt, fn, fnName, attrs, resultTypeName);
+    out << tgfmt("\nauto $0 = $_module.getOrInsertFunction($1, $attrs, $2",
+                 &fmt, fn, fnName, resultTypeName);
     for (const auto& argType : argTypes) {
       out << ", " << argType;
     }
