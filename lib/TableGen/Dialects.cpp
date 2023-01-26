@@ -262,7 +262,7 @@ void GenDialectsContext::init(RecordKeeper &records,
           if (apply->getPredicate()->getKind() == Constraint::Kind::SameTypes) {
             auto arguments = apply->arguments();
             if (llvm::is_contained(arguments, namedValue.name)) {
-              for (const auto &overloadKey : op->overloadKeys) {
+              for (const auto &overloadKey : op->overload_keys()) {
                 StringRef name = overloadKey.kind == OverloadKey::Result
                                      ? op->results[overloadKey.index].name
                                      : op->arguments[overloadKey.index].name;
@@ -282,7 +282,8 @@ void GenDialectsContext::init(RecordKeeper &records,
         OverloadKey key;
         key.kind = OverloadKey::Result;
         key.index = result.index();
-        op->overloadKeys.push_back(key);
+        op->m_overloadKeys.push_back(key);
+        op->m_haveResultOverloadKey = true;
       }
     }
     for (const auto &arg : llvm::enumerate(op->getFullArguments())) {
@@ -290,7 +291,8 @@ void GenDialectsContext::init(RecordKeeper &records,
         OverloadKey key;
         key.kind = OverloadKey::Argument;
         key.index = arg.index();
-        op->overloadKeys.push_back(key);
+        op->m_overloadKeys.push_back(key);
+        op->m_haveArgumentOverloadKey = true;
       }
     }
 
