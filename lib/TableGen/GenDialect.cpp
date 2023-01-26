@@ -249,8 +249,10 @@ class Builder;
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    )", &fmt, op.superclass ? op.superclass->name : "::llvm::CallInst",
-    op.overloadKeys.empty() ? "isSimpleOperation" : "isOverloadedOperation");
+    )",
+                 &fmt, op.superclass ? op.superclass->name : "::llvm::CallInst",
+                 !op.haveResultOverloadKey() ? "isSimpleOperation"
+                                             : "isOverloadedOperation");
 
     SymbolTable symbols;
     SmallVector<OpNamedValue> fullArguments = op.getFullArguments();
@@ -471,6 +473,7 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
     fmt.addSubst("_module", mod);
     fmt.addSubst("mnemonic", op.mnemonic);
     fmt.addSubst("attrs", symbols.chooseName("attrs"));
+    fmt.addSubst("fnType", symbols.chooseName("fnType"));
 
     out << tgfmt(R"(
       const ::llvm::StringLiteral $_op::s_name{"$dialect.$mnemonic"};
@@ -524,10 +527,14 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
     LlvmTypeBuilder typeBuilder{out, symbols, fmt};
     SmallVector<std::string> argTypes;
     for (const auto& [arg, argName] : llvm::zip(fullArguments, argNames)) {
-      if (isa<Attr>(arg.type))
+      if (isa<Attr>(arg.type)) {
         argTypes.push_back(typeBuilder.build(arg.type));
-      else
-        argTypes.push_back(argName + "->getType()");
+      } else {
+        if (!op.haveArgumentOverloadKey())
+          argTypes.push_back(argName + "->getType()");
+        else
+          argTypes.push_back("<skip type>");
+      }
     }
 
     std::string resultTypeName;
@@ -544,16 +551,12 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
 
     StringRef fnName;
 
-    if (!op.overloadKeys.empty()) {
+    if (op.haveResultOverloadKey()) {
       out << tgfmt("std::string $0 = ::llvm_dialects::getMangledName(s_name, {\n", &fmt,
                    mangledName);
-      for (const auto &key : op.overloadKeys) {
-        if (key.kind == OverloadKey::Argument) {
-          out << argNames[key.index] << "->getType(),\n";
-        } else {
-          assert(key.kind == OverloadKey::Result);
+      for (const auto &key : op.overload_keys()) {
+        if (key.kind == OverloadKey::Result)
           out << resultNames[key.index] << ",\n";
-        }
       }
       out << "});\n";
 
@@ -562,12 +565,20 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
       fnName = "s_name";
     }
 
-    out << tgfmt("\nauto $0 = $_module.getOrInsertFunction($1, $attrs, $2",
-                 &fmt, fn, fnName, resultTypeName);
-    for (const auto& argType : argTypes) {
-      out << ", " << argType;
+    if (op.haveArgumentOverloadKey()) {
+      out << tgfmt("auto $fnType = ::llvm::FunctionType::get($0, true);\n",
+                   &fmt, resultTypeName);
+    } else {
+      out << tgfmt("auto $fnType = ::llvm::FunctionType::get($0, {\n", &fmt,
+                   resultTypeName);
+      for (const auto &argType : argTypes)
+        out << argType << ",\n";
+      out << "}, false);\n";
     }
-    out << ");\n\n";
+
+    out << tgfmt(
+        "\nauto $0 = $_module.getOrInsertFunction($1, $fnType, $attrs);\n\n",
+        &fmt, fn, fnName);
 
     for (const auto& [name, arg] : llvm::zip_first(argNames, fullArguments)) {
       if (auto* type = dyn_cast<Type>(arg.type)) {
@@ -645,7 +656,8 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
         return desc;
       }
 
-    )", &fmt, op.overloadKeys.empty() ? "false" : "true");
+    )",
+                 &fmt, op.haveResultOverloadKey() ? "true" : "false");
   }
 
   out << R"(

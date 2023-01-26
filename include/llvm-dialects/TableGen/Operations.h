@@ -18,10 +18,12 @@
 
 #include "llvm-dialects/TableGen/Predicates.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace llvm_dialects {
 
+class GenDialectsContext;
 class GenDialect;
 class Constraint;
 class Operation;
@@ -69,8 +71,12 @@ public:
   std::vector<OpNamedValue> arguments;
   std::vector<OpNamedValue> results;
   std::vector<std::unique_ptr<PredicateExpr>> verifier;
-  std::vector<OverloadKey> overloadKeys;
   bool builderHasExplicitResultTypes = false;
+
+  llvm::ArrayRef<OverloadKey> overload_keys() const { return m_overloadKeys; }
+  bool overload_keys_empty() const { return m_overloadKeys.empty(); }
+  bool haveResultOverloadKey() const { return m_haveResultOverloadKey; }
+  bool haveArgumentOverloadKey() const { return m_haveArgumentOverloadKey; }
 
   llvm::SmallVector<OpNamedValue> getFullArguments() const;
   unsigned getNumFullArguments() const;
@@ -79,6 +85,11 @@ public:
 
 private:
   friend class GenDialect;
+  friend class GenDialectsContext;
+
+  std::vector<OverloadKey> m_overloadKeys;
+  bool m_haveResultOverloadKey = false;
+  bool m_haveArgumentOverloadKey = false;
 
   /// -1 if the operation has no attribute list / has an empty attribute list.
   /// Otherwise, an index into the dialect's attribute list array.
