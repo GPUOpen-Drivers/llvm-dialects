@@ -19,17 +19,133 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Instructions.h"
 
+#include <atomic>
+#include <mutex>
+
 using namespace llvm_dialects;
 using namespace llvm;
 
 namespace {
 
-struct CurrentContext {
-  DialectContext *ctx = nullptr;
-  unsigned entryCount = 0;
+class CurrentContextCache;
+
+/// Singleton class that maintains a global map of LLVMContexts to
+/// DialectContexts
+class ContextMap {
+  friend class CurrentContextCache;
+
+  std::mutex m_mutex;
+  DenseMap<LLVMContext *, DialectContext *> m_map;
+  CurrentContextCache *m_caches = nullptr;
+
+public:
+  static ContextMap &get() {
+    static ContextMap theMap;
+    return theMap;
+  }
+
+  void insert(LLVMContext *llvmContext, DialectContext *dialectContext);
+  void remove(LLVMContext *llvmContext, DialectContext *dialectContext);
 };
 
-thread_local CurrentContext s_currentContext;
+/// Thread-local cache that caches the LLVMContext to DialectContext mapping.
+///
+/// Since normal code only uses a single context per thread, at least for a
+/// significant amount of time, this allows a quick lookup without mutex
+/// locking overhead.
+class CurrentContextCache {
+  friend class ContextMap;
+
+  std::atomic<LLVMContext *> m_llvmContext = nullptr;
+  DialectContext *m_dialectContext = nullptr;
+  CurrentContextCache **m_pprev;
+  CurrentContextCache *m_next = nullptr;
+
+  CurrentContextCache() {
+    auto &map = ContextMap::get();
+    auto lock = std::lock_guard(map.m_mutex);
+    m_next = map.m_caches;
+    if (m_next)
+      m_next->m_pprev = &m_next;
+    m_pprev = &map.m_caches;
+    map.m_caches = this;
+  }
+
+  ~CurrentContextCache() {
+    auto &map = ContextMap::get();
+    auto lock = std::lock_guard(map.m_mutex);
+    if (m_next)
+      m_next->m_pprev = m_pprev;
+    *m_pprev = m_next;
+  }
+
+public:
+  static DialectContext *get(LLVMContext *llvmContext) {
+    assert(llvmContext != nullptr);
+    static thread_local CurrentContextCache cache;
+    if (cache.m_llvmContext.load(std::memory_order_relaxed) != llvmContext) {
+      auto &map = ContextMap::get();
+      auto lock = std::lock_guard(map.m_mutex);
+      cache.m_llvmContext.store(llvmContext, std::memory_order_relaxed);
+      cache.m_dialectContext = map.m_map.lookup(llvmContext);
+    }
+    return cache.m_dialectContext;
+  }
+};
+
+void ContextMap::insert(LLVMContext *llvmContext,
+                        DialectContext *dialectContext) {
+  auto lock = std::lock_guard(m_mutex);
+  bool inserted = m_map.try_emplace(llvmContext, dialectContext).second;
+  (void)inserted;
+  assert(inserted);
+}
+
+void ContextMap::remove(LLVMContext *llvmContext,
+                        DialectContext *dialectContext) {
+  auto lock = std::lock_guard(m_mutex);
+  assert(m_map.lookup(llvmContext) == dialectContext);
+  m_map.erase(llvmContext);
+
+  // Remove any stale per-thread cache entries.
+  //
+  // This is called when llvmContext still exists, and our thread destroys it
+  // (or at least detaches the dialectContext). No other thread can legitimately
+  // attempt to do anything with the same llvmContext at the same time.
+  //
+  // However, another thread may have previously used llvmContext and still
+  // see it in its cache. We need to null out those cache entries in case a
+  // new LLVMContext is created at the exact same address.
+  //
+  // The other thread may race us in an attempt to start using a *different*
+  // context. All *writes* to CurrentContextCache::m_llvmContext are guarded by
+  // ContextMap::m_mutex. But there is still a race between
+  //
+  //  1. Our thread writing to m_llvmContext and
+  //  2. The other thread checking m_llvmContext from CurrentContextCache::get
+  //
+  // This race is why we use std::atomic. Using std::atomic guarantees that the
+  // other thread sees either nullptr or llvmContext, either of which causes it
+  // to fail the cache lookup and use the slow path, where it will lock m_mutex
+  // before updating m_llvmContext.
+  //
+  // The other thread may also eventually attempt to start using the *same*
+  // LLVMContext again, or a re-created LLVMContext that happens to be allocated
+  // at the same address. However, our thread must currently have exclusive
+  // ownership of the LLVMContext (by the usual rules that an LLVMContext can
+  // only be used from a single thread at a time), and this ownership can only
+  // be transferred via external synchronization:
+  //
+  //  * either explicitly by an application-level synchronization
+  //  * or implicitly, via both the malloc implementation and (in case there
+  //    are doubts about what exactly the malloc implementation guarantees) also
+  //    the fact that the DialectContext constructor call for the newly created
+  //    LLVMContext takes the m_mutex look when it calls ContextMap::insert()
+  for (CurrentContextCache *cache = m_caches; cache; cache = cache->m_next) {
+    if (cache->m_llvmContext.load(std::memory_order_relaxed) == llvmContext)
+      cache->m_llvmContext.store(nullptr, std::memory_order_relaxed);
+  }
+}
 
 } // anonymous namespace
 
@@ -60,12 +176,13 @@ Dialect::Key::~Key() {
   m_index = std::numeric_limits<unsigned>::max();
 }
 
-DialectContext::DialectContext(llvm::LLVMContext& context, unsigned dialectArraySize)
+DialectContext::DialectContext(LLVMContext& context, unsigned dialectArraySize)
     : m_llvmContext(context), m_dialectArraySize(dialectArraySize) {
+  ContextMap::get().insert(&context, this);
 }
 
 DialectContext::~DialectContext() {
-  assert(s_currentContext.ctx != this);
+  ContextMap::get().remove(&m_llvmContext, this);
 
   Dialect** dialectArray = getTrailingObjects<Dialect*>();
   for (unsigned i = 0; i < m_dialectArraySize; ++i)
@@ -93,26 +210,8 @@ std::unique_ptr<DialectContext> DialectContext::make(LLVMContext& context,
   return result;
 }
 
-DialectContext& DialectContext::get(llvm::LLVMContext& context) {
-  assert(s_currentContext.ctx);
-  assert(&s_currentContext.ctx->m_llvmContext == &context);
-  return *s_currentContext.ctx;
-}
-
-DialectContextGuard::DialectContextGuard(DialectContext& dialectContext) {
-  assert(!s_currentContext.ctx || s_currentContext.ctx == &dialectContext);
-  m_dialectContext = &dialectContext;
-  s_currentContext.ctx = m_dialectContext;
-  s_currentContext.entryCount++;
-}
-
-DialectContextGuard::~DialectContextGuard() {
-  if (m_dialectContext) {
-    assert(m_dialectContext == s_currentContext.ctx);
-    assert(s_currentContext.entryCount > 0);
-    if (!--s_currentContext.entryCount)
-      s_currentContext.ctx = nullptr;
-  }
+DialectContext& DialectContext::get(LLVMContext& context) {
+  return *CurrentContextCache::get(&context);
 }
 
 bool llvm_dialects::detail::isSimpleOperationDecl(const Function *fn,
