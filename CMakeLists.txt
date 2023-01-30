@@ -110,4 +110,6 @@ target_include_directories(llvm-dialects-tblgen PRIVATE
 target_sources(llvm-dialects-tblgen PRIVATE
     utils/llvm-dialects-tblgen.cpp)
 
+add_subdirectory(test)
+
 message(STATUS "End configuring llvm-dialects")
