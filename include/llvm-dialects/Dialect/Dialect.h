@@ -70,13 +70,13 @@ public:
 
 /// Augmentation of LLVMContext with zero or more dialects.
 ///
-/// Users of this library must create a DialectContext together with the LLVMContext and then
-/// guard all code using the pair of context using @ref withDialects.
+/// Users of this library must create exactly one DialectContext together with
+/// the LLVMContext. The DialectContext must be destroyed again before the
+/// LLVMContext.
 ///
 /// @example
 ///   LLVMContext context;
 ///   auto dialectContext = DialectContext::make<Dialect1, Dialect2, ...>(context);
-///   auto guard = withDialects(dialectContext);
 ///
 class DialectContext final : private llvm::TrailingObjects<DialectContext, Dialect*> {
   friend llvm::TrailingObjects<DialectContext, Dialect*>;
@@ -102,8 +102,10 @@ public:
     DialectContext::operator delete(ctx);
   }
 
-  /// Get the DialectContext associated to the given LLVM context. This fails if no dialect context
-  /// was created for the LLVM context.
+  /// Get the DialectContext associated to the given LLVM context.
+  ///
+  /// It is an error to call this function for an LLVMContext for which no
+  /// DialectContext was created.
   static DialectContext& get(llvm::LLVMContext& context);
 
   template <typename... DialectsT>
@@ -128,31 +130,6 @@ public:
     return getTrailingObjects<Dialect*>()[DialectT::getIndex()];
   }
 };
-
-class DialectContextGuard {
-  DialectContext* m_dialectContext;
-
-  DialectContextGuard(const DialectContextGuard&) = delete;
-  DialectContextGuard& operator=(const DialectContextGuard&) = delete;
-public:
-  explicit DialectContextGuard(DialectContext& dialectContext);
-  ~DialectContextGuard();
-
-  DialectContextGuard(DialectContextGuard&& rhs) {
-    *this = std::move(rhs);
-  }
-  DialectContextGuard& operator=(DialectContextGuard&& rhs) {
-    if (this != &rhs) {
-      m_dialectContext = rhs.m_dialectContext;
-      rhs.m_dialectContext = nullptr;
-    }
-    return *this;
-  }
-};
-
-[[nodiscard]] inline DialectContextGuard withDialects(DialectContext& dialectContext) {
-  return DialectContextGuard{dialectContext};
-}
 
 /// CRTP helper for the TableGen-generated dialect classes.
 template <typename DialectT>
