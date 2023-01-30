@@ -208,7 +208,7 @@ void FmtObjectBase::format(raw_ostream &s) const {
         s << repl.spec << kMarkerForNoSubst;
         continue;
       }
-      auto range = ArrayRef(adapters);
+      auto range = ArrayRef<llvm::detail::format_adapter *>(adapters);
       range = range.drop_front(repl.index);
       if (repl.end != FmtReplacement::kUnset)
         range = range.drop_back(adapters.size() - repl.end);
