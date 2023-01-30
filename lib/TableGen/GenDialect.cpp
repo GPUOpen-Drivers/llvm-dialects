@@ -510,12 +510,6 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
         out << tgfmt("assert($0);\n", &fmt, arg.type->apply(&fmt, {cppExpr}));
     }
 
-    for (const auto &expr : op.verifier) {
-      out << tgfmt("assert($0);\n", &fmt,
-                   expr->evaluate(&fmt, argToCppExprMap));
-    }
-    out << '\n';
-
     if (op.getAttributeListIdx() < 0) {
       out << tgfmt("const ::llvm::AttributeList $attrs;\n", &fmt);
     } else {
@@ -550,6 +544,15 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
                                       : op.results[0].type;
       resultTypeName = typeBuilder.build(theResultType);
     }
+
+    if (op.results.size() == 1)
+      argToCppExprMap[op.results[0].name] = resultTypeName;
+
+    for (const auto &expr : op.verifier) {
+      out << tgfmt("assert($0);\n", &fmt,
+                   expr->evaluate(&fmt, argToCppExprMap));
+    }
+    out << '\n';
 
     StringRef fnName;
 
