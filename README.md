@@ -39,3 +39,7 @@ Common options are:
 - Build `llvm-dialects` as part of an `llvm` build. After checking out
   `llvm-dialects` in `llvm/tools` and re-running CMake, the `llvm_dialects`
   target (and other `llvm-dialects` targets) is available.
+
+Testing
+=======
+Run the `check-llvm-dialects` target to run a suite of automated tests.
