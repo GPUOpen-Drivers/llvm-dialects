@@ -151,7 +151,7 @@ struct EffectWriter {
 raw_ostream &operator<<(raw_ostream &out, const EffectWriter &writer) {
   StringRef mri;
   if (writer.effect.read && writer.effect.write)
-    mri = "::llvm::ModRefInfo::ReadWrite";
+    mri = "::llvm::ModRefInfo::ModRef";
   else if (writer.effect.write)
     mri = "::llvm::ModRefInfo::Mod";
   else
@@ -165,7 +165,7 @@ raw_ostream &operator<<(raw_ostream &out, const EffectWriter &writer) {
       if (!first)
         out << " | ";
       first = false;
-      out << tgfmt("::llvm::MemoryEffects(::llvm::Location::$0, $1)",
+      out << tgfmt("::llvm::MemoryEffects(::llvm::MemoryEffects::Location::$0, $1)",
                    &writer.fmt, location, mri);
     }
   }
