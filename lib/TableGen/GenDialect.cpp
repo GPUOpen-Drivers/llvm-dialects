@@ -42,7 +42,9 @@ class SymbolTable {
   std::unordered_set<std::string> m_names;
 
 public:
-  std::string chooseName(StringRef name) { return chooseName(ArrayRef(name)); }
+  std::string chooseName(StringRef name) {
+    return chooseName(ArrayRef<StringRef>(name));
+  }
 
   std::string chooseName(ArrayRef<StringRef> names) {
     for (StringRef name : names) {
