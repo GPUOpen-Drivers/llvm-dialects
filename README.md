@@ -13,7 +13,7 @@ using Issues and Pull Requests.
 
 LLVM Compatibility
 ==================
-The `main` branch is generally expected to work with (a recent version of) the
+The `dev` branch is generally expected to work with (a recent version of) the
 `main` branch of the llvm-project repository. No promises are made about
 compatibility with any specific LLVM version.
 
