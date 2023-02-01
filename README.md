@@ -26,3 +26,16 @@ Components
   dialect
 - utils/llvm-dialects-tblgen: a standalone CLI tool which reads a .td dialect
   definition and outputs C++ header and source files
+
+Building
+========
+
+The are multiple ways to combine `llvm` and `llvm-dialects` into a build process.
+Common options are:
+
+- Build `llvm-dialects` stand-alone against an installed `llvm`.
+- Build both `llvm-dialects` and `llvm` as part of some larger build process,
+  e.g. with both being submodules of the enclosing project.
+- Build `llvm-dialects` as part of an `llvm` build. After checking out
+  `llvm-dialects` in `llvm/tools` and re-running CMake, the `llvm_dialects`
+  target (and other `llvm-dialects` targets) is available.
