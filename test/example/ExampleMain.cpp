@@ -44,7 +44,9 @@ void createFunctionExample(Module &module, const Twine &name) {
   b.SetInsertPoint(bb);
 
   Value *x1 = b.create<xd::ReadOp>(b.getInt32Ty());
-  Value *x2 = b.create<xd::Add32Op>(x1, b.getInt32(42), 7);
+  Value *sizeOf = b.create<xd::SizeOfOp>(b.getDoubleTy());
+  Value *sizeOf32 = b.CreateTrunc(sizeOf, b.getInt32Ty());
+  Value *x2 = b.create<xd::Add32Op>(x1, sizeOf32, 7);
   Value *x3 = b.create<xd::CombineOp>(x2, x1);
   b.create<xd::WriteOp>(x3);
   b.CreateRetVoid();

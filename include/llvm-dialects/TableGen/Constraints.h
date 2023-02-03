@@ -38,6 +38,7 @@ public:
     DialectType,
     Type_Last = DialectType,
 
+    TypeArg,
     Attr,
     BaseCPred_First,
     BaseCPred = BaseCPred_First,
@@ -128,6 +129,27 @@ public:
 private:
   llvm::Record *m_dialectRec = nullptr;
   std::string m_mnemonic;
+};
+
+class TypeArg : public Constraint {
+public:
+  TypeArg() : Constraint(Kind::TypeArg) {}
+
+  void init(GenDialectsContext *context, llvm::Record *record) override;
+
+  std::pair<unsigned, unsigned> getMinMaxArgs() const final { return {1, 1}; }
+
+  std::string apply(FmtContext *fmt,
+                    llvm::ArrayRef<llvm::StringRef> arguments) const final;
+
+  Constraint &getConstraint() const { return *m_constraint; }
+
+  static bool classof(const Constraint *c) {
+    return c->getKind() == Kind::TypeArg;
+  }
+
+private:
+  Constraint *m_constraint = nullptr;
 };
 
 class Attr : public Constraint {

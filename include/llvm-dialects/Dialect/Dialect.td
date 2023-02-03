@@ -138,6 +138,19 @@ def or;
 def not;
 
 // ============================================================================
+/// Type arguments
+///
+/// Describe an argument that is only a static type, without an associated
+/// value. This can be used to model operations like `getelementptr`.
+// ============================================================================
+
+class TypeArg<Constraint constraint_> : Constraint {
+  /// The constraint that must be satisfied by the type argument. Can be
+  /// AnyType.
+  Constraint constraint = constraint_;
+}
+
+// ============================================================================
 /// Attributes
 ///
 /// Operations can have attributes, which one can think of as constant arguments. The default

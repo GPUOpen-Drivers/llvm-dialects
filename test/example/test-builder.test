@@ -5,8 +5,10 @@
 ; CHECK-LABEL: @example(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @xd.read.i32()
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @xd.add32(i32 [[TMP0]], i32 42, i32 7)
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 (...) @xd.combine.i32(i32 [[TMP1]], i32 [[TMP0]])
-; CHECK-NEXT:    call void (...) @xd.write(i32 [[TMP2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 (...) @xd.sizeof(double poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @xd.add32(i32 [[TMP0]], i32 [[TMP2]], i32 7)
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 (...) @xd.combine.i32(i32 [[TMP3]], i32 [[TMP0]])
+; CHECK-NEXT:    call void (...) @xd.write(i32 [[TMP4]])
 ; CHECK-NEXT:    ret void
 ;

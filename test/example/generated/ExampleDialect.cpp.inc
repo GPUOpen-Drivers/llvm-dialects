@@ -219,6 +219,55 @@ rhs,
 
 
 
+      const ::llvm::StringLiteral SizeOfOp::s_name{"xd.sizeof"};
+
+    SizeOfOp* SizeOfOp::create(llvm_dialects::Builder& b, ::llvm::Type * sizeofType) {
+    ::llvm::LLVMContext& context = b.getContext();
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(1);
+    llvm::Type* I64 = ::llvm::Type::getInt64Ty(context);
+auto fnType = ::llvm::FunctionType::get(I64, true);
+
+    auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
+
+  ::llvm::Value* const args[] = {
+::llvm::PoisonValue::get(sizeofType),
+
+      };
+
+      return ::llvm::cast<SizeOfOp>(b.CreateCall(fn, args));
+    }
+
+
+    bool SizeOfOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      if (arg_size() != 1) {
+        errs << "  wrong number of arguments: " << arg_size()
+              << ", expected 1\n";
+        return false;
+      }
+  
+        if (!(getResult()->getType() == ::llvm::Type::getInt64Ty(context))) {
+          errs << "  op arg verifier failed: getResult()->getType() == ::llvm::Type::getInt64Ty(context)\n";
+          return false;
+        }
+        return true;
+}
+
+
+        ::llvm::Type * SizeOfOp::getSizeofType() {
+          return getArgOperand(0)->getType();
+        }
+      
+::llvm::Value* SizeOfOp::getResult() {return this;}
+
+
+
       const ::llvm::StringLiteral WriteOp::s_name{"xd.write"};
 
     WriteOp* WriteOp::create(llvm_dialects::Builder& b, ::llvm::Value * data) {
@@ -283,6 +332,14 @@ data,
       const ::llvm_dialects::OpDescription &
       ::llvm_dialects::OpDescription::get<xd::ReadOp>() {
         static const ::llvm_dialects::OpDescription desc{true, "xd.read"};
+        return desc;
+      }
+
+    
+      template <>
+      const ::llvm_dialects::OpDescription &
+      ::llvm_dialects::OpDescription::get<xd::SizeOfOp>() {
+        static const ::llvm_dialects::OpDescription desc{false, "xd.sizeof"};
         return desc;
       }
 

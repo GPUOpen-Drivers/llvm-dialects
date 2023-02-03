@@ -261,7 +261,7 @@ static void emitVerifierMethod(raw_ostream &out, FmtContext &fmt,
   for (const auto &arg : argsAndResults) {
     std::string cppExpr =
         tgfmt("get$0()", &fmt, convertToCamelFromSnakeCase(arg.name, true));
-    if (!isa<Attr>(arg.type))
+    if (!isa<Attr>(arg.type) && !isa<TypeArg>(arg.type))
       cppExpr += "->getType()";
 
     argToCppExprMap[arg.name] = cppExpr;
@@ -464,6 +464,9 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
                                         numSuperclassArgs + indexedArg.index());
       if (auto* attr = dyn_cast<Attr>(arg.type))
         value = tgfmt(attr->getFromLlvmValue(), &fmt, value);
+      else if (isa<TypeArg>(arg.type))
+        value += "->getType()";
+
       out << tgfmt(R"(
         $0 $_op::get$1() {
           return $2;
