@@ -33,6 +33,8 @@ StringRef Constraint::getName() const { return m_record->getName(); }
 StringRef Constraint::getCppType() const {
   if (auto* attr = dyn_cast<Attr>(this))
     return attr->getCppType();
+  if (isa<TypeArg>(this))
+    return "::llvm::Type *";
   return "::llvm::Value *";
 }
 
@@ -63,6 +65,27 @@ void DialectType::init(GenDialectsContext *context, llvm::Record *record) {
 
 std::string DialectType::getLlvmType(FmtContext *fmt) const {
   return tgfmt("$0::get($_builder)", fmt, getName());
+}
+
+void TypeArg::init(GenDialectsContext *context, llvm::Record *record) {
+  Constraint::init(context, record);
+
+  llvm::Record *constraint = record->getValueAsDef("constraint");
+  m_constraint = context->getConstraint(constraint);
+
+  if (isa<Type>(m_constraint)) {
+    report_fatal_error(Twine("TypeArg '") + record->getName() +
+                         "' with Type constraint makes no sense");
+  }
+  if (isa<Attr>(m_constraint)) {
+    report_fatal_error(Twine("TypeArg '") + record->getName() +
+                         "' cannot have Attr constraint");
+  }
+}
+
+std::string TypeArg::apply(FmtContext *fmt,
+                           ArrayRef<StringRef> arguments) const {
+  return m_constraint->apply(fmt, arguments);
 }
 
 void Attr::init(GenDialectsContext *context, llvm::Record *record) {

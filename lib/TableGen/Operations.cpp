@@ -340,6 +340,8 @@ void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
               : llvm::zip_first(fullArguments, opArgBuilderArgs, argTypes)) {
       if (auto* attr = dyn_cast<Attr>(opArg.type)) {
         out << tgfmt(attr->getToLlvmValue(), &fmt, builderArg.name, argType);
+      } else if (isa<TypeArg>(opArg.type)) {
+        out << tgfmt("::llvm::PoisonValue::get($0)", &fmt, builderArg.name);
       } else {
         out << builderArg.name;
       }

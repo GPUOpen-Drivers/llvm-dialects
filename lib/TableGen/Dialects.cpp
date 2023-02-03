@@ -84,6 +84,8 @@ Constraint *GenDialectsContext::getConstraint(Record *constraintRec) {
       result = std::make_unique<BuiltinType>();
     } else if (constraintRec->isSubClassOf("DialectType")) {
       result = std::make_unique<DialectType>();
+    } else if (constraintRec->isSubClassOf("TypeArg")) {
+      result = std::make_unique<TypeArg>();
     } else if (constraintRec->isSubClassOf("Attr")) {
       result = std::make_unique<Attr>();
     } else if (constraintRec->isSubClassOf("BaseCPred")) {

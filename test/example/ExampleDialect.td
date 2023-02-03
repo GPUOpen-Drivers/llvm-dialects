@@ -79,3 +79,13 @@ def Add32Op : ExampleOp<"add32", [Memory<[]>, NoUnwind, WillReturn]> {
         numbers and puts a constant on top.
     }];
 }
+
+def SizeOfOp : ExampleOp<"sizeof", [Memory<[]>, NoUnwind, WillReturn]> {
+    let results = (outs I64:$result);
+    let arguments = (ins TypeArg<AnyType>:$sizeof_type);
+
+    let summary = "size of a given type";
+    let description = [{
+        Returns the store size of the given type in bytes.
+    }];
+}

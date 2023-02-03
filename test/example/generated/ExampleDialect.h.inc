@@ -111,6 +111,28 @@ bool verifier(::llvm::raw_ostream &errs);
 
       };
     
+      class SizeOfOp : public ::llvm::CallInst {
+        static const ::llvm::StringLiteral s_name; //{"xd.sizeof"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isSimpleOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static SizeOfOp* create(::llvm_dialects::Builder& b, ::llvm::Type * sizeofType);
+
+bool verifier(::llvm::raw_ostream &errs);
+
+::llvm::Type * getSizeofType();
+
+::llvm::Value * getResult();
+
+
+      };
+    
       class WriteOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.write"};
 
