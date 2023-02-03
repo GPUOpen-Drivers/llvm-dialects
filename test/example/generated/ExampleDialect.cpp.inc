@@ -161,13 +161,8 @@ rhs,
         return false;
       }
   
-        if (!((::llvm_dialects::areTypesEqual({getLhs()->getType(), getRhs()->getType()})))) {
-          errs << "  op verifier failed: (::llvm_dialects::areTypesEqual({getLhs()->getType(), getRhs()->getType()}))\n";
-          return false;
-        }
-      
-        if (!((::llvm_dialects::areTypesEqual({getResult()->getType(), getLhs()->getType()})))) {
-          errs << "  op verifier failed: (::llvm_dialects::areTypesEqual({getResult()->getType(), getLhs()->getType()}))\n";
+        if (!((::llvm_dialects::areTypesEqual({getResult()->getType(), getLhs()->getType(), getRhs()->getType()})))) {
+          errs << "  op verifier failed: (::llvm_dialects::areTypesEqual({getResult()->getType(), getLhs()->getType(), getRhs()->getType()}))\n";
           return false;
         }
         return true;
