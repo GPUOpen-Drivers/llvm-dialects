@@ -78,7 +78,7 @@ uint32_t getExtra();
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static CombineOp* create(::llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * lhs, ::llvm::Value * rhs);
+    static CombineOp* create(::llvm_dialects::Builder& b, ::llvm::Value * lhs, ::llvm::Value * rhs);
 
 bool verifier(::llvm::raw_ostream &errs);
 

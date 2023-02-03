@@ -18,6 +18,8 @@
 
 #include "llvm-dialects/TableGen/Constraints.h"
 #include "llvm-dialects/TableGen/Dialects.h"
+#include "llvm-dialects/TableGen/Format.h"
+#include "llvm-dialects/TableGen/LlvmTypeBuilder.h"
 
 #include "llvm/TableGen/Record.h"
 
@@ -100,6 +102,10 @@ void Operation::parse(GenDialectsContext *context, GenDialect *dialect,
     op->traits.push_back(context->getTrait(traitRec));
 
   op->arguments = parseArguments(context, record);
+  for (const auto &arg : op->arguments) {
+    if (!isa<Type>(arg.type) && !isa<Attr>(arg.type))
+      op->m_haveArgumentOverloads = true;
+  }
 
   DagInit *results = record->getValueAsDag("results");
   assert(results->getOperatorAsDef({})->getName() == "outs");
@@ -114,8 +120,14 @@ void Operation::parse(GenDialectsContext *context, GenDialect *dialect,
       report_fatal_error(Twine("Operation '") + op->mnemonic + "' result " +
                           Twine(i) + ": bad type constraint");
     }
-    if (!isa<Attr>(opResult.type) && !isa<Type>(opResult.type))
-      op->builderHasExplicitResultTypes = true;
+    if (isa<Attr>(opResult.type)) {
+      report_fatal_error(Twine("Operation '") + op->mnemonic +
+                           "': result cannot be an attribute");
+    }
+
+    if (!isa<Type>(opResult.type))
+      op->m_haveResultOverloads = true;
+
     op->results.push_back(std::move(opResult));
   }
 
@@ -130,51 +142,77 @@ void Operation::parse(GenDialectsContext *context, GenDialect *dialect,
     op->verifier.push_back(context->parsePredicateExpr(rule));
   }
 
-  // Derive the overload keys: Scan through results and arguments. Whenever
-  // we encounter one whose type isn't fully specified, add it to the overload
-  // keys unless an equal type has already been added.
-  auto needsOverloadKey = [&](const OpNamedValue &namedValue) -> bool {
-    if (isa<Type>(namedValue.type) || isa<Attr>(namedValue.type))
-      return false;
+  // Derive the default builder method.
+  BuilderMethod builder{*op};
+  const auto fullArguments = op->getFullArguments();
+  SmallVector<std::string> opArgumentBuilderNames;
 
-    for (const auto &expr : op->verifier) {
-      if (const auto *apply = dyn_cast<PredicateApply>(expr.get())) {
-        if (apply->getPredicate()->getKind() == Constraint::Kind::SameTypes) {
-          auto arguments = apply->arguments();
-          if (llvm::is_contained(arguments, namedValue.name)) {
-            for (const auto &overloadKey : op->overload_keys()) {
-              StringRef name = overloadKey.kind == OverloadKey::Result
-                                    ? op->results[overloadKey.index].name
-                                    : op->arguments[overloadKey.index].name;
-              if (llvm::is_contained(arguments, name))
-                return false;
+  for (const auto &opArg : fullArguments) {
+    opArgumentBuilderNames.push_back(builder.m_symbolTable.chooseName(
+        convertToCamelFromSnakeCase(opArg.name)));
+  }
+
+  if (!op->results.empty()) {
+    assert(op->results.size() == 1);
+
+    if (!isa<Type>(op->results[0].type)) {
+      // Check if the builder can derive the result type from a SameTypes
+      // constraint.
+      for (const auto &expr : op->verifier) {
+        if (const auto *apply = dyn_cast<PredicateApply>(expr.get())) {
+          if (apply->getPredicate()->getKind() == Constraint::Kind::SameTypes) {
+            bool haveResult = false;
+            bool haveArgument = false;
+            size_t argumentIdx = 0;
+            for (const auto &applyArg : apply->arguments()) {
+              if (applyArg == op->results[0].name) {
+                haveResult = true;
+              } else if (!haveArgument) {
+                auto it =
+                    llvm::find_if(op->arguments,
+                        [&](const OpNamedValue &opArg) {
+                          return applyArg == opArg.name;
+                        });
+                if (it != op->arguments.end()) {
+                  haveArgument = true;
+                  argumentIdx = std::distance(op->arguments.begin(), it);
+                }
+              }
+            }
+
+            if (haveResult && haveArgument) {
+              builder.m_resultTypeFromBuilderArg =
+                  opArgumentBuilderNames[argumentIdx] + "->getType()";
+              break;
             }
           }
         }
       }
-    }
 
-    return true;
-  };
+      if (builder.m_resultTypeFromBuilderArg.empty()) {
+        builder.m_resultTypeFromBuilderArg = builder.m_symbolTable.chooseName(
+            convertToCamelFromSnakeCase(op->results[0].name) + "Type");
 
-  for (const auto &result : llvm::enumerate(op->results)) {
-    if (needsOverloadKey(result.value())) {
-      OverloadKey key;
-      key.kind = OverloadKey::Result;
-      key.index = result.index();
-      op->m_overloadKeys.push_back(key);
-      op->m_haveResultOverloadKey = true;
+        BuilderMethod::Arg builderArg;
+        builderArg.name = builder.m_resultTypeFromBuilderArg;
+        builderArg.cppType = "::llvm::Type*";
+        builder.m_arguments.push_back(std::move(builderArg));
+      }
     }
   }
-  for (const auto &arg : llvm::enumerate(op->getFullArguments())) {
-    if (needsOverloadKey(arg.value())) {
-      OverloadKey key;
-      key.kind = OverloadKey::Argument;
-      key.index = arg.index();
-      op->m_overloadKeys.push_back(key);
-      op->m_haveArgumentOverloadKey = true;
-    }
+
+  builder.m_beginOpArguments = builder.m_arguments.size();
+  for (const auto &[opArg, builderName]
+      : llvm::zip(fullArguments, opArgumentBuilderNames)) {
+    BuilderMethod::Arg builderArg;
+    builderArg.name = builderName;
+    builderArg.cppType = opArg.type->getCppType();
+    builder.m_arguments.push_back(std::move(builderArg));
   }
+
+  builder.m_builder = builder.m_symbolTable.chooseName({"b", "builder"});
+
+  op->m_builders.push_back(std::move(builder));
 
   dialect->operations.push_back(std::move(op));
 }
@@ -191,4 +229,132 @@ unsigned Operation::getNumFullArguments() const {
   if (superclass)
     return superclass->getNumFullArguments() + arguments.size();
   return arguments.size();
+}
+
+void BuilderMethod::emitDeclaration(raw_ostream &out, FmtContext &fmt) const {
+  FmtContextScope scope{fmt};
+  fmt.withBuilder(m_builder);
+
+  out << tgfmt("static $_op* create(::llvm_dialects::Builder& $_builder", &fmt);
+  for (const auto& builderArg : m_arguments)
+    out << tgfmt(", $0 $1", &fmt, builderArg.cppType, builderArg.name);
+  out << ");\n";
+}
+
+void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
+                                   GenDialectsContext &genContext) const {
+  const auto fullArguments = m_operation.getFullArguments();
+  const auto opArgBuilderArgs =
+      ArrayRef(m_arguments).drop_front(m_beginOpArguments);
+
+  SymbolTable symbols{&m_symbolTable};
+  FmtContextScope scope{fmt};
+  fmt.withBuilder(m_builder);
+  fmt.withContext(symbols.chooseName("context"));
+  fmt.addSubst("_module", symbols.chooseName("module"));
+
+  LlvmTypeBuilder typeBuilder{out, symbols, fmt};
+
+  out << tgfmt("$_op* $_op::create(llvm_dialects::Builder& $_builder", &fmt);
+  for (const auto& builderArg : m_arguments)
+    out << tgfmt(", $0 $1", &fmt, builderArg.cppType, builderArg.name);
+
+  out << tgfmt(R"() {
+    ::llvm::LLVMContext& $_context = $_builder.getContext();
+    ::llvm::Module& $_module = *$_builder.GetInsertBlock()->getModule();
+  
+  )", &fmt);
+
+  fmt.addSubst("attrs", symbols.chooseName({"attrs", "attributes"}));
+  if (m_operation.getAttributeListIdx() < 0) {
+    out << tgfmt("const ::llvm::AttributeList $attrs;\n", &fmt);
+  } else {
+    out << tgfmt(R"(
+      const ::llvm::AttributeList $attrs
+          = $Dialect::get($_context).getAttributeList($0);
+    )",
+                  &fmt, m_operation.getAttributeListIdx());
+  }
+
+  if (!m_resultTypeFromBuilderArg.empty()) {
+    assert(m_operation.results.size() == 1);
+    fmt.addSubst("resultType", m_resultTypeFromBuilderArg);
+  } else {
+    assert(m_operation.results.size() <= 1);
+    Constraint *theResultType = m_operation.results.empty()
+                                    ? genContext.getVoidTy()
+                                    : m_operation.results[0].type;
+    fmt.addSubst("resultType", typeBuilder.build(theResultType));
+  }
+
+  if (m_operation.haveResultOverloads()) {
+    fmt.addSubst("fnName", symbols.chooseName("mangledName"));
+
+    out << tgfmt(R"(
+      std::string $fnName =
+          ::llvm_dialects::getMangledName(s_name, {$resultType});
+    )", &fmt);
+  } else {
+    fmt.addSubst("fnName", "s_name");
+  }
+
+  fmt.addSubst("fnType", symbols.chooseName({"fnType", "functionType"}));
+  if (m_operation.haveArgumentOverloads()) {
+    out << tgfmt(
+        "auto $fnType = ::llvm::FunctionType::get($resultType, true);\n", &fmt);
+  } else {
+    SmallVector<std::string> argTypes;
+    for (const auto& [opArg, builderArg]
+        : llvm::zip(fullArguments, opArgBuilderArgs)) {
+      if (isa<Attr>(opArg.type))
+        argTypes.push_back(typeBuilder.build(opArg.type));
+      else
+        argTypes.push_back(builderArg.name + "->getType()");
+    }
+    out << tgfmt("auto $fnType = ::llvm::FunctionType::get($resultType, {\n",
+                 &fmt);
+    for (const auto &argType : argTypes)
+      out << argType << ",\n";
+    out << "}, false);\n";
+  }
+
+  fmt.addSubst("fn", symbols.chooseName({"fn", "function"}));
+  out << tgfmt(R"(
+    auto $fn = $_module.getOrInsertFunction($fnName, $fnType, $attrs);
+
+  )", &fmt);
+
+  if (!fullArguments.empty()) {
+    SmallVector<std::string> argTypes;
+    for (const auto& [opArg, builderArg]
+        : llvm::zip(fullArguments, opArgBuilderArgs)) {
+      if (isa<Attr>(opArg.type))
+        argTypes.push_back(typeBuilder.build(opArg.type));
+      else
+        argTypes.push_back("<skip>");
+    }
+
+    fmt.addSubst("args", symbols.chooseName({"args", "arguments"}));
+    out << tgfmt("::llvm::Value* const $args[] = {\n", &fmt);
+    for (const auto& [opArg, builderArg, argType]
+              : llvm::zip_first(fullArguments, opArgBuilderArgs, argTypes)) {
+      if (auto* attr = dyn_cast<Attr>(opArg.type)) {
+        out << tgfmt(attr->getToLlvmValue(), &fmt, builderArg.name, argType);
+      } else {
+        out << builderArg.name;
+      }
+      out << ",\n";
+    }
+
+    out << tgfmt(R"(
+      };
+
+      return ::llvm::cast<$_op>($_builder.CreateCall($fn, $args));
+    )", &fmt);
+  } else {
+    out << tgfmt("return ::llvm::cast<$_op>($_builder.CreateCall($fn));\n",
+                 &fmt);
+  }
+
+  out << "}\n\n";
 }

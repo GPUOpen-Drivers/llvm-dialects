@@ -17,19 +17,23 @@
 #pragma once
 
 #include "llvm-dialects/TableGen/Predicates.h"
+#include "llvm-dialects/TableGen/SymbolTable.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
+class raw_ostream;
 class Record;
 } // namespace llvm
 
 namespace llvm_dialects {
 
+class BuilderMethod;
+class Constraint;
+class FmtContext;
 class GenDialectsContext;
 class GenDialect;
-class Constraint;
 class Operation;
 class Trait;
 
@@ -79,15 +83,14 @@ public:
   std::vector<OpNamedValue> arguments;
   std::vector<OpNamedValue> results;
   std::vector<std::unique_ptr<PredicateExpr>> verifier;
-  bool builderHasExplicitResultTypes = false;
 
   static void parse(GenDialectsContext *context, GenDialect *dialect,
                     llvm::Record *record);
 
-  llvm::ArrayRef<OverloadKey> overload_keys() const { return m_overloadKeys; }
-  bool overload_keys_empty() const { return m_overloadKeys.empty(); }
-  bool haveResultOverloadKey() const { return m_haveResultOverloadKey; }
-  bool haveArgumentOverloadKey() const { return m_haveArgumentOverloadKey; }
+  bool haveResultOverloads() const { return m_haveResultOverloads; }
+  bool haveArgumentOverloads() const { return m_haveArgumentOverloads; }
+
+  llvm::ArrayRef<BuilderMethod> builders() const { return m_builders; }
 
   llvm::SmallVector<OpNamedValue> getFullArguments() const;
   unsigned getNumFullArguments() const;
@@ -98,13 +101,42 @@ private:
   friend class GenDialect;
   friend class GenDialectsContext;
 
-  std::vector<OverloadKey> m_overloadKeys;
-  bool m_haveResultOverloadKey = false;
-  bool m_haveArgumentOverloadKey = false;
+  bool m_haveResultOverloads = false;
+  bool m_haveArgumentOverloads = false;
+
+  std::vector<BuilderMethod> m_builders;
 
   /// -1 if the operation has no attribute list / has an empty attribute list.
   /// Otherwise, an index into the dialect's attribute list array.
   int m_attributeListIdx = -1;
+};
+
+class BuilderMethod {
+  friend class Operation;
+
+public:
+  struct Arg {
+    std::string cppType;
+    std::string name;
+  };
+
+private:
+  Operation &m_operation;
+  SymbolTable m_symbolTable;
+  std::string m_builder;
+  std::vector<Arg> m_arguments;
+  unsigned m_beginOpArguments = 0;
+
+  /// If non-empty, a C++ expression that allows us to derive the result type
+  /// from one of the builder arguments.
+  std::string m_resultTypeFromBuilderArg;
+
+public:
+  BuilderMethod(Operation &op) : m_operation(op) {}
+
+  void emitDeclaration(llvm::raw_ostream &out, FmtContext &fmt) const;
+  void emitDefinition(llvm::raw_ostream &out, FmtContext &fmt,
+                      GenDialectsContext &genContext) const;
 };
 
 } // namespace llvm_dialects

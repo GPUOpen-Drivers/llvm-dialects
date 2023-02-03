@@ -26,7 +26,6 @@ using namespace llvm_dialects;
 
 void Constraint::init(GenDialectsContext *context, Record *record) {
   m_record = record;
-  m_builderArgumentFilter = record->getValueAsString("builderArgumentFilter");
 }
 
 StringRef Constraint::getName() const { return m_record->getName(); }
