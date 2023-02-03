@@ -99,6 +99,7 @@ target_sources(llvm_dialects_tablegen PRIVATE
     lib/TableGen/Dialects.cpp
     lib/TableGen/Format.cpp
     lib/TableGen/GenDialect.cpp
+    lib/TableGen/LlvmTypeBuilder.cpp
     lib/TableGen/Predicates.cpp
     lib/TableGen/Operations.cpp
     lib/TableGen/SymbolTable.cpp

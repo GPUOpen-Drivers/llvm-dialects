@@ -63,9 +63,8 @@ assert(rhs->getType() == ::llvm::Type::getInt32Ty(context));
         const ::llvm::AttributeList attrs
             = ExampleDialect::get(context).getAttributeList(1);
       llvm::Type* I32 = ::llvm::Type::getInt32Ty(context);
-llvm::Type* I32_0 = ::llvm::Type::getInt32Ty(context);
 
-auto fnType = ::llvm::FunctionType::get(I32_0, {
+auto fnType = ::llvm::FunctionType::get(I32, {
 lhs->getType(),
 rhs->getType(),
 I32,

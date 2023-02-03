@@ -19,6 +19,7 @@
 #include "llvm-dialects/TableGen/Constraints.h"
 #include "llvm-dialects/TableGen/Dialects.h"
 #include "llvm-dialects/TableGen/Format.h"
+#include "llvm-dialects/TableGen/LlvmTypeBuilder.h"
 #include "llvm-dialects/TableGen/Operations.h"
 #include "llvm-dialects/TableGen/Predicates.h"
 #include "llvm-dialects/TableGen/SymbolTable.h"
@@ -37,34 +38,6 @@ using namespace llvm;
 namespace {
 
 cl::opt<std::string> g_dialect("dialect", cl::desc("the dialect to generate"), cl::init(""));
-
-/// Helper class for emitting code that gets or builds llvm::Type*'s from constraints.
-class LlvmTypeBuilder {
-  SymbolTable& m_symbols;
-  raw_ostream& m_out;
-  DenseMap<Constraint*, std::string> m_constraintTypeVarName;
-  FmtContext& m_fmt;
-
-public:
-  LlvmTypeBuilder(raw_ostream& out, SymbolTable& symbols, FmtContext& fmt)
-      : m_symbols(symbols), m_out(out), m_fmt(fmt) {
-  }
-
-  std::string build(Constraint* constraint) {
-    std::string& varName = m_constraintTypeVarName[constraint];
-    if (varName.empty()) {
-      if (auto* attr = dyn_cast<Attr>(constraint))
-        constraint = attr->getLlvmType();
-
-      auto* type = cast<Type>(constraint);
-      varName = m_symbols.chooseName(type->getName());
-
-      m_out << "llvm::Type* " << varName << " = " << type->getLlvmType(&m_fmt)
-            << ";\n";
-    }
-    return varName;
-  }
-};
 
 } // anonymous namespace
 
