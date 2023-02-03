@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Advanced Micro Devices, Inc. All Rights Reserved.
+ * Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,82 +16,118 @@
 
 #pragma once
 
+#include "llvm-dialects/TableGen/Constraints.h"
+#include "llvm-dialects/TableGen/NamedValue.h"
+
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 
 namespace llvm_dialects {
 
-class Constraint;
 class FmtContext;
+class GenDialectsContext;
 
-class PredicateExpr {
+class Predicate {
 public:
   enum class Kind {
-    Logic_First,
-    And = Logic_First,
-    Or,
-    Not,
-    Logic_Last = Not,
-    Apply,
+    TgPredicate,
+    CppPredicate_First,
+    CppPredicate = CppPredicate_First,
+    Constant,
+    DialectType,
+    CppPredicate_Last = DialectType,
   };
 
-  virtual ~PredicateExpr() = default;
+  static std::unique_ptr<Predicate> parse(llvm::raw_ostream &errs,
+                                          GenDialectsContext &context,
+                                          llvm::Init *theInit);
+
+  virtual bool init(llvm::raw_ostream &errs, GenDialectsContext &genContext,
+                    llvm::Init *theInit);
 
   Kind getKind() const { return m_kind; }
-
-  /// Return a string containing a C++ expression that evaluates this
-  /// predicate expression.
-  ///
-  /// @p names maps TableGen argument names (such as `$lhs`) to C++ names.
-  virtual std::string
-  evaluate(FmtContext *fmt,
-           const llvm::DenseMap<llvm::StringRef, std::string> &names) const = 0;
+  llvm::Init *getInit() const { return m_init; }
+  llvm::ArrayRef<NamedValue> arguments() const { return m_arguments; }
+  bool canDerive(unsigned argumentIndex) const {
+    return m_canDerive[argumentIndex];
+  }
+  bool canCheckFromSelf() const { return m_canCheckFromSelf; }
 
 protected:
-  PredicateExpr(Kind kind) : m_kind(kind) {}
+  Predicate(Kind kind) : m_kind(kind) {}
 
   const Kind m_kind;
+  llvm::Init *m_init = nullptr;
+  std::vector<NamedValue> m_arguments;
+
+  /// Whether the constraint can be fully checked given only the "self"
+  /// argument.
+  bool m_canCheckFromSelf = false;
+
+  /// Whether the given argument can be derived. For the self argument
+  /// (argument 0), this means deriving given all other arguments. For non-self
+  /// arguments, this means deriving given the self argument.
+  std::vector<bool> m_canDerive;
 };
 
-class PredicateLogic : public PredicateExpr {
+class TgPredicate : public Predicate {
 public:
-  PredicateLogic(
-      Kind kind,
-      llvm::MutableArrayRef<std::unique_ptr<PredicateExpr>> arguments);
+  TgPredicate(GenDialectsContext &context)
+      : Predicate(Kind::TgPredicate), m_system(context, m_scope) {}
 
-  static bool classof(const PredicateExpr *e) {
-    return e->getKind() >= Kind::Logic_First &&
-           e->getKind() <= Kind::Logic_Last;
+  static bool classof(const Predicate *o) {
+    return o->getKind() == Kind::TgPredicate;
   }
 
-  std::string evaluate(
-      FmtContext *fmt,
-      const llvm::DenseMap<llvm::StringRef, std::string> &names) const final;
+  bool init(llvm::raw_ostream &errs, GenDialectsContext &genContext,
+            llvm::Init *theInit) override final;
+
+  const ConstraintSystem &getSystem() const { return m_system; }
+  llvm::ArrayRef<Variable *> variables() const { return m_variables; }
 
 private:
-  std::vector<std::unique_ptr<PredicateExpr>> m_arguments;
+  Scope m_scope;
+  ConstraintSystem m_system;
+  std::vector<Variable *> m_variables;
 };
 
-class PredicateApply : public PredicateExpr {
+class BaseCppPredicate : public Predicate {
 public:
-  PredicateApply(Constraint *constraint, llvm::ArrayRef<std::string> arguments);
-
-  static bool classof(const PredicateExpr *e) {
-    return e->getKind() == Kind::Apply;
+  static bool classof(const Predicate *o) {
+    return o->getKind() >= Kind::CppPredicate_First &&
+           o->getKind() <= Kind::CppPredicate_Last;
   }
 
-  Constraint *getPredicate() const { return m_constraint; }
-  llvm::ArrayRef<std::string> arguments() const { return m_arguments; }
+  llvm::StringRef getEvaluate() const { return m_evaluate; }
+  llvm::StringRef getCheck() const { return m_check; }
+  llvm::StringRef getCapture(unsigned i) const {
+    if (m_capture.empty() || i == 0)
+      return {};
+    assert(i <= m_capture.size());
+    return m_capture[i - 1];
+  }
 
-  std::string evaluate(
-      FmtContext *fmt,
-      const llvm::DenseMap<llvm::StringRef, std::string> &names) const final;
+protected:
+  BaseCppPredicate(Kind kind) : Predicate(kind) { assert(classof(this)); }
 
-  std::string getAsTableGenString() const;
+  std::string m_evaluate;
+  std::string m_check;
+  std::vector<std::string> m_capture;
+};
 
-private:
-  Constraint *m_constraint;
-  std::vector<std::string> m_arguments;
+class CppPredicate : public BaseCppPredicate {
+public:
+  CppPredicate() : BaseCppPredicate(Kind::CppPredicate) {}
+
+  bool init(llvm::raw_ostream &errs, GenDialectsContext &genContext,
+            llvm::Init *theInit) override final;
+};
+
+class Constant : public BaseCppPredicate {
+public:
+  Constant() : BaseCppPredicate(Kind::Constant) {}
+
+  bool init(llvm::raw_ostream &errs, GenDialectsContext &genContext,
+            llvm::Init *theInit) override final;
 };
 
 } // namespace llvm_dialects

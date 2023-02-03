@@ -18,9 +18,10 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/IR/Type.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
-class raw_ostream;
 class Instruction;
 class Type;
 } // namespace llvm
@@ -38,5 +39,37 @@ bool runInstructionVerifier(
     llvm::function_ref<bool (llvm::raw_ostream &)> verifier,
     llvm::Instruction *instruction,
     llvm::raw_ostream *errs = nullptr);
+bool runTypeVerifier(llvm::function_ref<bool(llvm::raw_ostream &)> verifier,
+                     llvm::Type *type, llvm::raw_ostream *errs = nullptr);
+
+template <typename T> struct Printable {
+  T x;
+
+  explicit Printable(const T &x) : x(x) {}
+};
+
+template <typename T>
+llvm::raw_ostream &operator<<(llvm::raw_ostream &out,
+                              const Printable<T> &p) {
+  out << p.x;
+  return out;
+}
+
+template <typename T>
+llvm::raw_ostream &operator<<(llvm::raw_ostream &out,
+                              const Printable<T *> &p) {
+  out << *p.x;
+  return out;
+}
+
+/// Wrap a value to be printed to an llvm::raw_ostream.
+///
+/// This is intended to be used to print constraint system values. All it
+/// really does is use C++ overload set trickery to solve the problem of
+/// printing type values (which are of C++ type `llvm::Type *`) in a useful way
+/// instead of printing out the pointer value.
+template <typename T> Printable<T> printable(const T &x) {
+  return Printable<T>(x);
+}
 
 } // namespace llvm_dialects

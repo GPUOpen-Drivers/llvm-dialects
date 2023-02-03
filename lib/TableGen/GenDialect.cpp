@@ -17,11 +17,10 @@
 #include "llvm-dialects/TableGen/GenDialect.h"
 #include "llvm-dialects/TableGen/Common.h"
 #include "llvm-dialects/TableGen/Constraints.h"
+#include "llvm-dialects/TableGen/DialectType.h"
 #include "llvm-dialects/TableGen/Dialects.h"
 #include "llvm-dialects/TableGen/Format.h"
-#include "llvm-dialects/TableGen/LlvmTypeBuilder.h"
 #include "llvm-dialects/TableGen/Operations.h"
-#include "llvm-dialects/TableGen/Predicates.h"
 #include "llvm-dialects/TableGen/SymbolTable.h"
 #include "llvm-dialects/TableGen/Traits.h"
 
@@ -41,20 +40,20 @@ cl::opt<std::string> g_dialect("dialect", cl::desc("the dialect to generate"), c
 
 } // anonymous namespace
 
-static std::pair<GenDialectsContext, GenDialect *>
+static std::pair<std::unique_ptr<GenDialectsContext>, GenDialect *>
 getSelectedDialect(RecordKeeper &records) {
   if (g_dialect.empty())
     report_fatal_error(Twine("Must select a dialect using the --dialect option"));
 
-  GenDialectsContext context;
+  auto context = std::make_unique<GenDialectsContext>();
   DenseSet<StringRef> dialects;
   dialects.insert(g_dialect);
 
-  context.init(records, dialects);
+  context->init(records, dialects);
 
   for (Record* dialectRec : records.getAllDerivedDefinitions("Dialect")) {
     if (dialectRec->getValueAsString("name") == g_dialect) {
-      GenDialect *selectedDialect = context.getDialect(dialectRec);
+      GenDialect *selectedDialect = context->getDialect(dialectRec);
       return {std::move(context), selectedDialect};
     }
   }
@@ -70,8 +69,9 @@ void llvm_dialects::genDialectDecls(raw_ostream& out, RecordKeeper& records) {
   out << R"(
 #ifdef GET_INCLUDES
 #undef GET_INCLUDES
-#include "llvm/IR/Instructions.h"
 #include "llvm-dialects/Dialect/Dialect.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Instructions.h"
 
 namespace llvm {
 class raw_ostream;
@@ -128,30 +128,8 @@ class Builder;
   out << "};\n";
 
   // Type class declaration
-  for (DialectType* type : dialect->types) {
-    FmtContextScope scope{fmt};
-    fmt.addSubst("Type", type->getName());
-    fmt.addSubst("type", type->getMnemonic());
-
-    out << tgfmt(R"(
-      class $Type : public ::llvm::StructType {
-        static constexpr ::llvm::StringLiteral s_name{"$dialect.$type"};
-
-      public:
-        static $Type* get(::llvm::LLVMContext& context);
-        static $Type* get($Dialect& dialect);
-        static $Type* get(::llvm_dialects::Builder& builder);
-
-        static bool classof(::llvm::StructType *t) {
-          return t->hasName() && t->getName() == s_name;
-        }
-        static bool classof(::llvm::Type* t) {
-          return llvm::isa<::llvm::StructType>(t) &&
-                 classof(llvm::cast<::llvm::StructType>(t));
-        }
-      };
-    )", &fmt);
-  }
+  for (DialectType *type : dialect->types)
+    type->emitDeclaration(out, dialect);
 
   // Operation class class declarations
   for (OpClass* opClass : dialect->opClasses) {
@@ -210,14 +188,14 @@ class Builder;
     out << "bool verifier(::llvm::raw_ostream &errs);\n\n";
 
     for (const auto& arg : op.arguments) {
-      out << tgfmt("$0 get$1();\n", &fmt, arg.type->getCppType(),
+      out << tgfmt("$0 get$1();\n", &fmt, arg.type->getBuilderCppType(),
                    convertToCamelFromSnakeCase(arg.name, true));
     }
 
     out << '\n';
 
     for (const auto& result : op.results) {
-      out << tgfmt("$0 get$1();\n", &fmt, result.type->getCppType(),
+      out << tgfmt("$0 get$1();\n", &fmt, result.type->getBuilderCppType(),
                    convertToCamelFromSnakeCase(result.name, true));
     }
 
@@ -236,64 +214,9 @@ class Builder;
 )";
 }
 
-static void emitVerifierMethod(raw_ostream &out, FmtContext &fmt,
-                               GenDialectsContext &genContext,
-                               const Operation &op) {
-  FmtContextScope scope{fmt};
-  fmt.withContext("context");
-
-  out << tgfmt(R"(
-    bool $_op::verifier(::llvm::raw_ostream &errs) {
-      ::llvm::LLVMContext &$_context = getModule()->getContext();
-      (void)$_context;
-
-      if (arg_size() != $0) {
-        errs << "  wrong number of arguments: " << arg_size()
-              << ", expected $0\n";
-        return false;
-      }
-  )", &fmt, op.getNumFullArguments());
-
-  SmallVector<NamedValue> argsAndResults = op.getFullArguments();
-  argsAndResults.append(op.results.begin(), op.results.end());
-
-  DenseMap<StringRef, std::string> argToCppExprMap;
-  for (const auto &arg : argsAndResults) {
-    std::string cppExpr =
-        tgfmt("get$0()", &fmt, convertToCamelFromSnakeCase(arg.name, true));
-    if (!isa<Attr>(arg.type) && !isa<TypeArg>(arg.type))
-      cppExpr += "->getType()";
-
-    argToCppExprMap[arg.name] = cppExpr;
-
-    std::string check = arg.type->apply(&fmt, {cppExpr});
-    if (check != "true") {
-      out << tgfmt(R"(
-        if (!($0)) {
-          errs << "  op arg verifier failed: $0\n";
-          return false;
-        }
-      )", &fmt, check);
-    }
-  }
-
-  for (const auto &expr : op.verifier) {
-    std::string check = expr->evaluate(&fmt, argToCppExprMap);
-    if (check != "true") {
-      out << tgfmt(R"(
-        if (!($0)) {
-          errs << "  op verifier failed: $0\n";
-          return false;
-        }
-      )", &fmt, check);
-    }
-  }
-
-  out << "  return true;\n}\n\n";
-}
-
 void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
-  auto [genDialectsContext, dialect] = getSelectedDialect(records);
+  auto [contextPtr, dialect] = getSelectedDialect(records);
+  auto &genDialectsContext = *contextPtr;
 
   emitHeader(out);
 
@@ -369,24 +292,8 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
   out << "}\n\n";
 
   // Type class definitions.
-  for (DialectType* type : dialect->types) {
-    FmtContextScope scope{fmt};
-    fmt.addSubst("Type", type->getName());
-    fmt.addSubst("type", type->getMnemonic());
-
-    out << tgfmt(R"(
-      $Type* $Type::get(::llvm::LLVMContext& context) {
-        ::llvm::Type* t = ::llvm::StructType::getTypeByName(context, s_name);
-        if (t)
-          return static_cast<$Type*>(t);
-
-        return static_cast<$Type*>(::llvm::StructType::create(context, s_name));
-      }
-      $Type* $Type::get($Dialect& dialect) {return get(dialect.getContext());}
-      $Type* $Type::get(::llvm_dialects::Builder& builder) {return get(builder.getContext());}
-
-    )", &fmt);
-  }
+  for (DialectType *type : dialect->types)
+    type->emitDefinition(out, dialect);
 
   // Operation class class definitions.
   for (const OpClass* opClass : dialect->opClasses) {
@@ -452,7 +359,7 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
     for (const auto &builder : op.builders())
       builder.emitDefinition(out, fmt, genDialectsContext);
 
-    emitVerifierMethod(out, fmt, genDialectsContext, op);
+    op.emitVerifierMethod(out, fmt);
 
     // Emit argument getters.
     unsigned numSuperclassArgs = 0;
@@ -464,21 +371,23 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
                                         numSuperclassArgs + indexedArg.index());
       if (auto* attr = dyn_cast<Attr>(arg.type))
         value = tgfmt(attr->getFromLlvmValue(), &fmt, value);
-      else if (isa<TypeArg>(arg.type))
+      else if (arg.type->isTypeArg())
         value += "->getType()";
 
       out << tgfmt(R"(
         $0 $_op::get$1() {
           return $2;
         }
-      )", &fmt, arg.type->getCppType(), convertToCamelFromSnakeCase(arg.name, true), value);
+      )",
+                   &fmt, arg.type->getBuilderCppType(),
+                   convertToCamelFromSnakeCase(arg.name, true), value);
     }
 
     out << '\n';
 
     // Emit result getter
     for (const auto& result : op.results) {
-      out << tgfmt("::llvm::Value* $_op::get$0() {return this;}\n", &fmt,
+      out << tgfmt("::llvm::Value *$_op::get$0() {return this;}\n", &fmt,
                    convertToCamelFromSnakeCase(result.name, true));
     }
 
