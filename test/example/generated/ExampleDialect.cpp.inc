@@ -56,7 +56,7 @@ m_attributeLists[2] = ::llvm::AttributeList::get(context, ::llvm::AttributeList:
 
     Add32Op* Add32Op::create(llvm_dialects::Builder& b, ::llvm::Value * lhs, ::llvm::Value * rhs, uint32_t extra) {
     ::llvm::LLVMContext& context = b.getContext();
-    ::llvm::Module& mod = *b.GetInsertBlock()->getModule();
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
   
   
       const ::llvm::AttributeList attrs
@@ -68,16 +68,17 @@ rhs->getType(),
 I32,
 }, false);
 
-auto fn = mod.getOrInsertFunction(s_name, fnType, attrs);
+    auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
 
-::llvm::Value* const args[] = {
+  ::llvm::Value* const args[] = {
 lhs,
 rhs,
  ::llvm::ConstantInt::get(I32, extra) ,
-};
 
-return ::llvm::cast<Add32Op>(b.CreateCall(fn, args));
-}
+      };
+
+      return ::llvm::cast<Add32Op>(b.CreateCall(fn, args));
+    }
 
 
     bool Add32Op::verifier(::llvm::raw_ostream &errs) {
@@ -126,27 +127,28 @@ return ::llvm::cast<Add32Op>(b.CreateCall(fn, args));
 
       const ::llvm::StringLiteral CombineOp::s_name{"xd.combine"};
 
-    CombineOp* CombineOp::create(llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * lhs, ::llvm::Value * rhs) {
+    CombineOp* CombineOp::create(llvm_dialects::Builder& b, ::llvm::Value * lhs, ::llvm::Value * rhs) {
     ::llvm::LLVMContext& context = b.getContext();
-    ::llvm::Module& mod = *b.GetInsertBlock()->getModule();
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
   
   
       const ::llvm::AttributeList attrs
           = ExampleDialect::get(context).getAttributeList(1);
-    std::string mangledName = ::llvm_dialects::getMangledName(s_name, {
-resultType,
-});
-auto fnType = ::llvm::FunctionType::get(resultType, true);
+    
+      std::string mangledName =
+          ::llvm_dialects::getMangledName(s_name, {lhs->getType()});
+    auto fnType = ::llvm::FunctionType::get(lhs->getType(), true);
 
-auto fn = mod.getOrInsertFunction(mangledName, fnType, attrs);
+    auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
 
-::llvm::Value* const args[] = {
+  ::llvm::Value* const args[] = {
 lhs,
 rhs,
-};
 
-return ::llvm::cast<CombineOp>(b.CreateCall(fn, args));
-}
+      };
+
+      return ::llvm::cast<CombineOp>(b.CreateCall(fn, args));
+    }
 
 
     bool CombineOp::verifier(::llvm::raw_ostream &errs) {
@@ -188,20 +190,20 @@ return ::llvm::cast<CombineOp>(b.CreateCall(fn, args));
 
     ReadOp* ReadOp::create(llvm_dialects::Builder& b, ::llvm::Type* dataType) {
     ::llvm::LLVMContext& context = b.getContext();
-    ::llvm::Module& mod = *b.GetInsertBlock()->getModule();
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
   
   
       const ::llvm::AttributeList attrs
           = ExampleDialect::get(context).getAttributeList(2);
-    std::string mangledName = ::llvm_dialects::getMangledName(s_name, {
-dataType,
-});
-auto fnType = ::llvm::FunctionType::get(dataType, {
+    
+      std::string mangledName =
+          ::llvm_dialects::getMangledName(s_name, {dataType});
+    auto fnType = ::llvm::FunctionType::get(dataType, {
 }, false);
 
-auto fn = mod.getOrInsertFunction(mangledName, fnType, attrs);
+    auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
 
-return ::llvm::cast<ReadOp>(b.CreateCall(fn));
+  return ::llvm::cast<ReadOp>(b.CreateCall(fn));
 }
 
 
@@ -226,7 +228,7 @@ return ::llvm::cast<ReadOp>(b.CreateCall(fn));
 
     WriteOp* WriteOp::create(llvm_dialects::Builder& b, ::llvm::Value * data) {
     ::llvm::LLVMContext& context = b.getContext();
-    ::llvm::Module& mod = *b.GetInsertBlock()->getModule();
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
   
   
       const ::llvm::AttributeList attrs
@@ -234,14 +236,15 @@ return ::llvm::cast<ReadOp>(b.CreateCall(fn));
     llvm::Type* VoidTy = ::llvm::Type::getVoidTy(context);
 auto fnType = ::llvm::FunctionType::get(VoidTy, true);
 
-auto fn = mod.getOrInsertFunction(s_name, fnType, attrs);
+    auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
 
-::llvm::Value* const args[] = {
+  ::llvm::Value* const args[] = {
 data,
-};
 
-return ::llvm::cast<WriteOp>(b.CreateCall(fn, args));
-}
+      };
+
+      return ::llvm::cast<WriteOp>(b.CreateCall(fn, args));
+    }
 
 
     bool WriteOp::verifier(::llvm::raw_ostream &errs) {

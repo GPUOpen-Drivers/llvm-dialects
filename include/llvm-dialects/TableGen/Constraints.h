@@ -54,10 +54,6 @@ public:
   llvm::StringRef getName() const;
   llvm::StringRef getCppType() const;
 
-  llvm::StringRef getBuilderArgumentFilter() const {
-    return m_builderArgumentFilter;
-  }
-
   virtual std::pair<unsigned, unsigned> getMinMaxArgs() const = 0;
 
   /// Return a string containing a C++ expression that applies this predicate
@@ -71,7 +67,6 @@ protected:
 private:
   const Kind m_kind;
   llvm::Record *m_record = nullptr;
-  std::string m_builderArgumentFilter;
 };
 
 class Type : public Constraint {

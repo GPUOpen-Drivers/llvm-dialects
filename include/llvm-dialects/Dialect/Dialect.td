@@ -45,11 +45,7 @@ class Dialect {
 /// TODO Type constraints
 // ============================================================================
 
-class Constraint {
-  // An optional piece of code that is used to filter all argument values of
-  // this type in builder methods. $_self is the argument value.
-  string builderArgumentFilter = "";
-}
+class Constraint;
 
 class Type : Constraint;
 
@@ -80,11 +76,6 @@ class PointerType<int addressSpace_> : BuiltinType {
   int addressSpace = addressSpace_;
 
   let getter = "::llvm::PointerType::get($_context, " # addressSpace_ # ")";
-
-  let builderArgumentFilter = [{
-    if (!$_self->getType()->isOpaquePointerTy())
-      $_self = $_builder.CreateBitCast($_self, }] # getter # [{ );
-  }];
 }
 
 // LLVM IR fixed vector type (<n x T>).
@@ -136,15 +127,7 @@ class CPred<code pred> : BaseCPred<(ins $_self), pred>;
 
 def AnyType : CPred<"true">;
 
-def AnyPointerType : CPred<"$_self->isPointerTy()"> {
-  let builderArgumentFilter = [{
-    if (!$_self->getType()->isOpaquePointerTy()) {
-      unsigned as = cast<::llvm::PointerType>($_self)->getAddressSpace();
-      $_self = $_builder.CreateBitCast($_self,
-                                       ::llvm::PointerType::get($_context, as));
-    }
-  }];
-}
+def AnyPointerType : CPred<"$_self->isPointerTy()">;
 
 /// Variadic predicate that is true if all its arguments have the same
 /// LLVM type.
