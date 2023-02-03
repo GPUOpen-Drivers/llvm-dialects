@@ -112,39 +112,6 @@ GenDialect *GenDialectsContext::getDialect(Record *dialectRec) {
   return it->second.get();
 }
 
-std::vector<OpNamedValue> GenDialectsContext::parseArguments(Record *rec) {
-  Record *superClassRec = rec->getValueAsDef("superclass");
-  OpClass *superclass = getOpClass(superClassRec);
-  DagInit *argsInit = rec->getValueAsDag("arguments");
-  std::vector<OpNamedValue> arguments;
-
-  if (argsInit->getOperatorAsDef({})->getName() != "ins")
-    report_fatal_error(Twine(rec->getName()) +
-                       " argument operator must be 'ins'");
-
-  for (unsigned i = 0; i < argsInit->getNumArgs(); ++i) {
-    if (superclass && i == 0) {
-      if (argsInit->getArgName(0) ||
-          argsInit->getArg(0) != superClassRec->getDefInit())
-        report_fatal_error(Twine(rec->getName()) +
-                           ": superclass must be first in arguments list");
-      continue;
-    }
-
-    OpNamedValue opArg;
-    opArg.name = argsInit->getArgNameStr(i);
-    if (auto *arg = dyn_cast_or_null<DefInit>(argsInit->getArg(i)))
-      opArg.type = getConstraint(arg->getDef());
-    if (!opArg.type) {
-      report_fatal_error(Twine(rec->getName()) + " argument " + Twine(i) +
-                         ": bad type constraint");
-    }
-    arguments.push_back(std::move(opArg));
-  }
-
-  return arguments;
-}
-
 OpClass *GenDialectsContext::getOpClass(Record *opClassRec) {
   if (opClassRec->getName() == "NoSuperClass")
     return nullptr;
@@ -165,18 +132,12 @@ OpClass *GenDialectsContext::getOpClass(Record *opClassRec) {
   // Leave a marker in the map to detect recursive superclass relations.
   m_opClasses.try_emplace(opClassRec);
 
-  GenDialect *dialect = getDialect(opClassRec->getValueAsDef("dialect"));
-  auto opClass = std::make_unique<OpClass>();
-  opClass->name = opClassRec->getName();
-  opClass->superclass = getOpClass(opClassRec->getValueAsDef("superclass"));
-  opClass->arguments = parseArguments(opClassRec);
+  auto opClassOwner = OpClass::parse(this, opClassRec);
+  OpClass *opClass = opClassOwner.get();
 
-  OpClass *ptr = opClass.get();
-  if (opClass->superclass)
-    opClass->superclass->subclasses.push_back(ptr);
-  dialect->opClasses.push_back(ptr);
-  m_opClasses.find(opClassRec)->second = std::move(opClass);
-  return ptr;
+  // Re-find the class record in case there were recursive lookups.
+  m_opClasses.find(opClassRec)->second = std::move(opClassOwner);
+  return opClass;
 }
 
 void GenDialectsContext::init(RecordKeeper &records,
@@ -209,94 +170,7 @@ void GenDialectsContext::init(RecordKeeper &records,
     if (dialectIt == m_dialects.end())
       continue;
 
-    // Extract information from the TableGen record.
-    auto op = std::make_unique<Operation>();
-    op->superclass = getOpClass(opRec->getValueAsDef("superclass"));
-    if (op->superclass)
-      op->superclass->operations.push_back(op.get());
-    op->name = opRec->getName();
-    op->mnemonic = opRec->getValueAsString("mnemonic");
-    for (Record *traitRec : opRec->getValueAsListOfDefs("traits"))
-      op->traits.push_back(getTrait(traitRec));
-
-    op->arguments = parseArguments(opRec);
-
-    DagInit *results = opRec->getValueAsDag("results");
-    assert(results->getOperatorAsDef({})->getName() == "outs");
-    assert(results->getNumArgs() <= 1 &&
-           "multiple result values not supported");
-    for (unsigned i = 0; i < results->getNumArgs(); ++i) {
-      OpNamedValue opResult;
-      opResult.name = results->getArgNameStr(i);
-      if (auto *result = dyn_cast_or_null<DefInit>(results->getArg(i)))
-        opResult.type = getConstraint(result->getDef());
-      if (!opResult.type) {
-        report_fatal_error(Twine("Operation '") + op->mnemonic + "' result " +
-                           Twine(i) + ": bad type constraint");
-      }
-      if (!isa<Attr>(opResult.type) && !isa<Type>(opResult.type))
-        op->builderHasExplicitResultTypes = true;
-      op->results.push_back(std::move(opResult));
-    }
-
-    ListInit *verifier = opRec->getValueAsListInit("verifier");
-    for (Init *ruleInit : *verifier) {
-      auto *rule = dyn_cast<DagInit>(ruleInit);
-      if (!rule) {
-        report_fatal_error(Twine("Operation '") + op->mnemonic +
-                           "': verifier rules must be dags");
-      }
-
-      op->verifier.push_back(parsePredicateExpr(rule));
-    }
-
-    // Derive the overload keys: Scan through results and arguments. Whenever
-    // we encounter one whose type isn't fully specified, add it to the overload
-    // keys unless an equal type has already been added.
-    auto needsOverloadKey = [&](const OpNamedValue &namedValue) -> bool {
-      if (isa<Type>(namedValue.type) || isa<Attr>(namedValue.type))
-        return false;
-
-      for (const auto &expr : op->verifier) {
-        if (const auto *apply = dyn_cast<PredicateApply>(expr.get())) {
-          if (apply->getPredicate()->getKind() == Constraint::Kind::SameTypes) {
-            auto arguments = apply->arguments();
-            if (llvm::is_contained(arguments, namedValue.name)) {
-              for (const auto &overloadKey : op->overload_keys()) {
-                StringRef name = overloadKey.kind == OverloadKey::Result
-                                     ? op->results[overloadKey.index].name
-                                     : op->arguments[overloadKey.index].name;
-                if (llvm::is_contained(arguments, name))
-                  return false;
-              }
-            }
-          }
-        }
-      }
-
-      return true;
-    };
-
-    for (const auto &result : llvm::enumerate(op->results)) {
-      if (needsOverloadKey(result.value())) {
-        OverloadKey key;
-        key.kind = OverloadKey::Result;
-        key.index = result.index();
-        op->m_overloadKeys.push_back(key);
-        op->m_haveResultOverloadKey = true;
-      }
-    }
-    for (const auto &arg : llvm::enumerate(op->getFullArguments())) {
-      if (needsOverloadKey(arg.value())) {
-        OverloadKey key;
-        key.kind = OverloadKey::Argument;
-        key.index = arg.index();
-        op->m_overloadKeys.push_back(key);
-        op->m_haveArgumentOverloadKey = true;
-      }
-    }
-
-    dialectIt->second->operations.push_back(std::move(op));
+    Operation::parse(this, dialectIt->second.get(), opRec);
   }
 
   for (auto &dialectEntry : m_dialects)
