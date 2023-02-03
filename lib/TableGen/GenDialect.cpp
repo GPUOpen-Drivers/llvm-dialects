@@ -21,6 +21,7 @@
 #include "llvm-dialects/TableGen/Format.h"
 #include "llvm-dialects/TableGen/Operations.h"
 #include "llvm-dialects/TableGen/Predicates.h"
+#include "llvm-dialects/TableGen/SymbolTable.h"
 #include "llvm-dialects/TableGen/Traits.h"
 
 #include "llvm/ADT/StringExtras.h"
@@ -36,31 +37,6 @@ using namespace llvm;
 namespace {
 
 cl::opt<std::string> g_dialect("dialect", cl::desc("the dialect to generate"), cl::init(""));
-
-/// Helper class for choosing unique variable names.
-class SymbolTable {
-  std::unordered_set<std::string> m_names;
-
-public:
-  std::string chooseName(StringRef name) {
-    return chooseName(ArrayRef<StringRef>(name));
-  }
-
-  std::string chooseName(ArrayRef<StringRef> names) {
-    for (StringRef name : names) {
-      auto insert = m_names.insert(name.str());
-      if (insert.second)
-        return *insert.first;
-    }
-
-    for (int i = 0;; ++i) {
-      std::string alternate = llvm::formatv("{0}_{1}", names.back(), i).str();
-      auto insert = m_names.insert(alternate);
-      if (insert.second)
-        return *insert.first;
-    }
-  }
-};
 
 /// Helper class for emitting code that gets or builds llvm::Type*'s from constraints.
 class LlvmTypeBuilder {

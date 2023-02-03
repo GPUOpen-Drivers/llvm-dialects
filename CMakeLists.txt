@@ -101,6 +101,7 @@ target_sources(llvm_dialects_tablegen PRIVATE
     lib/TableGen/GenDialect.cpp
     lib/TableGen/Predicates.cpp
     lib/TableGen/Operations.cpp
+    lib/TableGen/SymbolTable.cpp
     lib/TableGen/Traits.cpp)
 
 target_include_directories(llvm-dialects-tblgen PRIVATE
