@@ -31,6 +31,12 @@ void Constraint::init(GenDialectsContext *context, Record *record) {
 
 StringRef Constraint::getName() const { return m_record->getName(); }
 
+StringRef Constraint::getCppType() const {
+  if (auto* attr = dyn_cast<Attr>(this))
+    return attr->getCppType();
+  return "::llvm::Value *";
+}
+
 std::string Type::apply(FmtContext *fmt, ArrayRef<StringRef> arguments) const {
   assert(arguments.size() == 1);
   return tgfmt("$0 == $1", fmt, arguments[0], getLlvmType(fmt));

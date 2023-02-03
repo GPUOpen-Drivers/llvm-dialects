@@ -92,12 +92,6 @@ public:
 
 } // anonymous namespace
 
-StringRef Constraint::getCppType() const {
-  if (auto* attr = dyn_cast<Attr>(this))
-    return attr->getCppType();
-  return "::llvm::Value *";
-}
-
 static std::pair<GenDialectsContext, GenDialect *>
 getSelectedDialect(RecordKeeper &records) {
   if (g_dialect.empty())
