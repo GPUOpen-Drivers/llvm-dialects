@@ -3,8 +3,9 @@
 
 #ifdef GET_INCLUDES
 #undef GET_INCLUDES
-#include "llvm/IR/Instructions.h"
 #include "llvm-dialects/Dialect/Dialect.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Instructions.h"
 
 namespace llvm {
 class raw_ostream;
@@ -42,6 +43,27 @@ namespace xd {
       private:
         ::std::array<::llvm::AttributeList, 3> m_attributeLists;
     };
+
+    class XdVectorType : public ::llvm::TargetExtType {
+      static constexpr ::llvm::StringLiteral s_name{"xd.vector"};
+
+    public:
+      static bool classof(const ::llvm::TargetExtType *t) {
+        return t->getName() == s_name;
+      }
+      static bool classof(const ::llvm::Type* t) {
+        return llvm::isa<::llvm::TargetExtType>(t) &&
+                classof(llvm::cast<::llvm::TargetExtType>(t));
+      }
+
+      bool verifier(::llvm::raw_ostream &errs) const;
+
+  static XdVectorType *get(::llvm::Type * elementType, uint32_t numElements);
+
+::llvm::Type * getElementType() const;
+uint32_t getNumElements() const;
+};
+
 
       class Add32Op : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.add32"};
@@ -84,6 +106,119 @@ bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getLhs();
 ::llvm::Value * getRhs();
+
+::llvm::Value * getResult();
+
+
+      };
+    
+      class ExtractElementOp : public ::llvm::CallInst {
+        static const ::llvm::StringLiteral s_name; //{"xd.extractelement"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isOverloadedOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static ExtractElementOp* create(::llvm_dialects::Builder& b, ::llvm::Value * vector, ::llvm::Value * index);
+
+bool verifier(::llvm::raw_ostream &errs);
+
+::llvm::Value * getVector();
+::llvm::Value * getIndex();
+
+::llvm::Value * getResult();
+
+
+      };
+    
+      class FromFixedVectorOp : public ::llvm::CallInst {
+        static const ::llvm::StringLiteral s_name; //{"xd.fromfixedvector"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isOverloadedOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static FromFixedVectorOp* create(::llvm_dialects::Builder& b, ::llvm::Value * source);
+
+bool verifier(::llvm::raw_ostream &errs);
+
+::llvm::Value * getSource();
+
+::llvm::Value * getResult();
+
+
+      };
+    
+      class IExtOp : public ::llvm::CallInst {
+        static const ::llvm::StringLiteral s_name; //{"xd.iext"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isOverloadedOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static IExtOp* create(::llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * source);
+
+bool verifier(::llvm::raw_ostream &errs);
+
+::llvm::Value * getSource();
+
+::llvm::Value * getResult();
+
+
+      };
+    
+      class ITruncOp : public ::llvm::CallInst {
+        static const ::llvm::StringLiteral s_name; //{"xd.itrunc"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isOverloadedOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static ITruncOp* create(::llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * source);
+
+bool verifier(::llvm::raw_ostream &errs);
+
+::llvm::Value * getSource();
+
+::llvm::Value * getResult();
+
+
+      };
+    
+      class InsertElementOp : public ::llvm::CallInst {
+        static const ::llvm::StringLiteral s_name; //{"xd.insertelement"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isOverloadedOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static InsertElementOp* create(::llvm_dialects::Builder& b, ::llvm::Value * vector, ::llvm::Value * value, ::llvm::Value * index);
+
+bool verifier(::llvm::raw_ostream &errs);
+
+::llvm::Value * getVector();
+::llvm::Value * getValue();
+::llvm::Value * getIndex();
 
 ::llvm::Value * getResult();
 

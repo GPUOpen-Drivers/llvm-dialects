@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Advanced Micro Devices, Inc. All Rights Reserved.
+ * Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,160 +17,281 @@
 #include "llvm-dialects/TableGen/Constraints.h"
 
 #include "llvm-dialects/TableGen/Dialects.h"
+#include "llvm-dialects/TableGen/Evaluator.h"
 #include "llvm-dialects/TableGen/Format.h"
+#include "llvm-dialects/TableGen/Predicates.h"
 
 #include "llvm/TableGen/Record.h"
 
 using namespace llvm;
 using namespace llvm_dialects;
 
-void Constraint::init(GenDialectsContext *context, Record *record) {
-  m_record = record;
+std::string Variable::toString() const {
+  if (!m_predicate)
+    return (Twine("$") + m_name).str();
+  return (Twine(m_predicate->getInit()->getAsString()) + ":$" + m_name).str();
 }
 
-StringRef Constraint::getName() const { return m_record->getName(); }
-
-StringRef Constraint::getCppType() const {
-  if (auto* attr = dyn_cast<Attr>(this))
-    return attr->getCppType();
-  if (isa<TypeArg>(this))
-    return "::llvm::Type *";
-  return "::llvm::Value *";
+Variable *Scope::findVariable(llvm::StringRef name) const {
+  assert(!name.empty());
+  auto it = m_namedVariables.find(name);
+  if (it == m_namedVariables.end())
+    return nullptr;
+  return it->second;
 }
 
-std::string Type::apply(FmtContext *fmt, ArrayRef<StringRef> arguments) const {
-  assert(arguments.size() == 1);
-  return tgfmt("$0 == $1", fmt, arguments[0], getLlvmType(fmt));
+Variable *Scope::getVariable(llvm::StringRef name) {
+  assert(!name.empty());
+  Variable *variable = findVariable(name);
+  if (variable)
+    return variable;
+
+  auto owner = std::make_unique<Variable>(name);
+  variable = owner.get();
+  m_variables.push_back(std::move(owner));
+  m_namedVariables.try_emplace(variable->name(), variable);
+  return variable;
 }
 
-void BuiltinType::init(GenDialectsContext *context, llvm::Record *record) {
-  Type::init(context, record);
-  m_getter = record->getValueAsString("getter");
+Variable *Scope::createVariable(StringRef name, Predicate *predicate) {
+  auto owner = std::make_unique<Variable>(name, predicate);
+  Variable *variable = owner.get();
+  m_variables.push_back(std::move(owner));
+  return variable;
 }
 
-std::string BuiltinType::getLlvmType(FmtContext *fmt) const {
-  return tgfmt(getGetter(), fmt);
-}
-
-void DialectType::init(GenDialectsContext *context, llvm::Record *record) {
-  Type::init(context, record);
-
-  m_dialectRec = record->getValueAsDef("dialect");
-  if (!m_dialectRec->isSubClassOf("Dialect")) {
-    report_fatal_error(Twine("'dialect' field of type constraint '") +
-                       record->getName() + "' is not a subclass of Dialect");
+bool ConstraintSystem::addConstraint(raw_ostream &errs, Init *init,
+                                     Variable *self) {
+  if (!addConstraintImpl(errs, init, self)) {
+    errs << ".. in " << init->getAsString() << '\n';
+    return false;
   }
-  m_mnemonic = record->getValueAsString("mnemonic");
+  return true;
 }
 
-std::string DialectType::getLlvmType(FmtContext *fmt) const {
-  return tgfmt("$0::get($_builder)", fmt, getName());
-}
+bool ConstraintSystem::addConstraintImpl(raw_ostream &errs, Init *init,
+                                         Variable *self) {
+  if (auto *dag = dyn_cast<DagInit>(init)) {
+    Record *op = dag->getOperatorAsDef({});
+    if (op->getName() == "and") {
+      for (size_t i = 0; i < dag->getNumArgs(); ++i) {
+        if (!dag->getArgNameStr(i).empty()) {
+          errs << "'and' operands cannot be captured\n";
+          return false;
+        }
 
-void TypeArg::init(GenDialectsContext *context, llvm::Record *record) {
-  Constraint::init(context, record);
+        Init *operand = dag->getArg(i);
+        if (!operand) {
+          errs << "'and' operand is missing\n";
+          return false;
+        }
 
-  llvm::Record *constraint = record->getValueAsDef("constraint");
-  m_constraint = context->getConstraint(constraint);
-
-  if (isa<Type>(m_constraint)) {
-    report_fatal_error(Twine("TypeArg '") + record->getName() +
-                         "' with Type constraint makes no sense");
-  }
-  if (isa<Attr>(m_constraint)) {
-    report_fatal_error(Twine("TypeArg '") + record->getName() +
-                         "' cannot have Attr constraint");
-  }
-}
-
-std::string TypeArg::apply(FmtContext *fmt,
-                           ArrayRef<StringRef> arguments) const {
-  return m_constraint->apply(fmt, arguments);
-}
-
-void Attr::init(GenDialectsContext *context, llvm::Record *record) {
-  Constraint::init(context, record);
-
-  m_cppType = record->getValueAsString("cppType");
-  llvm::Record *llvmTypeRec = record->getValueAsDef("llvmType");
-  Constraint *llvmType = context->getConstraint(llvmTypeRec);
-  if (!isa<Type>(llvmType)) {
-    report_fatal_error(Twine("Attr '") + record->getName() +
-                       "' has llvmType '" + llvmType->getName() +
-                       "' which is not a Type");
-  }
-
-  m_llvmType = cast<Type>(llvmType);
-  m_toLlvmValue = record->getValueAsString("toLlvmValue");
-  m_fromLlvmValue = record->getValueAsString("fromLlvmValue");
-}
-
-void BaseCPred::init(GenDialectsContext *context, llvm::Record *record) {
-  Constraint::init(context, record);
-
-  m_predExpr = record->getValueAsString("predExpr");
-
-  DagInit *arguments = record->getValueAsDag("arguments");
-  if (arguments->getOperatorAsDef({})->getName() != "ins") {
-    report_fatal_error(Twine("BaseCPred '") + record->getName() +
-                       "': arguments dag operator must be 'ins'");
-  }
-
-  for (auto [argInit, argName] :
-       llvm::zip(arguments->getArgs(), arguments->getArgNames())) {
-    if (m_variadic) {
-      report_fatal_error(Twine("BaseCPred '") + record->getName() +
-                         "': seq must be last");
-    }
-
-    Argument arg;
-    arg.name = argName->getValue();
-
-    if (arg.name.empty()) {
-      report_fatal_error(Twine("BaseCPred '") + record->getName() +
-                         "': missing argument name");
-    }
-
-    if (isa<UnsetInit>(argInit)) {
-      m_arguments.push_back(arg);
-    } else {
-      if (!isa<DefInit>(argInit) ||
-          cast<DefInit>(argInit)->getAsString() != "seq") {
-        report_fatal_error(Twine("BaseCPred '") + record->getName() +
-                           "': bad def used in arguments");
+        if (!addConstraint(errs, operand, self))
+          return false;
       }
 
-      m_variadic = arg;
-    }
-  }
-}
-
-std::string BaseCPred::apply(FmtContext *fmt,
-                             ArrayRef<StringRef> arguments) const {
-  assert(arguments.size() >= m_arguments.size());
-  assert(m_variadic || arguments.size() == m_arguments.size());
-
-  FmtContextScope scope(*fmt);
-  for (const auto &[formal, actual] : llvm::zip(m_arguments, arguments)) {
-    if (formal.name == "_self")
-      fmt->withSelf(actual);
-    else
-      fmt->addSubst(formal.name, actual);
-  }
-
-  if (m_variadic) {
-    std::string actuals;
-    actuals += '{';
-
-    for (const auto &actual : arguments.drop_front(m_arguments.size())) {
-      if (actuals.size() > 1)
-        actuals += ", ";
-      actuals += actual;
+      return true;
     }
 
-    actuals += '}';
-    fmt->addSubst(m_variadic->name, actuals);
+    if (op->getName() == "or") {
+      auto result = std::make_unique<LogicOr>();
+      result->m_init = init;
+      result->m_self = self;
+
+      for (size_t i = 0; i < dag->getNumArgs(); ++i) {
+        if (!dag->getArgNameStr(i).empty()) {
+          errs << "'or' operands cannot be captured\n";
+          return false;
+        }
+
+        Init *operand = dag->getArg(i);
+        if (!operand) {
+          errs << "'or' operand is missing\n";
+          return false;
+        }
+
+        ConstraintSystem branchSystem(m_context, m_scope);
+        if (!branchSystem.addConstraint(errs, operand, self))
+          return false;
+
+        for (Variable *variable : branchSystem.m_variables) {
+          result->addVariable(variable);
+          addVariable(variable);
+        }
+
+        result->m_branches.push_back(std::move(branchSystem));
+        result->m_branchInits.push_back(operand);
+      }
+
+      m_constraints.push_back(std::move(result));
+      return true;
+    }
   }
 
-  return tgfmt(m_predExpr, fmt);
+  auto result = std::make_unique<Apply>();
+  result->m_init = init;
+  result->m_self = self;
+
+  auto *dag = dyn_cast<DagInit>(init);
+  Init *predicateInit;
+  if (dag) {
+    predicateInit = dag->getOperator();
+  } else {
+    predicateInit = init;
+  }
+
+  result->m_predicate = m_context.getPredicate(predicateInit, errs);
+  if (!result->m_predicate)
+    return false;
+
+  unsigned expectedArgSize = result->m_predicate->arguments().size();
+  if (self) {
+    expectedArgSize -= 1;
+    result->m_arguments.push_back(self);
+    result->addVariable(self);
+  }
+
+  if (dag) {
+    if (dag->arg_size() != expectedArgSize) {
+      errs << "  expected number of arguments: " << expectedArgSize << '\n';
+      errs << "  actual number of arguments: " << dag->arg_size() << '\n';
+      return false;
+    }
+
+    auto parsed = NamedValue::parseList(errs, m_context, dag, 0,
+                                        NamedValue::Parser::ApplyArguments);
+    if (!parsed.has_value())
+      return false;
+
+    for (unsigned i = 0; i < parsed->size(); ++i) {
+      const auto &argument = (*parsed)[i];
+      bool nonTrivialConstraint =
+          argument.constraint && argument.constraint != m_context.getAny();
+      Variable *variable = nullptr;
+
+      if (!argument.name.empty()) {
+        variable = m_scope.getVariable(argument.name);
+      } else if (nonTrivialConstraint) {
+        unsigned predArgIdx = i + (self ? 1 : 0);
+        variable = m_scope.createVariable(
+            result->m_predicate->arguments()[predArgIdx].name,
+            result->m_predicate);
+      }
+
+      if (nonTrivialConstraint) {
+        // We add constraints from deeper nesting levels first. This has the
+        // effect that the evaluator can evaluate constants in a single pass
+        // by scanning the constraint list from beginning to end.
+        if (!addConstraint(errs, argument.constraint, variable))
+          return false;
+      }
+
+      if (variable)
+        addVariable(variable);
+      result->m_arguments.push_back(variable);
+    }
+  } else {
+    if (expectedArgSize != 0) {
+      if (!self) {
+        errs << "predicate in non-valued position needs explicit arguments\n";
+        return false;
+      }
+      if (!result->getPredicate()->canCheckFromSelf()) {
+        errs << "predicate cannot be checked from self and needs explicit "
+                "arguments\n";
+        return false;
+      }
+    }
+
+    for (unsigned i = 0; i < expectedArgSize; ++i)
+      result->m_arguments.push_back(nullptr);
+  }
+
+  m_constraints.push_back(std::move(result));
+  return true;
 }
+
+void ConstraintSystem::merge(ConstraintSystem &&rhs) {
+  assert(&m_context == &rhs.m_context);
+  assert(&m_scope == &rhs.m_scope);
+
+  for (auto &constraint : rhs.m_constraints)
+    m_constraints.push_back(std::move(constraint));
+  for (Variable *variable : rhs.m_variables)
+    addVariable(variable);
+}
+
+void ConstraintSystem::addVariable(Variable *variable) {
+  if (!llvm::is_contained(m_variables, variable))
+    m_variables.push_back(variable);
+}
+
+std::string Constraint::toString() const {
+  if (!m_self)
+    return m_init->getAsString();
+  return (Twine(m_init->getAsString()) + ":" + m_self->toString()).str();
+}
+
+void Constraint::addVariable(Variable *variable) {
+  if (!llvm::is_contained(m_variables, variable))
+    m_variables.push_back(variable);
+}
+
+MetaType *MetaType::type() {
+  static MetaType typeMetaType(Kind::Type);
+  return &typeMetaType;
+}
+
+MetaType *MetaType::value() {
+  static MetaType valueMetaType(Kind::Value);
+  return &valueMetaType;
+}
+
+StringRef MetaType::getCppType() const {
+  if (auto *attr = dyn_cast<Attr>(this))
+    return attr->getCppType();
+
+  return "::llvm::Type *";
+}
+
+StringRef MetaType::getBuilderCppType() const {
+  if (isValueArg())
+    return "::llvm::Value *";
+  return getCppType();
+}
+
+/// Return the C++ expression @p value transformed to be suitable for printing
+/// using LLVM's raw_ostream.
+std::string MetaType::printable(const MetaType *type, llvm::StringRef value) {
+  if (!type || isa<Attr>(type))
+    return value.str();
+  return (Twine('*') + value).str();
+}
+
+StringRef MetaType::getName() const {
+  if (auto *attr = dyn_cast<Attr>(this))
+    return attr->getName();
+
+  if (isTypeArg())
+    return "type";
+  return "value";
+}
+
+std::unique_ptr<Attr> Attr::parse(raw_ostream &errs,
+                                  GenDialectsContext &context, Record *record) {
+  if (!record->isSubClassOf("Attr")) {
+    errs << record->getName() << ": must be a subclass of Attr\n";
+    return {};
+  }
+
+  auto attr = std::make_unique<Attr>();
+  attr->m_record = record;
+
+  attr->m_cppType = record->getValueAsString("cppType");
+  attr->m_toLlvmValue = record->getValueAsString("toLlvmValue");
+  attr->m_fromLlvmValue = record->getValueAsString("fromLlvmValue");
+
+  return attr;
+}
+
+StringRef Attr::getName() const { return m_record->getName(); }

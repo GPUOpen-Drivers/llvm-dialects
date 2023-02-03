@@ -14,10 +14,14 @@
  * limitations under the License. 
  */
 
+def args;
 def ins;
 def outs;
 
-def seq;
+class MetaType;
+
+def type : MetaType;
+def value;
 
 // ============================================================================
 /// Dialect
@@ -37,130 +41,17 @@ class Dialect {
 
 
 // ============================================================================
-/// Types and (type) constraints
-///
-/// TableGen representation of LLVM IR types, including both builtin types (such as i32, pointers)
-/// and dialect-defined types.
-///
-/// TODO Type constraints
-// ============================================================================
-
-class Constraint;
-
-class Type : Constraint;
-
-class BuiltinType : Type {
-  // C++ expression to obtain an llvm::Type* instance.
-  string getter = ?;
-}
-
-def VoidTy : BuiltinType {
-  let getter = "::llvm::Type::getVoidTy($_context)";
-}
-
-/// LLVM IR integer type.
-class IntegerType<int numBits_> : BuiltinType {
-  int numBits = numBits_;
-
-  let getter = "::llvm::Type::getInt" # numBits_ # "Ty($_context)";
-}
-
-def I1 : IntegerType<1>;
-def I8 : IntegerType<8>;
-def I16 : IntegerType<16>;
-def I32 : IntegerType<32>;
-def I64 : IntegerType<64>;
-
-// LLVM IR pointer type.
-class PointerType<int addressSpace_> : BuiltinType {
-  int addressSpace = addressSpace_;
-
-  let getter = "::llvm::PointerType::get($_context, " # addressSpace_ # ")";
-}
-
-// LLVM IR fixed vector type (<n x T>).
-class FixedVectorType<int numElements_, BuiltinType elementType_> : BuiltinType {
-  int numElements = numElements_;
-  BuiltinType elementType = elementType_;
-
-  let getter = "::llvm::FixedVectorType::get(" # elementType.getter # ", "
-                   # numElements # ")";
-}
-
-/// All types that are defined by a dialect are derived from this class.
-class DialectType<Dialect dialect_, string mnemonic_> : Type {
-  Dialect dialect = dialect_;
-
-  string mnemonic = mnemonic_;
-}
-
-/// A generic predicate over arguments of an operation, implemented as a
-/// snippet of C++.
-///
-/// Unary predicates can be used in argument and result position, e.g.
-/// @code
-///   def MyUnaryPred : BaseCPred<...>;
-///   def MyOp : Op<...> {
-///     let arguments = (ins MyUnaryPred:$argname);
-///     ...
-///   }
-/// @endcode
-///
-/// All predicates can be used in verifier rules, e.g.:
-/// @code
-///   def MyArithmeticOp : Op<MyDialect, "my.arithmetic", [],
-///                           [(SameTypes $lhs, $rhs, $result)]> {
-///     let arguments = (ins $lhs, $rhs);
-///     let results = (outs $result);
-///   }
-/// @endcode
-class BaseCPred<dag arguments_, code pred> : Constraint {
-  /// The arguments provided to the predicate.
-  dag arguments = arguments_;
-
-  /// The C++ expression into which the arguments are substituted to test the
-  /// predicate.
-  code predExpr = pred;
-}
-
-class CPred<code pred> : BaseCPred<(ins $_self), pred>;
-
-def AnyType : CPred<"true">;
-
-def AnyPointerType : CPred<"$_self->isPointerTy()">;
-
-/// Variadic predicate that is true if all its arguments have the same
-/// LLVM type.
-def SameTypes : BaseCPred<(ins seq:$types), "::llvm_dialects::areTypesEqual($types)">;
-
-def and;
-def or;
-def not;
-
-// ============================================================================
-/// Type arguments
-///
-/// Describe an argument that is only a static type, without an associated
-/// value. This can be used to model operations like `getelementptr`.
-// ============================================================================
-
-class TypeArg<Constraint constraint_> : Constraint {
-  /// The constraint that must be satisfied by the type argument. Can be
-  /// AnyType.
-  Constraint constraint = constraint_;
-}
-
-// ============================================================================
 /// Attributes
 ///
-/// Operations can have attributes, which one can think of as constant arguments. The default
-/// representation of an operation with attributes uses function call arguments that are always
-/// llvm::Constants.
+/// Operations and types can have attributes, which one can think of as constant
+/// arguments.
+///
+/// The default representation of an operation with attributes uses function
+/// call arguments that are always llvm::Constants.
 // ============================================================================
 
-class Attr<string cppType_, Type llvmType_> : Constraint {
+class Attr<string cppType_> : MetaType {
   string cppType = cppType_;
-  Type llvmType = llvmType_;
 
   // $0 is the C++ value, $1 is the LLVM type.
   string toLlvmValue = ?;
@@ -169,17 +60,180 @@ class Attr<string cppType_, Type llvmType_> : Constraint {
   string fromLlvmValue = ?;
 }
 
-class IntegerAttr<string cppType_, Type llvmType_> : Attr<cppType_, llvmType_> {
+class IntegerAttr<string cppType_> : Attr<cppType_> {
   let toLlvmValue = [{ ::llvm::ConstantInt::get($1, $0) }];
   let fromLlvmValue = [{ ::llvm::cast<::llvm::ConstantInt>($0)->getZExtValue() }];
 }
 
-def AttrI1 : IntegerAttr<"bool", I1>;
-def AttrI8 : IntegerAttr<"uint8_t", I8>;
-def AttrI16 : IntegerAttr<"uint16_t", I16>;
-def AttrI32 : IntegerAttr<"uint32_t", I32>;
-def AttrI64 : IntegerAttr<"uint64_t", I64>;
+def AttrI1 : IntegerAttr<"bool">;
+def AttrI8 : IntegerAttr<"uint8_t">;
+def AttrI16 : IntegerAttr<"uint16_t">;
+def AttrI32 : IntegerAttr<"uint32_t">;
+def AttrI64 : IntegerAttr<"uint64_t">;
 
+// ============================================================================
+/// Types and (type) constraints
+///
+/// TableGen representation of LLVM IR types, including both builtin types
+/// (such as i32, pointers) and dialect-defined types.
+// ============================================================================
+
+class Constraint;
+
+class Predicate : Constraint {
+  /// Arguments of this predicate. The first argument is considered the "self"
+  /// argument for when the predicate is used in a valued position.
+  dag arguments = ?;
+}
+
+class CppPredicateMixin {
+  /// C++ expression to evaluate the predicate, substituting arguments by name.
+  /// All arguments (both capturable and uncapturable) can be (and usually are)
+  /// used in this expression.
+  string evaluate = ?;
+
+  /// C++ expression to check the predicate. Only the "self" (first) argument
+  /// and any uncapturable arguments can be referenced.
+  string check = ?;
+
+  /// C++ expressions to capture other arguments from the "self" (first)
+  /// argument, assuming that the `check` expression is true.
+  ///
+  /// This list can be empty to indicate that no argument can be captured.
+  /// Otherwise, its length must match the number of non-self arguments.
+  list<string> capture = ?;
+}
+
+def any : Predicate, CppPredicateMixin, MetaType {
+  let arguments = (args any:$self);
+  let evaluate = ""; // cannot be evaluated
+  let check = "true";
+  let capture = [];
+}
+
+def eq : Predicate, CppPredicateMixin {
+  let arguments = (args any:$lhs, any:$rhs);
+  let evaluate = "$rhs";
+  let check = "true"; // the check happens implicitly via the capture logic
+  let capture = ["$lhs"];
+}
+
+class TgPredicateMixin {
+  /// Expression that a predicate application is substituted by.
+  dag expression = ?;
+}
+
+class TgPredicate<dag arguments_, dag expression_>
+    : Predicate, TgPredicateMixin {
+  let arguments = arguments_;
+  let expression = expression_;
+}
+
+class TgConstant<dag expression_>
+    : TgPredicate<(args any:$self), (eq $self, expression_)>;
+
+class Type;
+
+class BuiltinType : Type, Predicate, CppPredicateMixin;
+
+def VoidTy : BuiltinType {
+  let arguments = (args type:$self);
+  let evaluate = "::llvm::Type::getVoidTy($_context)";
+  let check = "$self->isVoidTy()";
+  let capture = [];
+}
+
+def IntegerType : BuiltinType {
+  let arguments = (args type:$self, AttrI32:$num_bits);
+  let evaluate = "::llvm::IntegerType::get($_context, $num_bits)";
+  let check = "$self->isIntegerTy()";
+  let capture = ["$self->getIntegerBitWidth()"];
+}
+
+def I1 : TgConstant<(IntegerType 1)>, Type;
+def I8 : TgConstant<(IntegerType 8)>, Type;
+def I16 : TgConstant<(IntegerType 16)>, Type;
+def I32 : TgConstant<(IntegerType 32)>, Type;
+def I64 : TgConstant<(IntegerType 64)>, Type;
+
+def PointerType : BuiltinType {
+  let arguments = (args type:$self, AttrI32:$address_space);
+  let evaluate = "::llvm::PointerType::get($_context, $address_space)";
+  let check = "$self->isPointerTy()";
+  let capture = ["$self->getPointerAddressSpace()"];
+}
+
+def Ptr : TgConstant<(PointerType 0)>, Type;
+
+// LLVM IR fixed vector type (<n x T>).
+def FixedVectorType : BuiltinType {
+  let arguments = (args type:$self, type:$element_type, AttrI32:$num_elements);
+  let evaluate = "::llvm::FixedVectorType::get($element_type, $num_elements)";
+  let check = "::llvm::isa<::llvm::FixedVectorType>($self)";
+  let capture = [
+    "::llvm::cast<::llvm::FixedVectorType>($self)->getElementType()",
+    "::llvm::cast<::llvm::FixedVectorType>($self)->getNumElements()",
+  ];
+}
+
+/// All types that are defined by a dialect are derived from this class.
+class DialectType<Dialect dialect_, string mnemonic_> : Type, Predicate {
+  dag typeArguments = ?;
+  let arguments = !con((args type:$self), typeArguments);
+
+  Dialect dialect = dialect_;
+  string mnemonic = mnemonic_;
+
+  /// Whether the Type::get method has an explicit LLVMContext reference as the
+  /// first argument.
+  bit defaultGetterHasExplicitContextArgument = false;
+
+  string summary = ?;
+  string description = ?;
+}
+
+def and;
+def or;
+
+// ============================================================================
+/// Misc. predicates
+// ============================================================================
+
+def ScalarOrFixedVector : TgPredicate<
+    (args type:$self, type:$scalar_type),
+    (or (eq $self, $scalar_type),
+        (FixedVectorType $self, $scalar_type, any))>;
+
+class Comparison<string cppComparison> : Predicate, CppPredicateMixin {
+  let arguments = (args any:$lhs, any:$rhs);
+  let evaluate = "";
+  let check = "$lhs " # cppComparison # " $rhs";
+  let capture = [];
+}
+
+def ge : Comparison<">=">;
+def gt : Comparison<">">;
+def le : Comparison<"<=">;
+def lt : Comparison<"<">;
+
+// ============================================================================
+/// Tie attributes to LLVM types
+// ============================================================================
+
+// Link an Attr to its corresponding LLVM type.
+//
+// This link is achieved with a separate def to break a circular dependency in
+// how IntegerType is defined.
+class AttrLlvmType<Attr attr_, Type llvmType_> {
+  Attr attr = attr_;
+  Type llvmType = llvmType_;
+}
+
+def : AttrLlvmType<AttrI1, I1>;
+def : AttrLlvmType<AttrI8, I8>;
+def : AttrLlvmType<AttrI16, I16>;
+def : AttrLlvmType<AttrI32, I32>;
+def : AttrLlvmType<AttrI64, I64>;
 
 // ============================================================================
 /// Traits
@@ -270,4 +324,11 @@ class Op<Dialect dialect_, string mnemonic_, list<Trait> traits_> {
 
   string summary = ?;
   string description = ?;
+
+  /// Whether the default builder method has an explicit result type as its
+  /// first argument.
+  ///
+  /// If this is false, the result type must be either constant or computable
+  /// from the argument types using the available constraints.
+  bit defaultBuilderHasExplicitResultType = false;
 }

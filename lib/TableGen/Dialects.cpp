@@ -17,6 +17,7 @@
 #include "llvm-dialects/TableGen/Dialects.h"
 
 #include "llvm-dialects/TableGen/Constraints.h"
+#include "llvm-dialects/TableGen/DialectType.h"
 #include "llvm-dialects/TableGen/Operations.h"
 #include "llvm-dialects/TableGen/Predicates.h"
 #include "llvm-dialects/TableGen/Traits.h"
@@ -61,11 +62,13 @@ void GenDialect::finalize() {
   }
 }
 
+GenDialectsContext::GenDialectsContext() = default;
+GenDialectsContext::~GenDialectsContext() = default;
+
 Trait *GenDialectsContext::getTrait(Record *traitRec) {
   if (!traitRec->isSubClassOf("Trait"))
-    report_fatal_error(
-        Twine("Trying to use '") + traitRec->getName() +
-        "' as a constraint, but it is not a subclass of 'Constraint'");
+    report_fatal_error(Twine("Trying to use '") + traitRec->getName() +
+                       "' as a trait, but it is not a subclass of 'Trait'");
 
   auto &result = m_traits[traitRec];
   if (!result)
@@ -73,32 +76,42 @@ Trait *GenDialectsContext::getTrait(Record *traitRec) {
   return result.get();
 }
 
-Constraint *GenDialectsContext::getConstraint(Record *constraintRec) {
-  if (!constraintRec->isSubClassOf("Constraint"))
-    report_fatal_error(
-        Twine("Trying to use '") + constraintRec->getName() +
-        "' as a constraint, but it is not a subclass of 'Constraint'");
+Predicate *GenDialectsContext::getPredicate(Init *init, raw_ostream &errs) {
+  Predicate *op = getPredicateImpl(init, errs);
+  if (!op)
+    errs << "... while looking up predicate: " << init->getAsString() << '\n';
+  return op;
+}
 
-  auto &result = m_constraints[constraintRec];
-  if (!result) {
-    if (constraintRec->isSubClassOf("BuiltinType")) {
-      result = std::make_unique<BuiltinType>();
-    } else if (constraintRec->isSubClassOf("DialectType")) {
-      result = std::make_unique<DialectType>();
-    } else if (constraintRec->isSubClassOf("TypeArg")) {
-      result = std::make_unique<TypeArg>();
-    } else if (constraintRec->isSubClassOf("Attr")) {
-      result = std::make_unique<Attr>();
-    } else if (constraintRec->isSubClassOf("BaseCPred")) {
-      result = std::make_unique<BaseCPred>(constraintRec->getName());
-    } else {
-      report_fatal_error(Twine("unsupported type constraint: ") +
-                         constraintRec->getName());
-    }
-
-    result->init(this, constraintRec);
+Predicate *GenDialectsContext::getPredicateImpl(Init *init, raw_ostream &errs) {
+  auto it = m_predicates.find(init);
+  if (it != m_predicates.end()) {
+    if (!it->second)
+      errs << "  repeated predicate lookup\n";
+    return it->second.get();
   }
-  return result.get();
+
+  // Leave a marker to guard against recursive lookups.
+  m_predicates.try_emplace(init);
+
+  auto owner = Predicate::parse(errs, *this, init);
+  Predicate *op = owner.get();
+  m_predicates.find(init)->second = std::move(owner);
+
+  return op;
+}
+
+Attr *GenDialectsContext::getAttr(llvm::Record *record,
+                                  llvm::raw_ostream &errs) {
+  auto it = m_attrs.find(record);
+  if (it == m_attrs.end()) {
+    errs << "  not an attribute: " << record->getName() << '\n';
+    return nullptr;
+  }
+
+  Attr *attr = it->second.get();
+  assert(!m_attrsComplete || attr->getLlvmType());
+  return attr;
 }
 
 GenDialect *GenDialectsContext::getDialect(Record *dialectRec) {
@@ -135,7 +148,11 @@ OpClass *GenDialectsContext::getOpClass(Record *opClassRec) {
   // Leave a marker in the map to detect recursive superclass relations.
   m_opClasses.try_emplace(opClassRec);
 
-  auto opClassOwner = OpClass::parse(this, opClassRec);
+  auto opClassOwner = OpClass::parse(llvm::errs(), *this, opClassRec);
+  if (!opClassOwner) {
+    llvm::errs() << "... in operation class " << opClassRec->getName() << '\n';
+    report_fatal_error("parse error in operation class");
+  }
   OpClass *opClass = opClassOwner.get();
 
   // Re-find the class record in case there were recursive lookups.
@@ -145,7 +162,24 @@ OpClass *GenDialectsContext::getOpClass(Record *opClassRec) {
 
 void GenDialectsContext::init(RecordKeeper &records,
                               const DenseSet<StringRef> &dialects) {
-  m_voidTy = cast<BuiltinType>(getConstraint(records.getDef("VoidTy")));
+  for (Record *record : records.getAllDerivedDefinitions("Attr")) {
+    auto owner = Attr::parse(llvm::errs(), *this, record);
+    if (!record)
+      report_fatal_error(Twine("Error parsing Attr ") + record->getName());
+
+    m_attrs.try_emplace(record, std::move(owner));
+  }
+
+  for (Record *record : records.getAllDerivedDefinitions("AttrLlvmType")) {
+    Attr *attr = getAttr(record->getValueAsDef("attr"), llvm::errs());
+    assert(attr);
+    attr->setLlvmType(record->getValueInit("llvmType"));
+  }
+  m_attrsComplete = true;
+
+  m_voidTy = records.getDef("VoidTy")->getDefInit();
+  m_any = records.getDef("any")->getDefInit();
+  assert(m_voidTy && m_any);
 
   for (Record *dialectRec : records.getAllDerivedDefinitions("Dialect")) {
     auto name = dialectRec->getValueAsString("name");
@@ -161,7 +195,12 @@ void GenDialectsContext::init(RecordKeeper &records,
   }
 
   for (Record *typeRec : records.getAllDerivedDefinitions("DialectType")) {
-    auto *dialectType = cast<DialectType>(getConstraint(typeRec));
+    auto *dialectType =
+        cast<DialectType>(getPredicate(typeRec->getDefInit(), llvm::errs()));
+    if (!dialectType) {
+      report_fatal_error(Twine("failed to parse DialectType ") +
+                         typeRec->getName());
+    }
     auto dialectIt = m_dialects.find(dialectType->getDialectRec());
     if (dialectIt != m_dialects.end())
       dialectIt->second->types.push_back(dialectType);
@@ -173,77 +212,12 @@ void GenDialectsContext::init(RecordKeeper &records,
     if (dialectIt == m_dialects.end())
       continue;
 
-    Operation::parse(this, dialectIt->second.get(), opRec);
+    if (!Operation::parse(llvm::errs(), this, dialectIt->second.get(), opRec)) {
+      llvm::errs() << "... in operation " << opRec->getName() << '\n';
+      report_fatal_error("error parsing operation");
+    }
   }
 
   for (auto &dialectEntry : m_dialects)
     dialectEntry.second->finalize();
-}
-
-std::unique_ptr<PredicateExpr>
-GenDialectsContext::parsePredicateExpr(DagInit *dag) {
-  Record *op = dag->getOperatorAsDef({});
-
-  if (op->getName() == "and" || op->getName() == "or" ||
-      op->getName() == "not") {
-    PredicateExpr::Kind kind;
-    if (op->getName() == "and")
-      kind = PredicateExpr::Kind::And;
-    else if (op->getName() == "or")
-      kind = PredicateExpr::Kind::Or;
-    else
-      kind = PredicateExpr::Kind::Not;
-
-    SmallVector<std::unique_ptr<PredicateExpr>> arguments;
-    for (auto [arg, argName] : llvm::zip(dag->getArgs(), dag->getArgNames())) {
-      if (argName) {
-        report_fatal_error(Twine("Logical expression has named arguments: ") +
-                           dag->getAsString());
-      }
-
-      if (!isa<DagInit>(arg)) {
-        report_fatal_error(Twine("Logical expression is missing argument or "
-                                 "has non-dag argument: ") +
-                           dag->getAsString());
-      }
-
-      arguments.push_back(parsePredicateExpr(cast<DagInit>(arg)));
-    }
-
-    if (kind == PredicateExpr::Kind::Not && arguments.size() != 1) {
-      report_fatal_error(Twine("Logical 'not' must have exactly 1 argument: ") +
-                         dag->getAsString());
-    }
-
-    return std::make_unique<PredicateLogic>(kind, arguments);
-  }
-
-  // It's an application of a predicate.
-  Constraint *predicate = getConstraint(op);
-  SmallVector<std::string> arguments;
-
-  for (auto [arg, argName] : llvm::zip(dag->getArgs(), dag->getArgNames())) {
-    if (!isa<UnsetInit>(arg)) {
-      report_fatal_error(
-          Twine("Predicate application has an argument object: ") +
-          dag->getAsString());
-    }
-
-    if (!argName) {
-      report_fatal_error(
-          Twine("Predicate application is missing argument name: ") +
-          dag->getAsString());
-    }
-
-    arguments.push_back(argName->getValue().str());
-  }
-
-  auto [minArgs, maxArgs] = predicate->getMinMaxArgs();
-  if (arguments.size() < minArgs || arguments.size() > maxArgs) {
-    report_fatal_error(
-        Twine("Predicate application has wrong number of arguments: ") +
-        dag->getAsString());
-  }
-
-  return std::make_unique<PredicateApply>(predicate, arguments);
 }

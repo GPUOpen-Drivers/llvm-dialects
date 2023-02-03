@@ -86,6 +86,17 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
       Result += "nx";
     Result += "v" + utostr(EC.getKnownMinValue()) +
               getMangledTypeStr(VTy->getElementType(), HasUnnamedType);
+#if HAVE_LLVM_VERSION_MAJOR >= 17
+  } else if (TargetExtType *TETy = dyn_cast<TargetExtType>(Ty)) {
+    Result += "t";
+    Result += TETy->getName();
+    for (Type *ParamTy : TETy->type_params())
+      Result += "_" + getMangledTypeStr(ParamTy, HasUnnamedType);
+    for (unsigned IntParam : TETy->int_params())
+      Result += "_" + utostr(IntParam);
+    // Ensure nested target extension types are distinguishable.
+    Result += "t";
+#endif
   } else if (Ty) {
     switch (Ty->getTypeID()) {
     default: llvm_unreachable("Unhandled type");
@@ -121,10 +132,11 @@ std::string llvm_dialects::getMangledName(StringRef name,
   return result;
 }
 
-bool llvm_dialects::runInstructionVerifier(
-    function_ref<bool (raw_ostream &)> verifier,
-    llvm::Instruction *instruction,
-    raw_ostream *errs) {
+namespace {
+
+template <typename T>
+bool runVerifier(function_ref<bool(raw_ostream &)> verifier, T *ir,
+                 raw_ostream *errs) {
   std::string errors;
   raw_string_ostream out(errors);
 
@@ -134,6 +146,19 @@ bool llvm_dialects::runInstructionVerifier(
   if (!errs)
     errs = &llvm::errs();
 
-  *errs << "Verifier error in: " << *instruction << ":\n" << errors;
+  *errs << "Verifier error in: " << *ir << ":\n" << errors;
   return false;
+}
+
+} // anonymous namespace
+
+bool llvm_dialects::runInstructionVerifier(
+    function_ref<bool(raw_ostream &)> verifier, llvm::Instruction *instruction,
+    raw_ostream *errs) {
+  return runVerifier(verifier, instruction, errs);
+}
+
+bool llvm_dialects::runTypeVerifier(function_ref<bool(raw_ostream &)> verifier,
+                                    llvm::Type *type, raw_ostream *errs) {
+  return runVerifier(verifier, type, errs);
 }

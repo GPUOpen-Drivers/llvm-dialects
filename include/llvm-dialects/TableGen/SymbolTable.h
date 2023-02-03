@@ -55,4 +55,18 @@ private:
   SymbolTable &operator=(const SymbolTable &) = delete;
 };
 
+class SymbolScope {
+  SymbolTable **m_ptr = nullptr;
+  SymbolTable *m_parent = nullptr;
+  SymbolTable m_symbols;
+
+public:
+  SymbolScope(SymbolTable **ptr)
+      : m_ptr(ptr), m_parent(*ptr), m_symbols(m_parent) {
+    *m_ptr = &m_symbols;
+  }
+
+  ~SymbolScope() { *m_ptr = m_parent; }
+};
+
 } // namespace llvm_dialects

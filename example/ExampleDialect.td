@@ -30,13 +30,25 @@ def ExampleDialect : Dialect {
   let cppNamespace = "xd";
 }
 
+def XdVectorType : DialectType<ExampleDialect, "vector"> {
+  let typeArguments = (args type:$element_type, AttrI32:$num_elements);
+
+  let summary = "a custom vector type";
+  let description = [{
+    Unlike LLVM's built-in vector type, this vector can have arbitrary element
+    types (and nesting is possible!).
+  }];
+}
+
 class ExampleOp<string mnemonic_, list<Trait> traits_>
     : Op<ExampleDialect, mnemonic_, traits_>;
 
 def ReadOp : ExampleOp<"read",
                        [Memory<[(readwrite InaccessibleMem)]>, NoUnwind]> {
-  let results = (outs AnyType:$data);
+  let results = (outs value:$data);
   let arguments = (ins);
+
+  let defaultBuilderHasExplicitResultType = true;
 
   let summary = "read a piece of data";
   let description = [{
@@ -48,7 +60,7 @@ def WriteOp : ExampleOp<"write",
                         [Memory<[(write InaccessibleMem)]>, NoUnwind,
                          WillReturn]> {
   let results = (outs);
-  let arguments = (ins AnyType:$data);
+  let arguments = (ins value:$data);
 
   let summary = "write a piece of data";
   let description = [{
@@ -58,10 +70,8 @@ def WriteOp : ExampleOp<"write",
 
 def CombineOp : ExampleOp<"combine",
                           [Memory<[]>, NoUnwind, WillReturn]> {
-  let results = (outs AnyType:$result);
-  let arguments = (ins AnyType:$lhs, AnyType:$rhs);
-
-  let verifier = [(SameTypes $result, $lhs, $rhs)];
+  let results = (outs value:$result);
+  let arguments = (ins (eq $result):$lhs, (eq $result):$rhs);
 
   let summary = "combine two pieces of data";
   let description = [{
@@ -82,10 +92,78 @@ def Add32Op : ExampleOp<"add32", [Memory<[]>, NoUnwind, WillReturn]> {
 
 def SizeOfOp : ExampleOp<"sizeof", [Memory<[]>, NoUnwind, WillReturn]> {
   let results = (outs I64:$result);
-  let arguments = (ins TypeArg<AnyType>:$sizeof_type);
+  let arguments = (ins type:$sizeof_type);
 
   let summary = "size of a given type";
   let description = [{
     Returns the store size of the given type in bytes.
+  }];
+}
+
+def ExtractElementOp : ExampleOp<"extractelement", [Memory<[]>, NoUnwind,
+                                                    WillReturn]> {
+  let results = (outs value:$result);
+  let arguments = (ins (XdVectorType $result, any):$vector, I32:$index);
+
+  let summary = "extract an element from a vector";
+  let description = [{
+    Return the element of `vector` with the given `index`.
+  }];
+}
+
+def InsertElementOp : ExampleOp<"insertelement", [Memory<[]>, NoUnwind,
+                                                  WillReturn]> {
+  let results = (outs value:$result);
+  let arguments = (ins value:$vector, value:$value, I32:$index);
+
+  let verifier = [
+    (XdVectorType $result, $value, any),
+    (eq $result, $vector),
+  ];
+
+  let summary = "insert an element into a vector";
+  let description = [{
+    Insert the given `value` into the given `vector` at the given `index` and
+    returns the result.
+  }];
+}
+
+def FromFixedVectorOp : ExampleOp<"fromfixedvector", [Memory<[]>, NoUnwind,
+                                                      WillReturn]> {
+  let results = (outs (XdVectorType $scalar_type, $num_elements):$result);
+  let arguments = (ins (FixedVectorType $scalar_type, $num_elements):$source);
+
+  let summary = "convert <n x T> to our custom vector type";
+  let description = [{
+    Demonstrate a more complex unification case.
+  }];
+}
+
+def ITruncOp : ExampleOp<"itrunc", [Memory<[]>, NoUnwind, WillReturn]> {
+  let results = (outs (IntegerType $result_width):$result);
+  let arguments = (ins (IntegerType $source_width):$source);
+
+  let verifier = [
+    (le $result_width, $source_width),
+  ];
+
+  let defaultBuilderHasExplicitResultType = true;
+
+  let summary = "custom trunc operation that only works on integers";
+  let description = [{
+    Demonstrates the use of a predicate in an unvalued position.
+  }];
+}
+
+def IExtOp : ExampleOp<"iext", [Memory<[]>, NoUnwind, WillReturn]> {
+  let results = (outs (IntegerType $result_width):$result);
+  let arguments = (ins (IntegerType (le $result_width)):$source);
+
+  let defaultBuilderHasExplicitResultType = true;
+
+  let summary = "custom ext operation that only works on integers";
+  let description = [{
+    Demonstrates the use of the same unevaluatable `le` predicate in a valued
+    position.
   }];
 }

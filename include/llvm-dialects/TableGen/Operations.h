@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include "llvm-dialects/TableGen/Constraints.h"
+#include "llvm-dialects/TableGen/Evaluator.h"
 #include "llvm-dialects/TableGen/NamedValue.h"
 #include "llvm-dialects/TableGen/SymbolTable.h"
 
@@ -30,12 +32,10 @@ class Record;
 namespace llvm_dialects {
 
 class BuilderMethod;
-class Constraint;
 class FmtContext;
 class GenDialectsContext;
 class GenDialect;
 class Operation;
-class PredicateExpr;
 class Trait;
 
 struct OverloadKey {
@@ -60,7 +60,8 @@ public:
   std::vector<OpClass *> subclasses;
   std::vector<Operation *> operations;
 
-  static std::unique_ptr<OpClass> parse(GenDialectsContext *context,
+  static std::unique_ptr<OpClass> parse(llvm::raw_ostream &errs,
+                                        GenDialectsContext &context,
                                         llvm::Record *record);
 
   llvm::SmallVector<NamedValue> getFullArguments() const;
@@ -68,6 +69,8 @@ public:
 };
 
 class Operation {
+  friend class BuilderMethod;
+
 public:
   OpClass *superclass = nullptr;
   std::string name;
@@ -78,12 +81,12 @@ public:
   /// arguments, if any.
   std::vector<NamedValue> arguments;
   std::vector<NamedValue> results;
-  std::vector<std::unique_ptr<PredicateExpr>> verifier;
 
+  Operation(GenDialectsContext &context) : m_system(context, m_scope) {}
   ~Operation();
 
-  static void parse(GenDialectsContext *context, GenDialect *dialect,
-                    llvm::Record *record);
+  static bool parse(llvm::raw_ostream &errs, GenDialectsContext *context,
+                    GenDialect *dialect, llvm::Record *record);
 
   bool haveResultOverloads() const { return m_haveResultOverloads; }
   bool haveArgumentOverloads() const { return m_haveArgumentOverloads; }
@@ -95,13 +98,19 @@ public:
 
   int getAttributeListIdx() const { return m_attributeListIdx; }
 
+  void emitVerifierMethod(llvm::raw_ostream &out, FmtContext &fmt) const;
+
 private:
   friend class GenDialect;
   friend class GenDialectsContext;
 
+  bool m_defaultBuilderHasExplicitResultType = false;
+
   bool m_haveResultOverloads = false;
   bool m_haveArgumentOverloads = false;
 
+  Scope m_scope;
+  ConstraintSystem m_system;
   std::vector<BuilderMethod> m_builders;
 
   /// -1 if the operation has no attribute list / has an empty attribute list.
@@ -121,13 +130,14 @@ public:
 private:
   Operation &m_operation;
   SymbolTable m_symbolTable;
+  std::string m_context;
   std::string m_builder;
   std::vector<Arg> m_arguments;
   unsigned m_beginOpArguments = 0;
 
-  /// If non-empty, a C++ expression that allows us to derive the result type
-  /// from one of the builder arguments.
-  std::string m_resultTypeFromBuilderArg;
+  std::string m_prelude;
+  std::string m_resultType;
+  std::vector<std::string> m_attrTypes;
 
 public:
   BuilderMethod(Operation &op) : m_operation(op) {}

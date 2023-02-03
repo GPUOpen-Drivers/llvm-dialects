@@ -19,57 +19,52 @@
 #include "llvm-dialects/TableGen/Constraints.h"
 #include "llvm-dialects/TableGen/Dialects.h"
 #include "llvm-dialects/TableGen/Format.h"
-#include "llvm-dialects/TableGen/LlvmTypeBuilder.h"
-#include "llvm-dialects/TableGen/Predicates.h"
 
 #include "llvm/TableGen/Record.h"
 
 using namespace llvm;
 using namespace llvm_dialects;
 
+// Default destructor instantiated explicitly to avoid having to add more
+// includes in the header.
 Operation::~Operation() = default;
 
-static std::vector<NamedValue> parseArguments(GenDialectsContext *context,
-                                                Record *rec) {
+static std::optional<std::vector<NamedValue>>
+parseArguments(raw_ostream &errs, GenDialectsContext &context, Record *rec) {
   Record *superClassRec = rec->getValueAsDef("superclass");
-  OpClass *superclass = context->getOpClass(superClassRec);
+  OpClass *superclass = context.getOpClass(superClassRec);
   DagInit *argsInit = rec->getValueAsDag("arguments");
-  std::vector<NamedValue> arguments;
 
-  if (argsInit->getOperatorAsDef({})->getName() != "ins")
-    report_fatal_error(Twine(rec->getName()) +
-                       " argument operator must be 'ins'");
-
-  for (unsigned i = 0; i < argsInit->getNumArgs(); ++i) {
-    if (superclass && i == 0) {
-      if (argsInit->getArgName(0) ||
-          argsInit->getArg(0) != superClassRec->getDefInit())
-        report_fatal_error(Twine(rec->getName()) +
-                           ": superclass must be first in arguments list");
-      continue;
-    }
-
-    NamedValue opArg;
-    opArg.name = argsInit->getArgNameStr(i);
-    if (auto *arg = dyn_cast_or_null<DefInit>(argsInit->getArg(i)))
-      opArg.type = context->getConstraint(arg->getDef());
-    if (!opArg.type) {
-      report_fatal_error(Twine(rec->getName()) + " argument " + Twine(i) +
-                         ": bad type constraint");
-    }
-    arguments.push_back(std::move(opArg));
+  if (argsInit->getOperatorAsDef({})->getName() != "ins") {
+    errs << "argument list operator must be 'ins'\n";
+    errs << "... in: " << argsInit->getAsString() << '\n';
+    return {};
   }
 
-  return arguments;
+  if (superclass) {
+    if (argsInit->arg_size() < 1 || argsInit->getArgName(0) ||
+        argsInit->getArg(0) != superClassRec->getDefInit()) {
+      errs << "'superclass' must be first in arguments list\n";
+      errs << "... in: " << argsInit->getAsString() << '\n';
+      return {};
+    }
+  }
+
+  return NamedValue::parseList(errs, context, argsInit, superclass ? 1 : 0,
+                               NamedValue::Parser::OperationArguments);
 }
 
-std::unique_ptr<OpClass> OpClass::parse(GenDialectsContext *context,
-                                        Record *record) {
+std::unique_ptr<OpClass>
+OpClass::parse(raw_ostream &errs, GenDialectsContext &context, Record *record) {
   auto opClass = std::make_unique<OpClass>();
-  opClass->dialect = context->getDialect(record->getValueAsDef("dialect"));
+  opClass->dialect = context.getDialect(record->getValueAsDef("dialect"));
   opClass->name = record->getName();
-  opClass->superclass = context->getOpClass(record->getValueAsDef("superclass"));
-  opClass->arguments = parseArguments(context, record);
+  opClass->superclass = context.getOpClass(record->getValueAsDef("superclass"));
+
+  auto arguments = parseArguments(errs, context, record);
+  if (!arguments.has_value())
+    return {};
+  opClass->arguments = std::move(*arguments);
 
   OpClass *ptr = opClass.get();
   opClass->dialect->opClasses.push_back(opClass.get());
@@ -93,9 +88,34 @@ unsigned OpClass::getNumFullArguments() const {
   return arguments.size();
 }
 
-void Operation::parse(GenDialectsContext *context, GenDialect *dialect,
-                      Record *record) {
-  auto op = std::make_unique<Operation>();
+static std::string evaluateAttrLlvmType(raw_ostream &errs, raw_ostream &out,
+                                        FmtContext &fmt, Attr *attr,
+                                        StringRef name,
+                                        GenDialectsContext &context,
+                                        SymbolTable &symbols) {
+  Scope attrTypeScope;
+  ConstraintSystem attrTypeSystem(context, attrTypeScope);
+  Variable *typeVariable =
+      attrTypeScope.getVariable((Twine(name) + "Type").str());
+  if (!attrTypeSystem.addConstraint(errs, attr->getLlvmType(), typeVariable)) {
+    errs << "... while trying to obtain llvm::Type of " << name << '\n';
+    return {};
+  }
+
+  Assignment assignment;
+  Evaluator attrTypeEval(symbols, assignment, attrTypeSystem, out, fmt);
+  std::string attrType = attrTypeEval.evaluate(typeVariable);
+  if (attrType.empty()) {
+    errs << "Failed to obtain llvm::Type of " << name << ":\n";
+    errs << attrTypeEval.takeErrorMessages();
+    return {};
+  }
+  return attrType;
+}
+
+bool Operation::parse(raw_ostream &errs, GenDialectsContext *context,
+                      GenDialect *dialect, Record *record) {
+  auto op = std::make_unique<Operation>(*context);
   op->superclass = context->getOpClass(record->getValueAsDef("superclass"));
   if (op->superclass)
     op->superclass->operations.push_back(op.get());
@@ -104,45 +124,64 @@ void Operation::parse(GenDialectsContext *context, GenDialect *dialect,
   for (Record *traitRec : record->getValueAsListOfDefs("traits"))
     op->traits.push_back(context->getTrait(traitRec));
 
-  op->arguments = parseArguments(context, record);
+  auto arguments = parseArguments(errs, *context, record);
+  if (!arguments.has_value())
+    return false;
+  op->arguments = std::move(*arguments);
+
+  EvaluationPlanner evaluation(op->m_system);
+
   for (const auto &arg : op->arguments) {
-    if (!isa<Type>(arg.type) && !isa<Attr>(arg.type))
-      op->m_haveArgumentOverloads = true;
+    auto variable = op->m_scope.getVariable(arg.name);
+    ConstraintSystem singletonSystem{*context, op->m_scope};
+    if (!singletonSystem.addConstraint(errs, arg.constraint, variable))
+      return false;
+
+    if (!isa<Attr>(arg.type)) {
+      EvaluationPlanner planner{singletonSystem};
+      if (!planner.getPlan(variable))
+        op->m_haveArgumentOverloads = true;
+    }
+
+    op->m_system.merge(std::move(singletonSystem));
   }
 
   DagInit *results = record->getValueAsDag("results");
-  assert(results->getOperatorAsDef({})->getName() == "outs");
-  assert(results->getNumArgs() <= 1 &&
-          "multiple result values not supported");
-  for (unsigned i = 0; i < results->getNumArgs(); ++i) {
-    NamedValue opResult;
-    opResult.name = results->getArgNameStr(i);
-    if (auto *result = dyn_cast_or_null<DefInit>(results->getArg(i)))
-      opResult.type = context->getConstraint(result->getDef());
-    if (!opResult.type) {
-      report_fatal_error(Twine("Operation '") + op->mnemonic + "' result " +
-                          Twine(i) + ": bad type constraint");
-    }
-    if (isa<Attr>(opResult.type)) {
-      report_fatal_error(Twine("Operation '") + op->mnemonic +
-                           "': result cannot be an attribute");
-    }
-
-    if (!isa<Type>(opResult.type))
-      op->m_haveResultOverloads = true;
-
-    op->results.push_back(std::move(opResult));
+  if (results->getOperatorAsDef({})->getName() != "outs") {
+    errs << "result list operator must be 'outs'\n";
+    return false;
+  }
+  if (results->getNumArgs() > 1) {
+    errs << "multiple result values are not supported\n";
+    return false;
   }
 
-  ListInit *verifier = record->getValueAsListInit("verifier");
-  for (Init *ruleInit : *verifier) {
-    auto *rule = dyn_cast<DagInit>(ruleInit);
-    if (!rule) {
-      report_fatal_error(Twine("Operation '") + op->mnemonic +
-                          "': verifier rules must be dags");
-    }
+  auto parsedResults = NamedValue::parseList(
+      errs, *context, results, 0, NamedValue::Parser::OperationResults);
+  if (!parsedResults.has_value())
+    return false;
+  op->results = std::move(*parsedResults);
 
-    op->verifier.push_back(context->parsePredicateExpr(rule));
+  for (const auto &result : op->results) {
+    auto variable = op->m_scope.getVariable(result.name);
+    ConstraintSystem singletonSystem{*context, op->m_scope};
+    if (!singletonSystem.addConstraint(errs, result.constraint, variable))
+      return false;
+
+    EvaluationPlanner planner{singletonSystem};
+    if (!planner.getPlan(variable))
+      op->m_haveResultOverloads = true;
+
+    op->m_system.merge(std::move(singletonSystem));
+  }
+
+  op->m_defaultBuilderHasExplicitResultType =
+      record->getValueAsBit("defaultBuilderHasExplicitResultType");
+
+  ListInit *verifier = record->getValueAsListInit("verifier");
+  for (Init *constraint : *verifier) {
+    if (!op->m_system.addConstraint(errs, constraint, nullptr))
+      return false;
   }
 
   // Derive the default builder method.
@@ -155,51 +194,48 @@ void Operation::parse(GenDialectsContext *context, GenDialect *dialect,
         convertToCamelFromSnakeCase(opArg.name)));
   }
 
+  builder.m_context = builder.m_symbolTable.chooseName("context");
+  builder.m_builder = builder.m_symbolTable.chooseName({"b", "builder"});
+
+  raw_string_ostream prelude(builder.m_prelude);
+  FmtContext fmt;
+  fmt.withContext(builder.m_context);
+  fmt.withBuilder(builder.m_builder);
+
+  Assignment assignments;
+  Evaluator eval(builder.m_symbolTable, assignments, op->m_system, prelude,
+                 fmt);
+
+  for (const auto &[opArg, builderName] :
+       llvm::zip(fullArguments, opArgumentBuilderNames)) {
+    auto variable = op->m_scope.findVariable(opArg.name);
+
+    std::string constraintValue = builderName;
+    if (opArg.type->isValueArg())
+      constraintValue += "->getType()";
+
+    assignments.assign(variable, constraintValue);
+  }
+
   if (!op->results.empty()) {
     assert(op->results.size() == 1);
+    StringRef resultName = op->results[0].name;
 
-    if (!isa<Type>(op->results[0].type)) {
-      // Check if the builder can derive the result type from a SameTypes
-      // constraint.
-      for (const auto &expr : op->verifier) {
-        if (const auto *apply = dyn_cast<PredicateApply>(expr.get())) {
-          if (apply->getPredicate()->getKind() == Constraint::Kind::SameTypes) {
-            bool haveResult = false;
-            bool haveArgument = false;
-            size_t argumentIdx = 0;
-            for (const auto &applyArg : apply->arguments()) {
-              if (applyArg == op->results[0].name) {
-                haveResult = true;
-              } else if (!haveArgument) {
-                auto it =
-                    llvm::find_if(op->arguments,
-                        [&](const NamedValue &opArg) {
-                          return applyArg == opArg.name;
-                        });
-                if (it != op->arguments.end()) {
-                  haveArgument = true;
-                  argumentIdx = std::distance(op->arguments.begin(), it);
-                }
-              }
-            }
+    if (op->m_defaultBuilderHasExplicitResultType) {
+      builder.m_resultType = builder.m_symbolTable.chooseName(
+          convertToCamelFromSnakeCase(resultName, false) + "Type");
 
-            if (haveResult && haveArgument) {
-              builder.m_resultTypeFromBuilderArg =
-                  opArgumentBuilderNames[argumentIdx] + "->getType()";
-              break;
-            }
-          }
-        }
-      }
-
-      if (builder.m_resultTypeFromBuilderArg.empty()) {
-        builder.m_resultTypeFromBuilderArg = builder.m_symbolTable.chooseName(
-            convertToCamelFromSnakeCase(op->results[0].name) + "Type");
-
-        BuilderMethod::Arg builderArg;
-        builderArg.name = builder.m_resultTypeFromBuilderArg;
-        builderArg.cppType = "::llvm::Type*";
-        builder.m_arguments.push_back(std::move(builderArg));
+      BuilderMethod::Arg builderArg;
+      builderArg.name = builder.m_resultType;
+      builderArg.cppType = "::llvm::Type*";
+      builder.m_arguments.push_back(std::move(builderArg));
+    } else {
+      auto variable = op->m_scope.findVariable(op->results[0].name);
+      builder.m_resultType = eval.evaluate(variable);
+      if (builder.m_resultType.empty()) {
+        errs << "Failed to deduce result type for default builder:\n";
+        errs << eval.takeErrorMessages();
+        return false;
       }
     }
   }
@@ -209,15 +245,24 @@ void Operation::parse(GenDialectsContext *context, GenDialect *dialect,
       : llvm::zip(fullArguments, opArgumentBuilderNames)) {
     BuilderMethod::Arg builderArg;
     builderArg.name = builderName;
-    builderArg.cppType = opArg.type->getCppType();
+    builderArg.cppType = opArg.type->getBuilderCppType();
     builder.m_arguments.push_back(std::move(builderArg));
-  }
 
-  builder.m_builder = builder.m_symbolTable.chooseName({"b", "builder"});
+    std::string attrType;
+    if (auto *attr = dyn_cast<Attr>(opArg.type)) {
+      attrType = evaluateAttrLlvmType(errs, prelude, fmt, attr, builderName,
+                                      *context, builder.m_symbolTable);
+      if (attrType.empty())
+        return false;
+    }
+    builder.m_attrTypes.push_back(std::move(attrType));
+  }
 
   op->m_builders.push_back(std::move(builder));
 
   dialect->operations.push_back(std::move(op));
+
+  return true;
 }
 
 SmallVector<NamedValue> Operation::getFullArguments() const {
@@ -232,6 +277,89 @@ unsigned Operation::getNumFullArguments() const {
   if (superclass)
     return superclass->getNumFullArguments() + arguments.size();
   return arguments.size();
+}
+
+void Operation::emitVerifierMethod(llvm::raw_ostream &out,
+                                   FmtContext &fmt) const {
+  SymbolTable symbols;
+  FmtContextScope scope{fmt};
+  fmt.withContext(symbols.chooseName("context"));
+  fmt.addSubst("_errs", symbols.chooseName("errs"));
+
+  out << tgfmt(R"(
+    bool $_op::verifier(::llvm::raw_ostream &$_errs) {
+      ::llvm::LLVMContext &$_context = getModule()->getContext();
+      (void)$_context;
+
+      using ::llvm_dialects::printable;
+
+      if (arg_size() != $0) {
+        $_errs << "  wrong number of arguments: " << arg_size()
+               << ", expected $0\n";
+        return false;
+      }
+  )",
+               &fmt, getNumFullArguments());
+
+  Assignment assignment;
+  Evaluator eval(symbols, assignment, m_system, out, fmt);
+
+  SmallVector<NamedValue> variables = getFullArguments();
+  for (const auto &enumeratedArgument : llvm::enumerate(variables)) {
+    auto index = enumeratedArgument.index();
+    const NamedValue &argument = enumeratedArgument.value();
+
+    if (auto *attr = dyn_cast<Attr>(argument.type)) {
+      FmtContextScope scope{fmt};
+      fmt.addSubst("type", evaluateAttrLlvmType(
+                               llvm::errs(), out, fmt, attr, argument.name,
+                               m_system.getContext(), symbols));
+      fmt.addSubst("name", argument.name);
+      fmt.addSubst("index", Twine(index));
+
+      out << tgfmt(R"(
+        if (getArgOperand($index)->getType() != $type) {
+          $_errs << "  argument $index ($name) has type: "
+                 << *getArgOperand($index)->getType() << '\n';
+          $_errs << "  expected: " << *$type << '\n';
+          return false;
+        }
+      )",
+                   &fmt);
+    }
+  }
+
+  variables.append(results.begin(), results.end());
+  for (const auto &variable : variables) {
+    FmtContextScope scope{fmt};
+    fmt.addSubst("type", variable.type->getCppType());
+    fmt.addSubst("getter", convertToCamelFromSnakeCase(variable.name, true));
+
+    std::string name = convertToCamelFromSnakeCase(variable.name, false);
+    if (variable.type->isValueArg())
+      name += "Type";
+    name = symbols.chooseName(name);
+    fmt.addSubst("name", name);
+
+    if (variable.type->isValueArg()) {
+      fmt.addSubst("value", tgfmt("get$getter()->getType()", &fmt).str());
+    } else {
+      fmt.addSubst("value", tgfmt("get$getter()", &fmt).str());
+    }
+
+    out << tgfmt("$type const $name = $value;\n(void)$name;\n", &fmt);
+
+    auto systemVariable = m_scope.findVariable(variable.name);
+    assignment.assign(systemVariable, name);
+  }
+
+  if (!eval.check()) {
+    llvm::errs() << "failed to generate verifier method for " << name << ":\n";
+    llvm::errs() << eval.takeErrorMessages();
+    report_fatal_error("failed to generate verifier");
+  }
+
+  out << "  return true;\n}\n\n";
 }
 
 void BuilderMethod::emitDeclaration(raw_ostream &out, FmtContext &fmt) const {
@@ -253,10 +381,8 @@ void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
   SymbolTable symbols{&m_symbolTable};
   FmtContextScope scope{fmt};
   fmt.withBuilder(m_builder);
-  fmt.withContext(symbols.chooseName("context"));
+  fmt.withContext(m_context);
   fmt.addSubst("_module", symbols.chooseName("module"));
-
-  LlvmTypeBuilder typeBuilder{out, symbols, fmt};
 
   out << tgfmt("$_op* $_op::create(llvm_dialects::Builder& $_builder", &fmt);
   for (const auto& builderArg : m_arguments)
@@ -267,6 +393,8 @@ void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
     ::llvm::Module& $_module = *$_builder.GetInsertBlock()->getModule();
   
   )", &fmt);
+
+  out << m_prelude;
 
   fmt.addSubst("attrs", symbols.chooseName({"attrs", "attributes"}));
   if (m_operation.getAttributeListIdx() < 0) {
@@ -279,15 +407,22 @@ void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
                   &fmt, m_operation.getAttributeListIdx());
   }
 
-  if (!m_resultTypeFromBuilderArg.empty()) {
+  if (!m_resultType.empty()) {
     assert(m_operation.results.size() == 1);
-    fmt.addSubst("resultType", m_resultTypeFromBuilderArg);
+    fmt.addSubst("resultType", m_resultType);
   } else {
-    assert(m_operation.results.size() <= 1);
-    Constraint *theResultType = m_operation.results.empty()
-                                    ? genContext.getVoidTy()
-                                    : m_operation.results[0].type;
-    fmt.addSubst("resultType", typeBuilder.build(theResultType));
+    assert(m_operation.results.size() == 0);
+
+    Assignment assignment;
+    Scope scope;
+    ConstraintSystem system{genContext, scope};
+    Evaluator eval(symbols, assignment, system, out, fmt);
+    Variable *variable = scope.getVariable("void");
+    bool success =
+        system.addConstraint(llvm::errs(), genContext.getVoidTy(), variable);
+    (void)success;
+    assert(success);
+    fmt.addSubst("resultType", eval.evaluate(variable));
   }
 
   if (m_operation.haveResultOverloads()) {
@@ -307,10 +442,10 @@ void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
         "auto $fnType = ::llvm::FunctionType::get($resultType, true);\n", &fmt);
   } else {
     SmallVector<std::string> argTypes;
-    for (const auto& [opArg, builderArg]
-        : llvm::zip(fullArguments, opArgBuilderArgs)) {
-      if (isa<Attr>(opArg.type))
-        argTypes.push_back(typeBuilder.build(opArg.type));
+    for (const auto &[opArg, builderArg, attrType] :
+         llvm::zip(fullArguments, opArgBuilderArgs, m_attrTypes)) {
+      if (!attrType.empty())
+        argTypes.push_back(attrType);
       else
         argTypes.push_back(builderArg.name + "->getType()");
     }
@@ -329,10 +464,10 @@ void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
 
   if (!fullArguments.empty()) {
     SmallVector<std::string> argTypes;
-    for (const auto& [opArg, builderArg]
-        : llvm::zip(fullArguments, opArgBuilderArgs)) {
-      if (isa<Attr>(opArg.type))
-        argTypes.push_back(typeBuilder.build(opArg.type));
+    for (const auto &[opArg, builderArg, attrType] :
+         llvm::zip(fullArguments, opArgBuilderArgs, m_attrTypes)) {
+      if (!attrType.empty())
+        argTypes.push_back(attrType);
       else
         argTypes.push_back("<skip>");
     }
@@ -343,7 +478,7 @@ void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
               : llvm::zip_first(fullArguments, opArgBuilderArgs, argTypes)) {
       if (auto* attr = dyn_cast<Attr>(opArg.type)) {
         out << tgfmt(attr->getToLlvmValue(), &fmt, builderArg.name, argType);
-      } else if (isa<TypeArg>(opArg.type)) {
+      } else if (opArg.type->isTypeArg()) {
         out << tgfmt("::llvm::PoisonValue::get($0)", &fmt, builderArg.name);
       } else {
         out << builderArg.name;

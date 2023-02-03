@@ -52,6 +52,60 @@ m_attributeLists[2] = ::llvm::AttributeList::get(context, ::llvm::AttributeList:
 }
 
 
+      ::llvm::Type * XdVectorType::getElementType() const {
+        return type_params()[0];
+      }
+
+    
+      uint32_t XdVectorType::getNumElements() const {
+        return int_params()[0];
+      }
+
+    XdVectorType* XdVectorType::get(::llvm::Type * elementType, uint32_t numElements) {
+::llvm::LLVMContext &ctx = elementType->getContext();
+::llvm::Type *types[1] = {
+elementType,
+
+    };
+    unsigned ints[1] = {
+  numElements,
+
+      };
+
+      auto *type = ::llvm::cast<XdVectorType>(::llvm::TargetExtType::get(ctx, s_name, types, ints));
+      assert(::llvm_dialects::runTypeVerifier([type](llvm::raw_ostream &errs) {
+        return type->verifier(errs);
+      }, type));
+      return type;
+    }
+  
+    bool XdVectorType::verifier(::llvm::raw_ostream &errs) const {
+      ::llvm::LLVMContext &ctx = getContext();
+      (void)ctx;
+
+      using ::llvm_dialects::printable;
+
+      if (getNumTypeParameters() != 1) {
+        errs << "  wrong number of type parameters\n";
+        errs << "    expected: 1\n";
+        errs << "      actual: " << getNumTypeParameters() << '\n';
+        return false;
+      }
+
+      if (getNumIntParameters() != 1) {
+        errs << "  wrong number of int parameters\n";
+        errs << "    expected: 1\n";
+        errs << "      actual: " << getNumIntParameters() << '\n';
+        return false;
+      }
+  auto elementType = getElementType();
+(void)elementType;
+auto numElements = getNumElements();
+(void)numElements;
+return true;
+}
+
+
       const ::llvm::StringLiteral Add32Op::s_name{"xd.add32"};
 
     Add32Op* Add32Op::create(llvm_dialects::Builder& b, ::llvm::Value * lhs, ::llvm::Value * rhs, uint32_t extra) {
@@ -61,11 +115,10 @@ m_attributeLists[2] = ::llvm::AttributeList::get(context, ::llvm::AttributeList:
   
       const ::llvm::AttributeList attrs
           = ExampleDialect::get(context).getAttributeList(1);
-    llvm::Type* I32 = ::llvm::Type::getInt32Ty(context);
-auto fnType = ::llvm::FunctionType::get(I32, {
+    auto fnType = ::llvm::FunctionType::get(::llvm::IntegerType::get(context, 32), {
 lhs->getType(),
 rhs->getType(),
-I32,
+::llvm::IntegerType::get(context, 32),
 }, false);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
@@ -73,7 +126,7 @@ I32,
   ::llvm::Value* const args[] = {
 lhs,
 rhs,
- ::llvm::ConstantInt::get(I32, extra) ,
+ ::llvm::ConstantInt::get(::llvm::IntegerType::get(context, 32), extra) ,
 
       };
 
@@ -85,24 +138,47 @@ rhs,
       ::llvm::LLVMContext &context = getModule()->getContext();
       (void)context;
 
+      using ::llvm_dialects::printable;
+
       if (arg_size() != 3) {
         errs << "  wrong number of arguments: " << arg_size()
-              << ", expected 3\n";
+               << ", expected 3\n";
         return false;
       }
   
-        if (!(getLhs()->getType() == ::llvm::Type::getInt32Ty(context))) {
-          errs << "  op arg verifier failed: getLhs()->getType() == ::llvm::Type::getInt32Ty(context)\n";
+        if (getArgOperand(2)->getType() != ::llvm::IntegerType::get(context, 32)) {
+          errs << "  argument 2 (extra) has type: "
+                 << *getArgOperand(2)->getType() << '\n';
+          errs << "  expected: " << *::llvm::IntegerType::get(context, 32) << '\n';
+          return false;
+        }
+      ::llvm::Type * const lhsType = getLhs()->getType();
+(void)lhsType;
+::llvm::Type * const rhsType = getRhs()->getType();
+(void)rhsType;
+uint32_t const extra = getExtra();
+(void)extra;
+::llvm::Type * const resultType = getResult()->getType();
+(void)resultType;
+
+        if (::llvm::IntegerType::get(context, 32) != lhsType) {
+          errs << "  unexpected value of $lhs:\n";
+          errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 32)) << '\n';
+          errs << "    actual:    " << printable(lhsType) << '\n';
           return false;
         }
       
-        if (!(getRhs()->getType() == ::llvm::Type::getInt32Ty(context))) {
-          errs << "  op arg verifier failed: getRhs()->getType() == ::llvm::Type::getInt32Ty(context)\n";
+        if (::llvm::IntegerType::get(context, 32) != rhsType) {
+          errs << "  unexpected value of $rhs:\n";
+          errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 32)) << '\n';
+          errs << "    actual:    " << printable(rhsType) << '\n';
           return false;
         }
       
-        if (!(getResult()->getType() == ::llvm::Type::getInt32Ty(context))) {
-          errs << "  op arg verifier failed: getResult()->getType() == ::llvm::Type::getInt32Ty(context)\n";
+        if (::llvm::IntegerType::get(context, 32) != resultType) {
+          errs << "  unexpected value of $result:\n";
+          errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 32)) << '\n';
+          errs << "    actual:    " << printable(resultType) << '\n';
           return false;
         }
         return true;
@@ -121,7 +197,7 @@ rhs,
           return  ::llvm::cast<::llvm::ConstantInt>(getArgOperand(2))->getZExtValue() ;
         }
       
-::llvm::Value* Add32Op::getResult() {return this;}
+::llvm::Value *Add32Op::getResult() {return this;}
 
 
 
@@ -155,14 +231,31 @@ rhs,
       ::llvm::LLVMContext &context = getModule()->getContext();
       (void)context;
 
+      using ::llvm_dialects::printable;
+
       if (arg_size() != 2) {
         errs << "  wrong number of arguments: " << arg_size()
-              << ", expected 2\n";
+               << ", expected 2\n";
         return false;
       }
-  
-        if (!((::llvm_dialects::areTypesEqual({getResult()->getType(), getLhs()->getType(), getRhs()->getType()})))) {
-          errs << "  op verifier failed: (::llvm_dialects::areTypesEqual({getResult()->getType(), getLhs()->getType(), getRhs()->getType()}))\n";
+  ::llvm::Type * const lhsType = getLhs()->getType();
+(void)lhsType;
+::llvm::Type * const rhsType = getRhs()->getType();
+(void)rhsType;
+::llvm::Type * const resultType = getResult()->getType();
+(void)resultType;
+
+        if (resultType != lhsType) {
+          errs << "  unexpected value of $lhs:\n";
+          errs << "    expected:  " << printable(resultType) << '\n';
+          errs << "    actual:    " << printable(lhsType) << '\n';
+          return false;
+        }
+      
+        if (resultType != rhsType) {
+          errs << "  unexpected value of $rhs:\n";
+          errs << "    expected:  " << printable(resultType) << '\n';
+          errs << "    actual:    " << printable(rhsType) << '\n';
           return false;
         }
         return true;
@@ -177,7 +270,421 @@ rhs,
           return getArgOperand(1);
         }
       
-::llvm::Value* CombineOp::getResult() {return this;}
+::llvm::Value *CombineOp::getResult() {return this;}
+
+
+
+      const ::llvm::StringLiteral ExtractElementOp::s_name{"xd.extractelement"};
+
+    ExtractElementOp* ExtractElementOp::create(llvm_dialects::Builder& b, ::llvm::Value * vector, ::llvm::Value * index) {
+    ::llvm::LLVMContext& context = b.getContext();
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(1);
+    
+      std::string mangledName =
+          ::llvm_dialects::getMangledName(s_name, {::llvm::cast<XdVectorType>(vector->getType())->getElementType()});
+    auto fnType = ::llvm::FunctionType::get(::llvm::cast<XdVectorType>(vector->getType())->getElementType(), true);
+
+    auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
+
+  ::llvm::Value* const args[] = {
+vector,
+index,
+
+      };
+
+      return ::llvm::cast<ExtractElementOp>(b.CreateCall(fn, args));
+    }
+
+
+    bool ExtractElementOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      using ::llvm_dialects::printable;
+
+      if (arg_size() != 2) {
+        errs << "  wrong number of arguments: " << arg_size()
+               << ", expected 2\n";
+        return false;
+      }
+  ::llvm::Type * const vectorType = getVector()->getType();
+(void)vectorType;
+::llvm::Type * const indexType = getIndex()->getType();
+(void)indexType;
+::llvm::Type * const resultType = getResult()->getType();
+(void)resultType;
+
+        if (::llvm::IntegerType::get(context, 32) != indexType) {
+          errs << "  unexpected value of $index:\n";
+          errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 32)) << '\n';
+          errs << "    actual:    " << printable(indexType) << '\n';
+          return false;
+        }
+      
+        if (!(::llvm::isa<XdVectorType>(vectorType))) {
+          errs << "  failed check for (XdVectorType ?:$result, any):$vector\n";
+          
+    errs << "  with $vector = " << printable(vectorType) << '\n';
+  
+          return false;
+        }
+      
+        if (::llvm::cast<XdVectorType>(vectorType)->getElementType() != resultType) {
+          errs << "  unexpected value of $result:\n";
+          errs << "    expected:  " << printable(::llvm::cast<XdVectorType>(vectorType)->getElementType()) << '\n';
+          errs << "    actual:    " << printable(resultType) << '\n';
+          return false;
+        }
+        return true;
+}
+
+
+        ::llvm::Value * ExtractElementOp::getVector() {
+          return getArgOperand(0);
+        }
+      
+        ::llvm::Value * ExtractElementOp::getIndex() {
+          return getArgOperand(1);
+        }
+      
+::llvm::Value *ExtractElementOp::getResult() {return this;}
+
+
+
+      const ::llvm::StringLiteral FromFixedVectorOp::s_name{"xd.fromfixedvector"};
+
+    FromFixedVectorOp* FromFixedVectorOp::create(llvm_dialects::Builder& b, ::llvm::Value * source) {
+    ::llvm::LLVMContext& context = b.getContext();
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(1);
+    
+      std::string mangledName =
+          ::llvm_dialects::getMangledName(s_name, {XdVectorType::get(::llvm::cast<::llvm::FixedVectorType>(source->getType())->getElementType(), ::llvm::cast<::llvm::FixedVectorType>(source->getType())->getNumElements())});
+    auto fnType = ::llvm::FunctionType::get(XdVectorType::get(::llvm::cast<::llvm::FixedVectorType>(source->getType())->getElementType(), ::llvm::cast<::llvm::FixedVectorType>(source->getType())->getNumElements()), true);
+
+    auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
+
+  ::llvm::Value* const args[] = {
+source,
+
+      };
+
+      return ::llvm::cast<FromFixedVectorOp>(b.CreateCall(fn, args));
+    }
+
+
+    bool FromFixedVectorOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      using ::llvm_dialects::printable;
+
+      if (arg_size() != 1) {
+        errs << "  wrong number of arguments: " << arg_size()
+               << ", expected 1\n";
+        return false;
+      }
+  ::llvm::Type * const sourceType = getSource()->getType();
+(void)sourceType;
+::llvm::Type * const resultType = getResult()->getType();
+(void)resultType;
+
+        if (!(::llvm::isa<::llvm::FixedVectorType>(sourceType))) {
+          errs << "  failed check for (FixedVectorType ?:$scalar_type, ?:$num_elements):$source\n";
+          
+    errs << "  with $source = " << printable(sourceType) << '\n';
+  
+          return false;
+        }
+      
+        if (!(::llvm::isa<XdVectorType>(resultType))) {
+          errs << "  failed check for (XdVectorType ?:$scalar_type, ?:$num_elements):$result\n";
+          
+    errs << "  with $result = " << printable(resultType) << '\n';
+  
+          return false;
+        }
+      
+        if (::llvm::cast<XdVectorType>(resultType)->getElementType() != ::llvm::cast<::llvm::FixedVectorType>(sourceType)->getElementType()) {
+          errs << "  unexpected value of $scalar_type:\n";
+          errs << "    expected:  " << printable(::llvm::cast<XdVectorType>(resultType)->getElementType()) << '\n';
+          errs << "    actual:    " << printable(::llvm::cast<::llvm::FixedVectorType>(sourceType)->getElementType()) << '\n';
+          return false;
+        }
+      
+        if (::llvm::cast<XdVectorType>(resultType)->getNumElements() != ::llvm::cast<::llvm::FixedVectorType>(sourceType)->getNumElements()) {
+          errs << "  unexpected value of $num_elements:\n";
+          errs << "    expected:  " << printable(::llvm::cast<XdVectorType>(resultType)->getNumElements()) << '\n';
+          errs << "    actual:    " << printable(::llvm::cast<::llvm::FixedVectorType>(sourceType)->getNumElements()) << '\n';
+          return false;
+        }
+        return true;
+}
+
+
+        ::llvm::Value * FromFixedVectorOp::getSource() {
+          return getArgOperand(0);
+        }
+      
+::llvm::Value *FromFixedVectorOp::getResult() {return this;}
+
+
+
+      const ::llvm::StringLiteral IExtOp::s_name{"xd.iext"};
+
+    IExtOp* IExtOp::create(llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * source) {
+    ::llvm::LLVMContext& context = b.getContext();
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(1);
+    
+      std::string mangledName =
+          ::llvm_dialects::getMangledName(s_name, {resultType});
+    auto fnType = ::llvm::FunctionType::get(resultType, true);
+
+    auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
+
+  ::llvm::Value* const args[] = {
+source,
+
+      };
+
+      return ::llvm::cast<IExtOp>(b.CreateCall(fn, args));
+    }
+
+
+    bool IExtOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      using ::llvm_dialects::printable;
+
+      if (arg_size() != 1) {
+        errs << "  wrong number of arguments: " << arg_size()
+               << ", expected 1\n";
+        return false;
+      }
+  ::llvm::Type * const sourceType = getSource()->getType();
+(void)sourceType;
+::llvm::Type * const resultType = getResult()->getType();
+(void)resultType;
+
+        if (!(sourceType->isIntegerTy())) {
+          errs << "  failed check for (IntegerType (le ?:$result_width)):$source\n";
+          
+    errs << "  with $source = " << printable(sourceType) << '\n';
+  
+          return false;
+        }
+      
+        if (!(resultType->isIntegerTy())) {
+          errs << "  failed check for (IntegerType ?:$result_width):$result\n";
+          
+    errs << "  with $result = " << printable(resultType) << '\n';
+  
+          return false;
+        }
+      
+        if (!(sourceType->getIntegerBitWidth() <= resultType->getIntegerBitWidth())) {
+          errs << "  failed check for (le ?:$result_width):IntegerType:$num_bits\n";
+          
+    errs << "  with IntegerType:$num_bits = " << printable(sourceType->getIntegerBitWidth()) << '\n';
+  
+        errs << "  with $result_width = " << printable(resultType->getIntegerBitWidth()) << '\n';
+      
+          return false;
+        }
+        return true;
+}
+
+
+        ::llvm::Value * IExtOp::getSource() {
+          return getArgOperand(0);
+        }
+      
+::llvm::Value *IExtOp::getResult() {return this;}
+
+
+
+      const ::llvm::StringLiteral ITruncOp::s_name{"xd.itrunc"};
+
+    ITruncOp* ITruncOp::create(llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * source) {
+    ::llvm::LLVMContext& context = b.getContext();
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(1);
+    
+      std::string mangledName =
+          ::llvm_dialects::getMangledName(s_name, {resultType});
+    auto fnType = ::llvm::FunctionType::get(resultType, true);
+
+    auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
+
+  ::llvm::Value* const args[] = {
+source,
+
+      };
+
+      return ::llvm::cast<ITruncOp>(b.CreateCall(fn, args));
+    }
+
+
+    bool ITruncOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      using ::llvm_dialects::printable;
+
+      if (arg_size() != 1) {
+        errs << "  wrong number of arguments: " << arg_size()
+               << ", expected 1\n";
+        return false;
+      }
+  ::llvm::Type * const sourceType = getSource()->getType();
+(void)sourceType;
+::llvm::Type * const resultType = getResult()->getType();
+(void)resultType;
+
+        if (!(sourceType->isIntegerTy())) {
+          errs << "  failed check for (IntegerType ?:$source_width):$source\n";
+          
+    errs << "  with $source = " << printable(sourceType) << '\n';
+  
+          return false;
+        }
+      
+        if (!(resultType->isIntegerTy())) {
+          errs << "  failed check for (IntegerType ?:$result_width):$result\n";
+          
+    errs << "  with $result = " << printable(resultType) << '\n';
+  
+          return false;
+        }
+      
+        if (!(resultType->getIntegerBitWidth() <= sourceType->getIntegerBitWidth())) {
+          errs << "  failed check for (le ?:$result_width, ?:$source_width)\n";
+          
+    errs << "  with $result_width = " << printable(resultType->getIntegerBitWidth()) << '\n';
+  
+        errs << "  with $source_width = " << printable(sourceType->getIntegerBitWidth()) << '\n';
+      
+          return false;
+        }
+        return true;
+}
+
+
+        ::llvm::Value * ITruncOp::getSource() {
+          return getArgOperand(0);
+        }
+      
+::llvm::Value *ITruncOp::getResult() {return this;}
+
+
+
+      const ::llvm::StringLiteral InsertElementOp::s_name{"xd.insertelement"};
+
+    InsertElementOp* InsertElementOp::create(llvm_dialects::Builder& b, ::llvm::Value * vector, ::llvm::Value * value, ::llvm::Value * index) {
+    ::llvm::LLVMContext& context = b.getContext();
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(1);
+    
+      std::string mangledName =
+          ::llvm_dialects::getMangledName(s_name, {vector->getType()});
+    auto fnType = ::llvm::FunctionType::get(vector->getType(), true);
+
+    auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
+
+  ::llvm::Value* const args[] = {
+vector,
+value,
+index,
+
+      };
+
+      return ::llvm::cast<InsertElementOp>(b.CreateCall(fn, args));
+    }
+
+
+    bool InsertElementOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      using ::llvm_dialects::printable;
+
+      if (arg_size() != 3) {
+        errs << "  wrong number of arguments: " << arg_size()
+               << ", expected 3\n";
+        return false;
+      }
+  ::llvm::Type * const vectorType = getVector()->getType();
+(void)vectorType;
+::llvm::Type * const valueType = getValue()->getType();
+(void)valueType;
+::llvm::Type * const indexType = getIndex()->getType();
+(void)indexType;
+::llvm::Type * const resultType = getResult()->getType();
+(void)resultType;
+
+        if (::llvm::IntegerType::get(context, 32) != indexType) {
+          errs << "  unexpected value of $index:\n";
+          errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 32)) << '\n';
+          errs << "    actual:    " << printable(indexType) << '\n';
+          return false;
+        }
+      
+        if (vectorType != resultType) {
+          errs << "  unexpected value of $result:\n";
+          errs << "    expected:  " << printable(vectorType) << '\n';
+          errs << "    actual:    " << printable(resultType) << '\n';
+          return false;
+        }
+      
+        if (!(::llvm::isa<XdVectorType>(resultType))) {
+          errs << "  failed check for (XdVectorType ?:$result, ?:$value, any)\n";
+          
+    errs << "  with $result = " << printable(resultType) << '\n';
+  
+          return false;
+        }
+      
+        if (::llvm::cast<XdVectorType>(resultType)->getElementType() != valueType) {
+          errs << "  unexpected value of $value:\n";
+          errs << "    expected:  " << printable(::llvm::cast<XdVectorType>(resultType)->getElementType()) << '\n';
+          errs << "    actual:    " << printable(valueType) << '\n';
+          return false;
+        }
+        return true;
+}
+
+
+        ::llvm::Value * InsertElementOp::getVector() {
+          return getArgOperand(0);
+        }
+      
+        ::llvm::Value * InsertElementOp::getValue() {
+          return getArgOperand(1);
+        }
+      
+        ::llvm::Value * InsertElementOp::getIndex() {
+          return getArgOperand(2);
+        }
+      
+::llvm::Value *InsertElementOp::getResult() {return this;}
 
 
 
@@ -206,16 +713,20 @@ rhs,
       ::llvm::LLVMContext &context = getModule()->getContext();
       (void)context;
 
+      using ::llvm_dialects::printable;
+
       if (arg_size() != 0) {
         errs << "  wrong number of arguments: " << arg_size()
-              << ", expected 0\n";
+               << ", expected 0\n";
         return false;
       }
-    return true;
+  ::llvm::Type * const dataType = getData()->getType();
+(void)dataType;
+  return true;
 }
 
 
-::llvm::Value* ReadOp::getData() {return this;}
+::llvm::Value *ReadOp::getData() {return this;}
 
 
 
@@ -228,8 +739,7 @@ rhs,
   
       const ::llvm::AttributeList attrs
           = ExampleDialect::get(context).getAttributeList(1);
-    llvm::Type* I64 = ::llvm::Type::getInt64Ty(context);
-auto fnType = ::llvm::FunctionType::get(I64, true);
+    auto fnType = ::llvm::FunctionType::get(::llvm::IntegerType::get(context, 64), true);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
 
@@ -246,14 +756,22 @@ auto fnType = ::llvm::FunctionType::get(I64, true);
       ::llvm::LLVMContext &context = getModule()->getContext();
       (void)context;
 
+      using ::llvm_dialects::printable;
+
       if (arg_size() != 1) {
         errs << "  wrong number of arguments: " << arg_size()
-              << ", expected 1\n";
+               << ", expected 1\n";
         return false;
       }
-  
-        if (!(getResult()->getType() == ::llvm::Type::getInt64Ty(context))) {
-          errs << "  op arg verifier failed: getResult()->getType() == ::llvm::Type::getInt64Ty(context)\n";
+  ::llvm::Type * const sizeofType = getSizeofType();
+(void)sizeofType;
+::llvm::Type * const resultType = getResult()->getType();
+(void)resultType;
+
+        if (::llvm::IntegerType::get(context, 64) != resultType) {
+          errs << "  unexpected value of $result:\n";
+          errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 64)) << '\n';
+          errs << "    actual:    " << printable(resultType) << '\n';
           return false;
         }
         return true;
@@ -264,7 +782,7 @@ auto fnType = ::llvm::FunctionType::get(I64, true);
           return getArgOperand(0)->getType();
         }
       
-::llvm::Value* SizeOfOp::getResult() {return this;}
+::llvm::Value *SizeOfOp::getResult() {return this;}
 
 
 
@@ -277,8 +795,7 @@ auto fnType = ::llvm::FunctionType::get(I64, true);
   
       const ::llvm::AttributeList attrs
           = ExampleDialect::get(context).getAttributeList(0);
-    llvm::Type* VoidTy = ::llvm::Type::getVoidTy(context);
-auto fnType = ::llvm::FunctionType::get(VoidTy, true);
+    auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), true);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
 
@@ -295,12 +812,16 @@ data,
       ::llvm::LLVMContext &context = getModule()->getContext();
       (void)context;
 
+      using ::llvm_dialects::printable;
+
       if (arg_size() != 1) {
         errs << "  wrong number of arguments: " << arg_size()
-              << ", expected 1\n";
+               << ", expected 1\n";
         return false;
       }
-    return true;
+  ::llvm::Type * const dataType = getData()->getType();
+(void)dataType;
+  return true;
 }
 
 
@@ -324,6 +845,46 @@ data,
       const ::llvm_dialects::OpDescription &
       ::llvm_dialects::OpDescription::get<xd::CombineOp>() {
         static const ::llvm_dialects::OpDescription desc{true, "xd.combine"};
+        return desc;
+      }
+
+    
+      template <>
+      const ::llvm_dialects::OpDescription &
+      ::llvm_dialects::OpDescription::get<xd::ExtractElementOp>() {
+        static const ::llvm_dialects::OpDescription desc{true, "xd.extractelement"};
+        return desc;
+      }
+
+    
+      template <>
+      const ::llvm_dialects::OpDescription &
+      ::llvm_dialects::OpDescription::get<xd::FromFixedVectorOp>() {
+        static const ::llvm_dialects::OpDescription desc{true, "xd.fromfixedvector"};
+        return desc;
+      }
+
+    
+      template <>
+      const ::llvm_dialects::OpDescription &
+      ::llvm_dialects::OpDescription::get<xd::IExtOp>() {
+        static const ::llvm_dialects::OpDescription desc{true, "xd.iext"};
+        return desc;
+      }
+
+    
+      template <>
+      const ::llvm_dialects::OpDescription &
+      ::llvm_dialects::OpDescription::get<xd::ITruncOp>() {
+        static const ::llvm_dialects::OpDescription desc{true, "xd.itrunc"};
+        return desc;
+      }
+
+    
+      template <>
+      const ::llvm_dialects::OpDescription &
+      ::llvm_dialects::OpDescription::get<xd::InsertElementOp>() {
+        static const ::llvm_dialects::OpDescription desc{true, "xd.insertelement"};
         return desc;
       }
 

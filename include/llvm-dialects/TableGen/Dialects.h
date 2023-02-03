@@ -24,18 +24,19 @@
 
 namespace llvm {
 class DagInit;
+class Init;
+class raw_ostream;
 class Record;
 class RecordKeeper;
 } // namespace llvm
 
 namespace llvm_dialects {
 
-class BuiltinType;
-class Constraint;
+class Attr;
 class DialectType;
 class OpClass;
 class Operation;
-class PredicateExpr;
+class Predicate;
 class Trait;
 
 class GenDialect {
@@ -63,22 +64,35 @@ private:
 
 class GenDialectsContext {
 public:
+  GenDialectsContext();
+  ~GenDialectsContext();
+
   void init(llvm::RecordKeeper &records,
             const llvm::DenseSet<llvm::StringRef> &dialects);
 
   Trait *getTrait(llvm::Record *traitRec);
-  Constraint *getConstraint(llvm::Record *constraintRec);
+  Predicate *getPredicate(llvm::Init *init, llvm::raw_ostream &errs);
+  Attr *getAttr(llvm::Record *record, llvm::raw_ostream &errs);
   OpClass *getOpClass(llvm::Record *opClassRec);
   GenDialect *getDialect(llvm::Record *dialectRec);
 
-  BuiltinType *getVoidTy() const { return m_voidTy; }
-
-  std::unique_ptr<PredicateExpr> parsePredicateExpr(llvm::DagInit *dag);
+  llvm::Init *getVoidTy() const { return m_voidTy; }
+  llvm::Init *getAny() const { return m_any; }
 
 private:
-  BuiltinType *m_voidTy = nullptr;
+  GenDialectsContext(const GenDialectsContext &rhs) = delete;
+  GenDialectsContext &operator=(const GenDialectsContext &rhs) = delete;
+  GenDialectsContext(GenDialectsContext &&rhs) = delete;
+  GenDialectsContext &operator=(GenDialectsContext &&rhs) = delete;
+
+  Predicate *getPredicateImpl(llvm::Init *record, llvm::raw_ostream &errs);
+
+  llvm::Init *m_voidTy = nullptr;
+  llvm::Init *m_any = nullptr;
+  bool m_attrsComplete = false;
   llvm::DenseMap<llvm::Record *, std::unique_ptr<Trait>> m_traits;
-  llvm::DenseMap<llvm::Record *, std::unique_ptr<Constraint>> m_constraints;
+  llvm::DenseMap<llvm::Init *, std::unique_ptr<Predicate>> m_predicates;
+  llvm::DenseMap<llvm::Record *, std::unique_ptr<Attr>> m_attrs;
   llvm::DenseMap<llvm::Record *, std::unique_ptr<OpClass>> m_opClasses;
   llvm::DenseMap<llvm::Record *, std::unique_ptr<GenDialect>> m_dialects;
 };

@@ -16,15 +16,45 @@
 
 #pragma once
 
+#include <optional>
 #include <string>
+#include <vector>
+
+namespace llvm {
+class DagInit;
+class Init;
+class raw_ostream;
+} // namespace llvm
 
 namespace llvm_dialects {
 
 class Constraint;
+class GenDialectsContext;
+class MetaType;
 
 struct NamedValue {
+  /// The meta-type of the value, if known.
+  MetaType *type = nullptr;
+
+  /// The name of the value.
   std::string name;
-  Constraint *type = nullptr;
+
+  /// The implied constraint on the value.
+  llvm::Init *constraint = nullptr;
+
+  enum class Parser {
+    ApplyArguments,
+    PredicateArguments,
+    DialectTypeArguments,
+    OperationArguments,
+    OperationResults,
+  };
+
+  static std::optional<std::vector<NamedValue>>
+  parseList(llvm::raw_ostream &errs, GenDialectsContext &context,
+            llvm::DagInit *init, unsigned begin, Parser mode);
+
+  std::string toString() const;
 };
 
 } // namespace llvm_dialects
