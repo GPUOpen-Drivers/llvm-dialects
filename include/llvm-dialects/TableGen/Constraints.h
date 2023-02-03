@@ -145,7 +145,9 @@ public:
 
   std::string apply(FmtContext *fmt,
                     llvm::ArrayRef<llvm::StringRef> arguments) const final {
-    llvm_unreachable("cannot apply an Attr predicate");
+    // Attr constraints don't imply additional constraints at the moment, but
+    // this could be added in the future, e.g. for enum attributes.
+    return "true";
   }
 
   llvm::StringRef getCppType() const { return m_cppType; }

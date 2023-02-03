@@ -72,14 +72,18 @@ void llvm_dialects::genDialectDecls(raw_ostream& out, RecordKeeper& records) {
 #undef GET_INCLUDES
 #include "llvm/IR/Instructions.h"
 #include "llvm-dialects/Dialect/Dialect.h"
-#endif // GET_INCLUDES
 
-#ifdef GET_DIALECT_DECLS
-#undef GET_DIALECT_DECLS
+namespace llvm {
+class raw_ostream;
+} // namespace llvm
 
 namespace llvm_dialects {
 class Builder;
 } // namespace llvm_dialects
+#endif // GET_INCLUDES
+
+#ifdef GET_DIALECT_DECLS
+#undef GET_DIALECT_DECLS
 
 )";
 
@@ -216,12 +220,14 @@ class Builder;
 
     fmt.withBuilder(symbols.chooseName({"b", "builder"}));
 
-    out << tgfmt("static ::llvm::Value* create(::llvm_dialects::Builder& $_builder", &fmt);
+    out << tgfmt("static $_op* create(::llvm_dialects::Builder& $_builder", &fmt);
     for (const auto& resultName : resultNames)
       out << tgfmt(", ::llvm::Type* $0", &fmt, resultName);
     for (const auto& [argName, arg] : llvm::zip_first(argNames, fullArguments))
       out << tgfmt(", $0 $1", &fmt, arg.type->getCppType(), argName);
     out << ");\n\n";
+
+    out << "bool verifier(::llvm::raw_ostream &errs);\n\n";
 
     for (const auto& arg : op.arguments) {
       out << tgfmt("$0 get$1();\n", &fmt, arg.type->getCppType(),
@@ -250,8 +256,204 @@ class Builder;
 )";
 }
 
+static void emitBuilderMethod(raw_ostream &out, FmtContext &fmt,
+                              GenDialectsContext &genContext, 
+                              const Operation &op) {
+  SmallVector<OpNamedValue> fullArguments = op.getFullArguments();
+  SmallVector<std::string> resultNames;
+  SmallVector<std::string> argNames;
+  SymbolTable symbols;
+
+  if (op.builderHasExplicitResultTypes) {
+    for (const auto& result : op.results) {
+      resultNames.push_back(symbols.chooseName(
+          convertToCamelFromSnakeCase(result.name, false) + "Type"));
+    }
+  }
+
+  for (const auto& arg : fullArguments) {
+    argNames.push_back(symbols.chooseName(convertToCamelFromSnakeCase(arg.name, false)));
+  }
+
+  std::string mod = symbols.chooseName("mod");
+  std::string fn = symbols.chooseName("fn");
+  std::string args = symbols.chooseName("args");
+  std::string mangledName = symbols.chooseName("mangledName");
+
+  FmtContextScope scope{fmt};
+  fmt.withContext(symbols.chooseName("context"));
+  fmt.withBuilder(symbols.chooseName({"b", "builder"}));
+  fmt.addSubst("_module", mod);
+  fmt.addSubst("attrs", symbols.chooseName("attrs"));
+  fmt.addSubst("fnType", symbols.chooseName("fnType"));
+
+  out << tgfmt("$_op* $_op::create(llvm_dialects::Builder& $_builder", &fmt);
+  for (const auto& resultName : resultNames)
+    out << tgfmt(", ::llvm::Type* $0", &fmt, resultName);
+  for (const auto& [argName, arg] : llvm::zip_first(argNames, fullArguments)) {
+    out << tgfmt(", $0 $1", &fmt, arg.type->getCppType(), argName);
+  }
+
+  out << tgfmt(R"() {
+    ::llvm::LLVMContext& $_context = $_builder.getContext();
+    ::llvm::Module& $_module = *$_builder.GetInsertBlock()->getModule();
+  
+  )", &fmt);
+
+  if (op.getAttributeListIdx() < 0) {
+    out << tgfmt("const ::llvm::AttributeList $attrs;\n", &fmt);
+  } else {
+    out << tgfmt(R"(
+      const ::llvm::AttributeList $attrs
+          = $Dialect::get($_context).getAttributeList($0);
+    )",
+                  &fmt, op.getAttributeListIdx());
+  }
+
+  LlvmTypeBuilder typeBuilder{out, symbols, fmt};
+  SmallVector<std::string> argTypes;
+  for (const auto& [arg, argName] : llvm::zip(fullArguments, argNames)) {
+    if (isa<Attr>(arg.type)) {
+      argTypes.push_back(typeBuilder.build(arg.type));
+    } else {
+      if (!op.haveArgumentOverloadKey())
+        argTypes.push_back(argName + "->getType()");
+      else
+        argTypes.push_back("<skip type>");
+    }
+  }
+
+  std::string resultTypeName;
+  if (op.builderHasExplicitResultTypes) {
+    assert(resultNames.size() == 1);
+    resultTypeName = resultNames[0];
+  } else {
+    assert(op.results.size() <= 1);
+    Constraint *theResultType = op.results.empty()
+                                    ? genContext.getVoidTy()
+                                    : op.results[0].type;
+    resultTypeName = typeBuilder.build(theResultType);
+  }
+
+  StringRef fnName;
+
+  if (op.haveResultOverloadKey()) {
+    out << tgfmt("std::string $0 = ::llvm_dialects::getMangledName(s_name, {\n", &fmt,
+                  mangledName);
+    for (const auto &key : op.overload_keys()) {
+      if (key.kind == OverloadKey::Result)
+        out << resultNames[key.index] << ",\n";
+    }
+    out << "});\n";
+
+    fnName = mangledName;
+  } else {
+    fnName = "s_name";
+  }
+
+  if (op.haveArgumentOverloadKey()) {
+    out << tgfmt("auto $fnType = ::llvm::FunctionType::get($0, true);\n",
+                  &fmt, resultTypeName);
+  } else {
+    out << tgfmt("auto $fnType = ::llvm::FunctionType::get($0, {\n", &fmt,
+                  resultTypeName);
+    for (const auto &argType : argTypes)
+      out << argType << ",\n";
+    out << "}, false);\n";
+  }
+
+  out << tgfmt(
+      "\nauto $0 = $_module.getOrInsertFunction($1, $fnType, $attrs);\n\n",
+      &fmt, fn, fnName);
+
+  for (const auto& [name, arg] : llvm::zip_first(argNames, fullArguments)) {
+    if (auto* type = dyn_cast<Type>(arg.type)) {
+      StringRef filter = type->getBuilderArgumentFilter();
+      if (!filter.empty()) {
+        FmtContextScope scope{fmt};
+        fmt.withSelf(name);
+        out << tgfmt(filter, &fmt);
+      }
+    }
+  }
+
+  if (!argNames.empty()) {
+    out << tgfmt("::llvm::Value* const $0[] = {\n", &fmt, args);
+    for (const auto& [name, type, arg]
+              : llvm::zip_first(argNames, argTypes, fullArguments)) {
+      if (auto* attr = dyn_cast<Attr>(arg.type)) {
+        out << tgfmt(attr->getToLlvmValue(), &fmt, name, type);
+      } else {
+        out << name;
+      }
+      out << ",\n";
+    }
+    out << "};\n\n";
+
+    out << tgfmt("return ::llvm::cast<$_op>($_builder.CreateCall($0, $1));\n", &fmt, fn, args);
+  } else
+    out << tgfmt("return ::llvm::cast<$_op>($_builder.CreateCall($0));\n", &fmt, fn);
+  out << "}\n\n";
+}
+
+static void emitVerifierMethod(raw_ostream &out, FmtContext &fmt,
+                               GenDialectsContext &genContext,
+                               const Operation &op) {
+  FmtContextScope scope{fmt};
+  fmt.withContext("context");
+
+  out << tgfmt(R"(
+    bool $_op::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &$_context = getModule()->getContext();
+      (void)$_context;
+
+      if (arg_size() != $0) {
+        errs << "  wrong number of arguments: " << arg_size()
+              << ", expected $0\n";
+        return false;
+      }
+  )", &fmt, op.getNumFullArguments());
+
+  SmallVector<OpNamedValue> argsAndResults = op.getFullArguments();
+  argsAndResults.append(op.results.begin(), op.results.end());
+
+  DenseMap<StringRef, std::string> argToCppExprMap;
+  for (const auto &arg : argsAndResults) {
+    std::string cppExpr =
+        tgfmt("get$0()", &fmt, convertToCamelFromSnakeCase(arg.name, true));
+    if (!isa<Attr>(arg.type))
+      cppExpr += "->getType()";
+
+    argToCppExprMap[arg.name] = cppExpr;
+
+    std::string check = arg.type->apply(&fmt, {cppExpr});
+    if (check != "true") {
+      out << tgfmt(R"(
+        if (!($0)) {
+          errs << "  op arg verifier failed: $0\n";
+          return false;
+        }
+      )", &fmt, check);
+    }
+  }
+
+  for (const auto &expr : op.verifier) {
+    std::string check = expr->evaluate(&fmt, argToCppExprMap);
+    if (check != "true") {
+      out << tgfmt(R"(
+        if (!($0)) {
+          errs << "  op verifier failed: $0\n";
+          return false;
+        }
+      )", &fmt, check);
+    }
+  }
+
+  out << "  return true;\n}\n\n";
+}
+
 void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
-  auto [GenDialectsContext, dialect] = getSelectedDialect(records);
+  auto [genDialectsContext, dialect] = getSelectedDialect(records);
 
   emitHeader(out);
 
@@ -271,6 +473,7 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
   }
 
   out << R"(
+#include "llvm/Support/raw_ostream.h"
 #endif // GET_INCLUDES
 
 #ifdef GET_DIALECT_DEFS
@@ -397,173 +600,17 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
   for (const auto& opPtr : dialect->operations) {
     const Operation& op = *opPtr;
 
-    // Emit create() method definition.
-    SmallVector<OpNamedValue> fullArguments = op.getFullArguments();
-    SmallVector<std::string> resultNames;
-    SmallVector<std::string> argNames;
-    SymbolTable symbols;
-
-    if (op.builderHasExplicitResultTypes) {
-      for (const auto& result : op.results) {
-        resultNames.push_back(symbols.chooseName(
-            convertToCamelFromSnakeCase(result.name, false) + "Type"));
-      }
-    }
-
-    for (const auto& arg : fullArguments) {
-      argNames.push_back(symbols.chooseName(convertToCamelFromSnakeCase(arg.name, false)));
-    }
-
-    std::string mod = symbols.chooseName("mod");
-    std::string fn = symbols.chooseName("fn");
-    std::string args = symbols.chooseName("args");
-    std::string mangledName = symbols.chooseName("mangledName");
-
     FmtContextScope scope{fmt};
-    fmt.withContext(symbols.chooseName("context"));
-    fmt.withBuilder(symbols.chooseName({"b", "builder"}));
     fmt.withOp(op.name);
-    fmt.addSubst("_module", mod);
     fmt.addSubst("mnemonic", op.mnemonic);
-    fmt.addSubst("attrs", symbols.chooseName("attrs"));
-    fmt.addSubst("fnType", symbols.chooseName("fnType"));
 
     out << tgfmt(R"(
       const ::llvm::StringLiteral $_op::s_name{"$dialect.$mnemonic"};
 
     )", &fmt);
 
-    out << tgfmt("::llvm::Value* $_op::create(llvm_dialects::Builder& $_builder", &fmt);
-    for (const auto& resultName : resultNames)
-      out << tgfmt(", ::llvm::Type* $0", &fmt, resultName);
-    for (const auto& [argName, arg] : llvm::zip_first(argNames, fullArguments)) {
-      out << tgfmt(", $0 $1", &fmt, arg.type->getCppType(), argName);
-    }
-
-    out << tgfmt(R"() {
-      ::llvm::LLVMContext& $_context = $_builder.getContext();
-      ::llvm::Module& $_module = *$_builder.GetInsertBlock()->getModule();
-    
-    )", &fmt);
-
-    // Map TableGen names of arguments to C++ expressions to be used by
-    // predicates.
-    DenseMap<StringRef, std::string> argToCppExprMap;
-    for (const auto &[arg, argName] : llvm::zip(fullArguments, argNames)) {
-      std::string cppExpr;
-      if (isa<Attr>(arg.type))
-        cppExpr = argName;
-      else
-        cppExpr = argName + "->getType()";
-      argToCppExprMap[arg.name] = cppExpr;
-
-      if (!isa<Attr>(arg.type))
-        out << tgfmt("assert($0);\n", &fmt, arg.type->apply(&fmt, {cppExpr}));
-    }
-
-    if (op.getAttributeListIdx() < 0) {
-      out << tgfmt("const ::llvm::AttributeList $attrs;\n", &fmt);
-    } else {
-      out << tgfmt(R"(
-        const ::llvm::AttributeList $attrs
-            = $Dialect::get($_context).getAttributeList($0);
-      )",
-                   &fmt, op.getAttributeListIdx());
-    }
-
-    LlvmTypeBuilder typeBuilder{out, symbols, fmt};
-    SmallVector<std::string> argTypes;
-    for (const auto& [arg, argName] : llvm::zip(fullArguments, argNames)) {
-      if (isa<Attr>(arg.type)) {
-        argTypes.push_back(typeBuilder.build(arg.type));
-      } else {
-        if (!op.haveArgumentOverloadKey())
-          argTypes.push_back(argName + "->getType()");
-        else
-          argTypes.push_back("<skip type>");
-      }
-    }
-
-    std::string resultTypeName;
-    if (op.builderHasExplicitResultTypes) {
-      assert(resultNames.size() == 1);
-      resultTypeName = resultNames[0];
-    } else {
-      assert(op.results.size() <= 1);
-      Constraint *theResultType = op.results.empty()
-                                      ? GenDialectsContext.getVoidTy()
-                                      : op.results[0].type;
-      resultTypeName = typeBuilder.build(theResultType);
-    }
-
-    if (op.results.size() == 1)
-      argToCppExprMap[op.results[0].name] = resultTypeName;
-
-    for (const auto &expr : op.verifier) {
-      out << tgfmt("assert($0);\n", &fmt,
-                   expr->evaluate(&fmt, argToCppExprMap));
-    }
-    out << '\n';
-
-    StringRef fnName;
-
-    if (op.haveResultOverloadKey()) {
-      out << tgfmt("std::string $0 = ::llvm_dialects::getMangledName(s_name, {\n", &fmt,
-                   mangledName);
-      for (const auto &key : op.overload_keys()) {
-        if (key.kind == OverloadKey::Result)
-          out << resultNames[key.index] << ",\n";
-      }
-      out << "});\n";
-
-      fnName = mangledName;
-    } else {
-      fnName = "s_name";
-    }
-
-    if (op.haveArgumentOverloadKey()) {
-      out << tgfmt("auto $fnType = ::llvm::FunctionType::get($0, true);\n",
-                   &fmt, resultTypeName);
-    } else {
-      out << tgfmt("auto $fnType = ::llvm::FunctionType::get($0, {\n", &fmt,
-                   resultTypeName);
-      for (const auto &argType : argTypes)
-        out << argType << ",\n";
-      out << "}, false);\n";
-    }
-
-    out << tgfmt(
-        "\nauto $0 = $_module.getOrInsertFunction($1, $fnType, $attrs);\n\n",
-        &fmt, fn, fnName);
-
-    for (const auto& [name, arg] : llvm::zip_first(argNames, fullArguments)) {
-      if (auto* type = dyn_cast<Type>(arg.type)) {
-        StringRef filter = type->getBuilderArgumentFilter();
-        if (!filter.empty()) {
-          FmtContextScope scope{fmt};
-          fmt.withSelf(name);
-          out << tgfmt(filter, &fmt);
-        }
-      }
-    }
-
-    if (!argNames.empty()) {
-      out << tgfmt("::llvm::Value* const $0[] = {\n", &fmt, args);
-      for (const auto& [name, type, arg]
-               : llvm::zip_first(argNames, argTypes, fullArguments)) {
-        if (auto* attr = dyn_cast<Attr>(arg.type)) {
-          out << tgfmt(attr->getToLlvmValue(), &fmt, name, type);
-        } else {
-          out << name;
-        }
-        out << ",\n";
-      }
-      out << "};\n\n";
-
-      out << tgfmt("return $_builder.CreateCall($0, $1);\n", &fmt, fn, args);
-    } else
-      out << tgfmt("return $_builder.CreateCall($0);\n", &fmt, fn);
-    out << "}\n\n";
+    emitBuilderMethod(out, fmt, genDialectsContext, op);
+    emitVerifierMethod(out, fmt, genDialectsContext, op);
 
     // Emit argument getters.
     unsigned numSuperclassArgs = 0;

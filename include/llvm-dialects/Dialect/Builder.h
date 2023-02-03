@@ -17,6 +17,7 @@
 #pragma once
 
 #include "llvm-dialects/Dialect/Dialect.h"
+#include "llvm-dialects/Dialect/Utils.h"
 
 #include "llvm/IR/IRBuilder.h"
 
@@ -41,8 +42,12 @@ public:
   DialectT& getDialect() const {return m_dialects.getDialect<DialectT>();}
 
   template <typename Op, typename ...Args>
-  llvm::Value* create(Args&&... args) {
-    return Op::create(*this, std::forward<Args>(args)...);
+  llvm::Instruction *create(Args&&... args) {
+    Op *op = Op::create(*this, std::forward<Args>(args)...);
+    assert(runInstructionVerifier([op](llvm::raw_ostream &errs) {
+      return op->verifier(errs);
+    }, op));
+    return op;
   }
 };
 

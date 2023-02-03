@@ -19,6 +19,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm_dialects;
@@ -117,4 +119,21 @@ std::string llvm_dialects::getMangledName(StringRef name,
     assert(!hasUnnamedType);
   }
   return result;
+}
+
+bool llvm_dialects::runInstructionVerifier(
+    function_ref<bool (raw_ostream &)> verifier,
+    llvm::Instruction *instruction,
+    raw_ostream *errs) {
+  std::string errors;
+  raw_string_ostream out(errors);
+
+  if (verifier(out))
+    return true;
+
+  if (!errs)
+    errs = &llvm::errs();
+
+  *errs << "Verifier error in: " << *instruction << ":\n" << errors;
+  return false;
 }

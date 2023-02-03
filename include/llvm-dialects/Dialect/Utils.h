@@ -17,8 +17,11 @@
 #pragma once
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 
 namespace llvm {
+class raw_ostream;
+class Instruction;
 class Type;
 } // namespace llvm
 
@@ -30,5 +33,10 @@ bool areTypesEqual(llvm::ArrayRef<llvm::Type *> types);
 
 std::string getMangledName(llvm::StringRef name,
                            llvm::ArrayRef<llvm::Type *> overloadTypes);
+
+bool runInstructionVerifier(
+    llvm::function_ref<bool (llvm::raw_ostream &)> verifier,
+    llvm::Instruction *instruction,
+    llvm::raw_ostream *errs = nullptr);
 
 } // namespace llvm_dialects
