@@ -61,10 +61,7 @@ def CombineOp : ExampleOp<"combine",
     let results = (outs AnyType:$result);
     let arguments = (ins AnyType:$lhs, AnyType:$rhs);
 
-    let verifier = [
-        (SameTypes $lhs, $rhs),
-        (SameTypes $result, $lhs),
-    ];
+    let verifier = [(SameTypes $result, $lhs, $rhs)];
 
     let summary = "combine two pieces of data";
     let description = [{
