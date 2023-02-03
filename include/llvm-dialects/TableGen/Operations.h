@@ -21,6 +21,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 
+namespace llvm {
+class Record;
+} // namespace llvm
+
 namespace llvm_dialects {
 
 class GenDialectsContext;
@@ -46,6 +50,7 @@ struct OverloadKey {
 
 class OpClass {
 public:
+  GenDialect *dialect = nullptr;
   OpClass *superclass = nullptr;
   std::string name;
 
@@ -54,6 +59,9 @@ public:
   std::vector<OpNamedValue> arguments;
   std::vector<OpClass *> subclasses;
   std::vector<Operation *> operations;
+
+  static std::unique_ptr<OpClass> parse(GenDialectsContext *context,
+                                        llvm::Record *record);
 
   llvm::SmallVector<OpNamedValue> getFullArguments() const;
   unsigned getNumFullArguments() const;
@@ -72,6 +80,9 @@ public:
   std::vector<OpNamedValue> results;
   std::vector<std::unique_ptr<PredicateExpr>> verifier;
   bool builderHasExplicitResultTypes = false;
+
+  static void parse(GenDialectsContext *context, GenDialect *dialect,
+                    llvm::Record *record);
 
   llvm::ArrayRef<OverloadKey> overload_keys() const { return m_overloadKeys; }
   bool overload_keys_empty() const { return m_overloadKeys.empty(); }

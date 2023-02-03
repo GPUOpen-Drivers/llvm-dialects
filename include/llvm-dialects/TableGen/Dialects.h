@@ -77,8 +77,6 @@ public:
   std::unique_ptr<PredicateExpr> parsePredicateExpr(llvm::DagInit *dag);
 
 private:
-  std::vector<OpNamedValue> parseArguments(llvm::Record *rec);
-
   BuiltinType *m_voidTy = nullptr;
   llvm::DenseMap<llvm::Record *, std::unique_ptr<Trait>> m_traits;
   llvm::DenseMap<llvm::Record *, std::unique_ptr<Constraint>> m_constraints;
