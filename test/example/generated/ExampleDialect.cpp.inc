@@ -10,6 +10,7 @@
 
 #include "llvm/Support/ModRef.h"
 
+#include "llvm/Support/raw_ostream.h"
 #endif // GET_INCLUDES
 
 #ifdef GET_DIALECT_DEFS
@@ -53,17 +54,14 @@ m_attributeLists[2] = ::llvm::AttributeList::get(context, ::llvm::AttributeList:
 
       const ::llvm::StringLiteral Add32Op::s_name{"xd.add32"};
 
-    ::llvm::Value* Add32Op::create(llvm_dialects::Builder& b, ::llvm::Value * lhs, ::llvm::Value * rhs, uint32_t extra) {
-      ::llvm::LLVMContext& context = b.getContext();
-      ::llvm::Module& mod = *b.GetInsertBlock()->getModule();
-    
-    assert(lhs->getType() == ::llvm::Type::getInt32Ty(context));
-assert(rhs->getType() == ::llvm::Type::getInt32Ty(context));
-
-        const ::llvm::AttributeList attrs
-            = ExampleDialect::get(context).getAttributeList(1);
-      llvm::Type* I32 = ::llvm::Type::getInt32Ty(context);
-
+    Add32Op* Add32Op::create(llvm_dialects::Builder& b, ::llvm::Value * lhs, ::llvm::Value * rhs, uint32_t extra) {
+    ::llvm::LLVMContext& context = b.getContext();
+    ::llvm::Module& mod = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(1);
+    llvm::Type* I32 = ::llvm::Type::getInt32Ty(context);
 auto fnType = ::llvm::FunctionType::get(I32, {
 lhs->getType(),
 rhs->getType(),
@@ -78,7 +76,35 @@ rhs,
  ::llvm::ConstantInt::get(I32, extra) ,
 };
 
-return b.CreateCall(fn, args);
+return ::llvm::cast<Add32Op>(b.CreateCall(fn, args));
+}
+
+
+    bool Add32Op::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      if (arg_size() != 3) {
+        errs << "  wrong number of arguments: " << arg_size()
+              << ", expected 3\n";
+        return false;
+      }
+  
+        if (!(getLhs()->getType() == ::llvm::Type::getInt32Ty(context))) {
+          errs << "  op arg verifier failed: getLhs()->getType() == ::llvm::Type::getInt32Ty(context)\n";
+          return false;
+        }
+      
+        if (!(getRhs()->getType() == ::llvm::Type::getInt32Ty(context))) {
+          errs << "  op arg verifier failed: getRhs()->getType() == ::llvm::Type::getInt32Ty(context)\n";
+          return false;
+        }
+      
+        if (!(getResult()->getType() == ::llvm::Type::getInt32Ty(context))) {
+          errs << "  op arg verifier failed: getResult()->getType() == ::llvm::Type::getInt32Ty(context)\n";
+          return false;
+        }
+        return true;
 }
 
 
@@ -100,19 +126,14 @@ return b.CreateCall(fn, args);
 
       const ::llvm::StringLiteral CombineOp::s_name{"xd.combine"};
 
-    ::llvm::Value* CombineOp::create(llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * lhs, ::llvm::Value * rhs) {
-      ::llvm::LLVMContext& context = b.getContext();
-      ::llvm::Module& mod = *b.GetInsertBlock()->getModule();
-    
-    assert(true);
-assert(true);
-
-        const ::llvm::AttributeList attrs
-            = ExampleDialect::get(context).getAttributeList(1);
-      assert((::llvm_dialects::areTypesEqual({lhs->getType(), rhs->getType()})));
-assert((::llvm_dialects::areTypesEqual({resultType, lhs->getType()})));
-
-std::string mangledName = ::llvm_dialects::getMangledName(s_name, {
+    CombineOp* CombineOp::create(llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * lhs, ::llvm::Value * rhs) {
+    ::llvm::LLVMContext& context = b.getContext();
+    ::llvm::Module& mod = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(1);
+    std::string mangledName = ::llvm_dialects::getMangledName(s_name, {
 resultType,
 });
 auto fnType = ::llvm::FunctionType::get(resultType, true);
@@ -124,7 +145,30 @@ lhs,
 rhs,
 };
 
-return b.CreateCall(fn, args);
+return ::llvm::cast<CombineOp>(b.CreateCall(fn, args));
+}
+
+
+    bool CombineOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      if (arg_size() != 2) {
+        errs << "  wrong number of arguments: " << arg_size()
+              << ", expected 2\n";
+        return false;
+      }
+  
+        if (!((::llvm_dialects::areTypesEqual({getLhs()->getType(), getRhs()->getType()})))) {
+          errs << "  op verifier failed: (::llvm_dialects::areTypesEqual({getLhs()->getType(), getRhs()->getType()}))\n";
+          return false;
+        }
+      
+        if (!((::llvm_dialects::areTypesEqual({getResult()->getType(), getLhs()->getType()})))) {
+          errs << "  op verifier failed: (::llvm_dialects::areTypesEqual({getResult()->getType(), getLhs()->getType()}))\n";
+          return false;
+        }
+        return true;
 }
 
 
@@ -142,15 +186,14 @@ return b.CreateCall(fn, args);
 
       const ::llvm::StringLiteral ReadOp::s_name{"xd.read"};
 
-    ::llvm::Value* ReadOp::create(llvm_dialects::Builder& b, ::llvm::Type* dataType) {
-      ::llvm::LLVMContext& context = b.getContext();
-      ::llvm::Module& mod = *b.GetInsertBlock()->getModule();
-    
-    
-        const ::llvm::AttributeList attrs
-            = ExampleDialect::get(context).getAttributeList(2);
-      
-std::string mangledName = ::llvm_dialects::getMangledName(s_name, {
+    ReadOp* ReadOp::create(llvm_dialects::Builder& b, ::llvm::Type* dataType) {
+    ::llvm::LLVMContext& context = b.getContext();
+    ::llvm::Module& mod = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(2);
+    std::string mangledName = ::llvm_dialects::getMangledName(s_name, {
 dataType,
 });
 auto fnType = ::llvm::FunctionType::get(dataType, {
@@ -158,7 +201,20 @@ auto fnType = ::llvm::FunctionType::get(dataType, {
 
 auto fn = mod.getOrInsertFunction(mangledName, fnType, attrs);
 
-return b.CreateCall(fn);
+return ::llvm::cast<ReadOp>(b.CreateCall(fn));
+}
+
+
+    bool ReadOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      if (arg_size() != 0) {
+        errs << "  wrong number of arguments: " << arg_size()
+              << ", expected 0\n";
+        return false;
+      }
+    return true;
 }
 
 
@@ -168,16 +224,14 @@ return b.CreateCall(fn);
 
       const ::llvm::StringLiteral WriteOp::s_name{"xd.write"};
 
-    ::llvm::Value* WriteOp::create(llvm_dialects::Builder& b, ::llvm::Value * data) {
-      ::llvm::LLVMContext& context = b.getContext();
-      ::llvm::Module& mod = *b.GetInsertBlock()->getModule();
-    
-    assert(true);
-
-        const ::llvm::AttributeList attrs
-            = ExampleDialect::get(context).getAttributeList(0);
-      llvm::Type* VoidTy = ::llvm::Type::getVoidTy(context);
-
+    WriteOp* WriteOp::create(llvm_dialects::Builder& b, ::llvm::Value * data) {
+    ::llvm::LLVMContext& context = b.getContext();
+    ::llvm::Module& mod = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(0);
+    llvm::Type* VoidTy = ::llvm::Type::getVoidTy(context);
 auto fnType = ::llvm::FunctionType::get(VoidTy, true);
 
 auto fn = mod.getOrInsertFunction(s_name, fnType, attrs);
@@ -186,7 +240,20 @@ auto fn = mod.getOrInsertFunction(s_name, fnType, attrs);
 data,
 };
 
-return b.CreateCall(fn, args);
+return ::llvm::cast<WriteOp>(b.CreateCall(fn, args));
+}
+
+
+    bool WriteOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      if (arg_size() != 1) {
+        errs << "  wrong number of arguments: " << arg_size()
+              << ", expected 1\n";
+        return false;
+      }
+    return true;
 }
 
 

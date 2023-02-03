@@ -5,14 +5,18 @@
 #undef GET_INCLUDES
 #include "llvm/IR/Instructions.h"
 #include "llvm-dialects/Dialect/Dialect.h"
-#endif // GET_INCLUDES
 
-#ifdef GET_DIALECT_DECLS
-#undef GET_DIALECT_DECLS
+namespace llvm {
+class raw_ostream;
+} // namespace llvm
 
 namespace llvm_dialects {
 class Builder;
 } // namespace llvm_dialects
+#endif // GET_INCLUDES
+
+#ifdef GET_DIALECT_DECLS
+#undef GET_DIALECT_DECLS
 
 namespace xd {
 
@@ -50,7 +54,9 @@ namespace xd {
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static ::llvm::Value* create(::llvm_dialects::Builder& b, ::llvm::Value * lhs, ::llvm::Value * rhs, uint32_t extra);
+    static Add32Op* create(::llvm_dialects::Builder& b, ::llvm::Value * lhs, ::llvm::Value * rhs, uint32_t extra);
+
+bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getLhs();
 ::llvm::Value * getRhs();
@@ -72,7 +78,9 @@ uint32_t getExtra();
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static ::llvm::Value* create(::llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * lhs, ::llvm::Value * rhs);
+    static CombineOp* create(::llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * lhs, ::llvm::Value * rhs);
+
+bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getLhs();
 ::llvm::Value * getRhs();
@@ -93,7 +101,9 @@ uint32_t getExtra();
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static ::llvm::Value* create(::llvm_dialects::Builder& b, ::llvm::Type* dataType);
+    static ReadOp* create(::llvm_dialects::Builder& b, ::llvm::Type* dataType);
+
+bool verifier(::llvm::raw_ostream &errs);
 
 
 ::llvm::Value * getData();
@@ -112,7 +122,9 @@ uint32_t getExtra();
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static ::llvm::Value* create(::llvm_dialects::Builder& b, ::llvm::Value * data);
+    static WriteOp* create(::llvm_dialects::Builder& b, ::llvm::Value * data);
+
+bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getData();
 
