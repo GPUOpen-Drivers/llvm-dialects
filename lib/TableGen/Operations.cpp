@@ -20,11 +20,14 @@
 #include "llvm-dialects/TableGen/Dialects.h"
 #include "llvm-dialects/TableGen/Format.h"
 #include "llvm-dialects/TableGen/LlvmTypeBuilder.h"
+#include "llvm-dialects/TableGen/Predicates.h"
 
 #include "llvm/TableGen/Record.h"
 
 using namespace llvm;
 using namespace llvm_dialects;
+
+Operation::~Operation() = default;
 
 static std::vector<OpNamedValue> parseArguments(GenDialectsContext *context,
                                                 Record *rec) {
