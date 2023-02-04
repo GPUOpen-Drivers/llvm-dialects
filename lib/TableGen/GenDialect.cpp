@@ -254,7 +254,7 @@ static void emitVerifierMethod(raw_ostream &out, FmtContext &fmt,
       }
   )", &fmt, op.getNumFullArguments());
 
-  SmallVector<OpNamedValue> argsAndResults = op.getFullArguments();
+  SmallVector<NamedValue> argsAndResults = op.getFullArguments();
   argsAndResults.append(op.results.begin(), op.results.end());
 
   DenseMap<StringRef, std::string> argToCppExprMap;
@@ -421,7 +421,7 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
     if (opClass->superclass)
       numSuperclassArgs = opClass->superclass->getNumFullArguments();
     for (auto indexedArg : llvm::enumerate(opClass->arguments)) {
-      const OpNamedValue& arg = indexedArg.value();
+      const NamedValue& arg = indexedArg.value();
       std::string value = llvm::formatv("getArgOperand({0})",
                                         numSuperclassArgs + indexedArg.index());
       if (auto* attr = dyn_cast<Attr>(arg.type))
@@ -459,7 +459,7 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
     if (op.superclass)
       numSuperclassArgs = op.superclass->getNumFullArguments();
     for (auto indexedArg : llvm::enumerate(op.arguments)) {
-      const OpNamedValue& arg = indexedArg.value();
+      const NamedValue& arg = indexedArg.value();
       std::string value = llvm::formatv("getArgOperand({0})",
                                         numSuperclassArgs + indexedArg.index());
       if (auto* attr = dyn_cast<Attr>(arg.type))

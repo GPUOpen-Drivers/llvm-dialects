@@ -29,12 +29,12 @@ using namespace llvm_dialects;
 
 Operation::~Operation() = default;
 
-static std::vector<OpNamedValue> parseArguments(GenDialectsContext *context,
+static std::vector<NamedValue> parseArguments(GenDialectsContext *context,
                                                 Record *rec) {
   Record *superClassRec = rec->getValueAsDef("superclass");
   OpClass *superclass = context->getOpClass(superClassRec);
   DagInit *argsInit = rec->getValueAsDag("arguments");
-  std::vector<OpNamedValue> arguments;
+  std::vector<NamedValue> arguments;
 
   if (argsInit->getOperatorAsDef({})->getName() != "ins")
     report_fatal_error(Twine(rec->getName()) +
@@ -49,7 +49,7 @@ static std::vector<OpNamedValue> parseArguments(GenDialectsContext *context,
       continue;
     }
 
-    OpNamedValue opArg;
+    NamedValue opArg;
     opArg.name = argsInit->getArgNameStr(i);
     if (auto *arg = dyn_cast_or_null<DefInit>(argsInit->getArg(i)))
       opArg.type = context->getConstraint(arg->getDef());
@@ -79,8 +79,8 @@ std::unique_ptr<OpClass> OpClass::parse(GenDialectsContext *context,
   return opClass;
 }
 
-SmallVector<OpNamedValue> OpClass::getFullArguments() const {
-  SmallVector<OpNamedValue> args;
+SmallVector<NamedValue> OpClass::getFullArguments() const {
+  SmallVector<NamedValue> args;
   if (superclass)
     args = superclass->getFullArguments();
   args.insert(args.end(), arguments.begin(), arguments.end());
@@ -115,7 +115,7 @@ void Operation::parse(GenDialectsContext *context, GenDialect *dialect,
   assert(results->getNumArgs() <= 1 &&
           "multiple result values not supported");
   for (unsigned i = 0; i < results->getNumArgs(); ++i) {
-    OpNamedValue opResult;
+    NamedValue opResult;
     opResult.name = results->getArgNameStr(i);
     if (auto *result = dyn_cast_or_null<DefInit>(results->getArg(i)))
       opResult.type = context->getConstraint(result->getDef());
@@ -173,7 +173,7 @@ void Operation::parse(GenDialectsContext *context, GenDialect *dialect,
               } else if (!haveArgument) {
                 auto it =
                     llvm::find_if(op->arguments,
-                        [&](const OpNamedValue &opArg) {
+                        [&](const NamedValue &opArg) {
                           return applyArg == opArg.name;
                         });
                 if (it != op->arguments.end()) {
@@ -220,8 +220,8 @@ void Operation::parse(GenDialectsContext *context, GenDialect *dialect,
   dialect->operations.push_back(std::move(op));
 }
 
-SmallVector<OpNamedValue> Operation::getFullArguments() const {
-  SmallVector<OpNamedValue> args;
+SmallVector<NamedValue> Operation::getFullArguments() const {
+  SmallVector<NamedValue> args;
   if (superclass)
     args = superclass->getFullArguments();
   args.insert(args.end(), arguments.begin(), arguments.end());
