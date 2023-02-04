@@ -142,30 +142,29 @@ private:
 
 /// Struct representing a replacement segment for the formatted string. It can
 /// be a segment of the formatting template (for `Literal`) or a replacement
-/// parameter (for `PositionalPH`, `PositionalRangePH` and `SpecialPH`).
+/// parameter (for `PositionalPH`, `PositionalRangePH`, `SpecialPH`, and
+/// `IndirectSpecialPH`).
 struct FmtReplacement {
   enum class Type {
     Empty,
     Literal,
     PositionalPH,
     PositionalRangePH,
-    SpecialPH
+    SpecialPH,
+    IndirectSpecialPH,
   };
 
   FmtReplacement() = default;
   explicit FmtReplacement(llvm::StringRef literal)
       : type(Type::Literal), spec(literal) {}
-  FmtReplacement(llvm::StringRef spec, size_t index)
-      : type(Type::PositionalPH), spec(spec), index(index) {}
-  FmtReplacement(llvm::StringRef spec, size_t index, size_t end)
-      : type(Type::PositionalRangePH), spec(spec), index(index), end(end) {}
+  FmtReplacement(llvm::StringRef spec, size_t index, Type type)
+      : type(type), spec(spec), index(index) {}
   FmtReplacement(llvm::StringRef spec, FmtContext::PHKind placeholder)
       : type(Type::SpecialPH), spec(spec), placeholder(placeholder) {}
 
   Type type = Type::Empty;
   llvm::StringRef spec;
   size_t index = 0;
-  size_t end = kUnset;
   FmtContext::PHKind placeholder = FmtContext::PHKind::None;
 
   static constexpr size_t kUnset = -1;
@@ -273,6 +272,7 @@ private:
 /// 1.a Positional placeholder: $[0-9]+
 /// 1.b Positional range placeholder: $[0-9]+...
 /// 2. Special placeholder:    $[a-zA-Z_][a-zA-Z0-9_]*
+/// 3. Indirect special placeholder: $\*[0-9]+
 ///
 /// Replacement parameters for positional placeholders are supplied as the
 /// `vals` parameter pack with 1:1 mapping. That is, $0 will be replaced by the
@@ -285,6 +285,11 @@ private:
 ///
 /// Replacement parameters for special placeholders are supplied using the `ctx`
 /// format context.
+///
+/// Indirect special placeholders take a positional argument as the name of a
+/// special placeholder that is supplied using the `ctx` format context.
+/// For example, if the first parameter in `vals` is "foo", then "$*0" has the
+/// same replacement as "$foo".
 ///
 /// The `fmt` is recorded as a `StringRef` inside the returned `FmtObject`.
 /// The caller needs to make sure the underlying data is available when the

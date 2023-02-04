@@ -127,28 +127,38 @@ FmtObjectBase::splitFmtSegment(StringRef fmt) {
   // First try to see if it's a positional placeholder, and then handle special
   // placeholders.
 
-  size_t end =
-      fmt.find_if_not([](char c) { return std::isdigit(c); }, /*From=*/1);
+  size_t from = 1;
+  bool isIndirect = false;
+  if (fmt[1] == '*') {
+    isIndirect = true;
+    from = 2;
+  }
+
+  size_t end = fmt.find_if_not([](char c) { return std::isdigit(c); }, from);
   if (end != 1) {
     // We have a positional placeholder. Parse the index.
     size_t index = 0;
-    if (fmt.substr(1, end - 1).consumeInteger(0, index)) {
+    if (fmt.substr(from, end - from).consumeInteger(0, index)) {
       llvm_unreachable("invalid replacement sequence index");
     }
 
     // Check if this is the part of a range specification.
-    if (fmt.substr(end, 3) == "...") {
+    if (!isIndirect && fmt.substr(end, 3) == "...") {
       // Currently only ranges without upper bound are supported.
       return {
-          FmtReplacement{fmt.substr(0, end + 3), index, FmtReplacement::kUnset},
+          FmtReplacement{fmt.substr(0, end + 3), index,
+                         FmtReplacement::Type::PositionalRangePH},
           fmt.substr(end + 3)};
     }
 
+    auto type =
+        isIndirect ? FmtReplacement::Type::IndirectSpecialPH 
+                   : FmtReplacement::Type::PositionalPH;
     if (end == StringRef::npos) {
       // All the remaining characters are part of the positional placeholder.
-      return {FmtReplacement{fmt, index}, StringRef()};
+      return {FmtReplacement{fmt, index, type}, StringRef()};
     }
-    return {FmtReplacement{fmt.substr(0, end), index}, fmt.substr(end)};
+    return {FmtReplacement{fmt.substr(0, end), index, type}, fmt.substr(end)};
   }
 
   end = fmt.find_if_not([](char c) { return std::isalnum(c) || c == '_'; }, 1);
@@ -210,19 +220,31 @@ void FmtObjectBase::format(raw_ostream &s) const {
       }
       auto range = ArrayRef<llvm::detail::format_adapter *>(adapters);
       range = range.drop_front(repl.index);
-      if (repl.end != FmtReplacement::kUnset)
-        range = range.drop_back(adapters.size() - repl.end);
       llvm::interleaveComma(range, s,
                             [&](auto &x) { x->format(s, /*Options=*/""); });
       continue;
     }
 
-    assert(repl.type == FmtReplacement::Type::PositionalPH);
-
     if (repl.index >= adapters.size()) {
       s << repl.spec << kMarkerForNoSubst;
       continue;
     }
+
+    if (repl.type == FmtReplacement::Type::IndirectSpecialPH) {
+      std::string indirectSpec;
+      raw_string_ostream indirectSpecStream(indirectSpec);
+      adapters[repl.index]->format(indirectSpecStream, /*Options=*/"");
+
+      auto subst = context->getSubstFor(indirectSpec);
+      if (subst.has_value())
+        s << *subst;
+      else
+        s << repl.spec << ':' << indirectSpec << kMarkerForNoSubst;
+      continue;
+    }
+
+    assert(repl.type == FmtReplacement::Type::PositionalPH);
+
     adapters[repl.index]->format(s, /*Options=*/"");
   }
 }
