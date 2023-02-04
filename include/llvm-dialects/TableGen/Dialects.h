@@ -34,7 +34,6 @@ class BuiltinType;
 class Constraint;
 class DialectType;
 class OpClass;
-struct OpNamedValue;
 class Operation;
 class PredicateExpr;
 class Trait;

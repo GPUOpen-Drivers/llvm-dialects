@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include "llvm-dialects/TableGen/NamedValue.h"
 #include "llvm-dialects/TableGen/SymbolTable.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -37,11 +38,6 @@ class Operation;
 class PredicateExpr;
 class Trait;
 
-struct OpNamedValue {
-  std::string name;
-  Constraint *type = nullptr;
-};
-
 struct OverloadKey {
   enum Kind {
     Result,
@@ -60,14 +56,14 @@ public:
 
   /// List of arguments specific to this class; does not contain superclass
   /// arguments, if any.
-  std::vector<OpNamedValue> arguments;
+  std::vector<NamedValue> arguments;
   std::vector<OpClass *> subclasses;
   std::vector<Operation *> operations;
 
   static std::unique_ptr<OpClass> parse(GenDialectsContext *context,
                                         llvm::Record *record);
 
-  llvm::SmallVector<OpNamedValue> getFullArguments() const;
+  llvm::SmallVector<NamedValue> getFullArguments() const;
   unsigned getNumFullArguments() const;
 };
 
@@ -80,8 +76,8 @@ public:
 
   /// List of arguments specific to this operation; does not contain superclass
   /// arguments, if any.
-  std::vector<OpNamedValue> arguments;
-  std::vector<OpNamedValue> results;
+  std::vector<NamedValue> arguments;
+  std::vector<NamedValue> results;
   std::vector<std::unique_ptr<PredicateExpr>> verifier;
 
   ~Operation();
@@ -94,7 +90,7 @@ public:
 
   llvm::ArrayRef<BuilderMethod> builders() const { return m_builders; }
 
-  llvm::SmallVector<OpNamedValue> getFullArguments() const;
+  llvm::SmallVector<NamedValue> getFullArguments() const;
   unsigned getNumFullArguments() const;
 
   int getAttributeListIdx() const { return m_attributeListIdx; }
