@@ -18,6 +18,7 @@
 
 #include "llvm-dialects/TableGen/Constraints.h"
 #include "llvm-dialects/TableGen/Operations.h"
+#include "llvm-dialects/TableGen/Predicates.h"
 #include "llvm-dialects/TableGen/Traits.h"
 
 #include "llvm/ADT/Twine.h"

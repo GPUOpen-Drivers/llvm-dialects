@@ -16,7 +16,6 @@
 
 #pragma once
 
-#include "llvm-dialects/TableGen/Predicates.h"
 #include "llvm-dialects/TableGen/SymbolTable.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -35,6 +34,7 @@ class FmtContext;
 class GenDialectsContext;
 class GenDialect;
 class Operation;
+class PredicateExpr;
 class Trait;
 
 struct OpNamedValue {
@@ -83,6 +83,8 @@ public:
   std::vector<OpNamedValue> arguments;
   std::vector<OpNamedValue> results;
   std::vector<std::unique_ptr<PredicateExpr>> verifier;
+
+  ~Operation();
 
   static void parse(GenDialectsContext *context, GenDialect *dialect,
                     llvm::Record *record);
