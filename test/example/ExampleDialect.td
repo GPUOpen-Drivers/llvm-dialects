@@ -35,13 +35,13 @@ class ExampleOp<string mnemonic_, list<Trait> traits_>
 
 def ReadOp : ExampleOp<"read",
                        [Memory<[(readwrite InaccessibleMem)]>, NoUnwind]> {
-    let results = (outs AnyType:$data);
-    let arguments = (ins);
+  let results = (outs AnyType:$data);
+  let arguments = (ins);
 
-    let summary = "read a piece of data";
-    let description = [{
-        Longer description of how this operation reads a piece of data.
-    }];
+  let summary = "read a piece of data";
+  let description = [{
+    Longer description of how this operation reads a piece of data.
+  }];
 }
 
 def WriteOp : ExampleOp<"write",
@@ -58,34 +58,34 @@ def WriteOp : ExampleOp<"write",
 
 def CombineOp : ExampleOp<"combine",
                           [Memory<[]>, NoUnwind, WillReturn]> {
-    let results = (outs AnyType:$result);
-    let arguments = (ins AnyType:$lhs, AnyType:$rhs);
+  let results = (outs AnyType:$result);
+  let arguments = (ins AnyType:$lhs, AnyType:$rhs);
 
-    let verifier = [(SameTypes $result, $lhs, $rhs)];
+  let verifier = [(SameTypes $result, $lhs, $rhs)];
 
-    let summary = "combine two pieces of data";
-    let description = [{
-        Longer description of... well, you know by now how this goes.
-    }];
+  let summary = "combine two pieces of data";
+  let description = [{
+    Longer description of... well, you know by now how this goes.
+  }];
 }
 
 def Add32Op : ExampleOp<"add32", [Memory<[]>, NoUnwind, WillReturn]> {
-    let results = (outs I32:$result);
-    let arguments = (ins I32:$lhs, I32:$rhs, AttrI32:$extra);
+  let results = (outs I32:$result);
+  let arguments = (ins I32:$lhs, I32:$rhs, AttrI32:$extra);
 
-    let summary = "add two numbers, and a little extra";
-    let description = [{
-        For those times when you want a little extra, this operation adds two
-        numbers and puts a constant on top.
-    }];
+  let summary = "add two numbers, and a little extra";
+  let description = [{
+    For those times when you want a little extra, this operation adds two
+    numbers and puts a constant on top.
+  }];
 }
 
 def SizeOfOp : ExampleOp<"sizeof", [Memory<[]>, NoUnwind, WillReturn]> {
-    let results = (outs I64:$result);
-    let arguments = (ins TypeArg<AnyType>:$sizeof_type);
+  let results = (outs I64:$result);
+  let arguments = (ins TypeArg<AnyType>:$sizeof_type);
 
-    let summary = "size of a given type";
-    let description = [{
-        Returns the store size of the given type in bytes.
-    }];
+  let summary = "size of a given type";
+  let description = [{
+    Returns the store size of the given type in bytes.
+  }];
 }
