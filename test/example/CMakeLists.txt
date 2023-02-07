@@ -1,7 +1,7 @@
 
 ### Example application
 
-add_executable(llvm-dialects-example
+add_executable(llvm-dialects-example EXCLUDE_FROM_ALL
     ExampleDialect.cpp
     ExampleMain.cpp)
 llvm_update_compile_flags(llvm-dialects-example)

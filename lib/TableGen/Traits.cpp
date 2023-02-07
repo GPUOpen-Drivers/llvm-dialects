@@ -18,12 +18,18 @@
 
 #include "llvm-dialects/TableGen/Format.h"
 
+#include "llvm/Support/CommandLine.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace llvm;
 using namespace llvm_dialects;
 
 namespace {
+
+static cl::opt<bool> NoMemoryEffects(
+    "no-memory-effects", cl::init(false),
+    cl::desc("as a workaround for supporting older LLVM versions, do not emit "
+             "code using the memory(...) attribute"));
 
 class LlvmEnumAttributeTrait : public LlvmAttributeTrait {
 public:
@@ -68,6 +74,10 @@ private:
 };
 
 } // anonymous namespace
+
+bool llvm_dialects::noMemoryEffects() {
+  return NoMemoryEffects;
+}
 
 std::unique_ptr<Trait> Trait::fromRecord(GenDialectsContext *context,
                                          llvm::Record *traitRec) {
@@ -177,6 +187,9 @@ raw_ostream &operator<<(raw_ostream &out, const EffectWriter &writer) {
 
 void LlvmMemoryAttributeTrait::addAttribute(raw_ostream &out,
                                             FmtContext &fmt) const {
+  if (noMemoryEffects())
+    return;
+
   if (m_effects.empty()) {
     out << tgfmt("$attrBuilder.addMemoryAttr(::llvm::MemoryEffects::none());\n",
                  &fmt);

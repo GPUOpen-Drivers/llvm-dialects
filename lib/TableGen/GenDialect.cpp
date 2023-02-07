@@ -319,7 +319,15 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
 #include "llvm-dialects/Dialect/OpDescription.h"
 #include "llvm-dialects/Dialect/Utils.h"
 #include "llvm/IR/InstrTypes.h"
+)";
+
+  if (!noMemoryEffects()) {
+    out << R"(
 #include "llvm/Support/ModRef.h"
+)";
+  }
+
+  out << R"(
 #endif // GET_INCLUDES
 
 #ifdef GET_DIALECT_DEFS
