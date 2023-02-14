@@ -1,7 +1,7 @@
 
 ### Example application
 
-add_executable(llvm-dialects-example EXCLUDE_FROM_ALL
+add_executable(llvm-dialects-example
     ExampleDialect.cpp
     ExampleMain.cpp)
 llvm_update_compile_flags(llvm-dialects-example)
@@ -23,9 +23,9 @@ set(EXAMPLE_TABLEGEN_TARGET llvm-dialects-tblgen)
 set(LLVM_TARGET_DEFINITIONS ExampleDialect.td)
 
 tablegen(EXAMPLE ExampleDialect.h.inc -gen-dialect-decls --dialect xd
-    EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../include)
+    EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 tablegen(EXAMPLE ExampleDialect.cpp.inc -gen-dialect-defs --dialect xd
-    EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../include)
+    EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 add_public_tablegen_target(ExampleDialectTableGen)
 
 add_dependencies(llvm-dialects-example ExampleDialectTableGen)
