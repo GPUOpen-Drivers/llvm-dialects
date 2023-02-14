@@ -16,14 +16,17 @@
 
 #include "llvm-dialects/Dialect/Dialect.h"
 
+#include "llvm-dialects/Dialect/ContextExtension.h"
+
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Instructions.h"
 
 #include <atomic>
 #include <mutex>
 
-using namespace llvm_dialects;
 using namespace llvm;
+using namespace llvm_dialects;
+using namespace llvm_dialects::detail;
 
 namespace {
 
@@ -176,13 +179,20 @@ Dialect::Key::~Key() {
   m_index = std::numeric_limits<unsigned>::max();
 }
 
-DialectContext::DialectContext(LLVMContext& context, unsigned dialectArraySize)
-    : m_llvmContext(context), m_dialectArraySize(dialectArraySize) {
+DialectContext::DialectContext(LLVMContext &context, unsigned dialectArraySize,
+                               unsigned extensionArraySize)
+    : m_llvmContext(context), m_dialectArraySize(dialectArraySize),
+      m_extensionArraySize(extensionArraySize) {
   ContextMap::get().insert(&context, this);
 }
 
 DialectContext::~DialectContext() {
   ContextMap::get().remove(&m_llvmContext, this);
+
+  std::unique_ptr<ContextExtensionBase> *extensionArray =
+      getTrailingObjects<std::unique_ptr<ContextExtensionBase>>();
+  for (unsigned i = 0; i < m_extensionArraySize; ++i)
+    std::destroy_n(extensionArray, m_extensionArraySize);
 
   Dialect** dialectArray = getTrailingObjects<Dialect*>();
   for (unsigned i = 0; i < m_dialectArraySize; ++i)
@@ -197,15 +207,24 @@ std::unique_ptr<DialectContext> DialectContext::make(LLVMContext& context,
   for (const auto& desc : dialects)
     dialectArraySize = std::max(dialectArraySize, desc.index + 1);
 
-  size_t totalSize = totalSizeToAlloc<Dialect*>(dialectArraySize);
+  unsigned extensionArraySize = detail::ContextExtensionKey::getKeys().size();
+
+  size_t totalSize =
+      totalSizeToAlloc<Dialect *, std::unique_ptr<ContextExtensionBase>>(
+          dialectArraySize, extensionArraySize);
   void* ptr = malloc(totalSize);
 
-  std::unique_ptr<DialectContext> result{new (ptr) DialectContext(context, dialectArraySize)};
+  std::unique_ptr<DialectContext> result{
+      new (ptr) DialectContext(context, dialectArraySize, extensionArraySize)};
   Dialect** dialectArray = result->getTrailingObjects<Dialect*>();
   std::uninitialized_fill_n(dialectArray, dialectArraySize, nullptr);
 
   for (const auto& desc : dialects)
     dialectArray[desc.index] = desc.make(context);
+
+  auto *extensionArray =
+      result->getTrailingObjects<std::unique_ptr<ContextExtensionBase>>();
+  std::uninitialized_default_construct_n(extensionArray, extensionArraySize);
 
   return result;
 }
