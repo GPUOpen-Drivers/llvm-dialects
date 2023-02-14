@@ -84,6 +84,7 @@ target_include_directories(llvm_dialects PRIVATE
 
 target_sources(llvm_dialects PRIVATE
     lib/Dialect/Builder.cpp
+    lib/Dialect/ContextExtension.cpp
     lib/Dialect/Dialect.cpp
     lib/Dialect/OpDescription.cpp
     lib/Dialect/Utils.cpp

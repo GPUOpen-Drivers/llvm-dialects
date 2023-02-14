@@ -28,6 +28,7 @@ class LLVMContext;
 
 namespace llvm_dialects {
 
+class ContextExtensionBase;
 class Dialect;
 class DialectContext;
 
@@ -78,15 +79,26 @@ public:
 ///   LLVMContext context;
 ///   auto dialectContext = DialectContext::make<Dialect1, Dialect2, ...>(context);
 ///
-class DialectContext final : private llvm::TrailingObjects<DialectContext, Dialect*> {
-  friend llvm::TrailingObjects<DialectContext, Dialect*>;
+class DialectContext final
+    : private llvm::TrailingObjects<DialectContext, Dialect *,
+                                    std::unique_ptr<ContextExtensionBase>> {
+  friend llvm::TrailingObjects<DialectContext, Dialect *,
+                               std::unique_ptr<ContextExtensionBase>>;
 
   llvm::LLVMContext& m_llvmContext;
   unsigned m_dialectArraySize;
+  unsigned m_extensionArraySize;
 
-  DialectContext(llvm::LLVMContext& context, unsigned dialectArraySize);
+  DialectContext(llvm::LLVMContext &context, unsigned dialectArraySize,
+                 unsigned extensionArraySize);
 
-  size_t numTrailingObjects(OverloadToken<Dialect*>) const {return m_dialectArraySize;}
+  size_t numTrailingObjects(OverloadToken<Dialect *>) const {
+    return m_dialectArraySize;
+  }
+  size_t numTrailingObjects(
+      OverloadToken<std::unique_ptr<ContextExtensionBase>>) const {
+    return m_extensionArraySize;
+  }
 
 public:
   ~DialectContext();
@@ -128,6 +140,10 @@ public:
   template <typename DialectT>
   bool hasDialect() const {
     return getTrailingObjects<Dialect*>()[DialectT::getIndex()];
+  }
+
+  std::unique_ptr<ContextExtensionBase> &getExtensionSlot(unsigned index) {
+    return getTrailingObjects<std::unique_ptr<ContextExtensionBase>>()[index];
   }
 };
 
