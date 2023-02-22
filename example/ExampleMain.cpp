@@ -26,13 +26,32 @@
 #include "ExampleDialect.h"
 
 #include "llvm-dialects/Dialect/Builder.h"
+#include "llvm-dialects/Dialect/Verifier.h"
 
-#include "llvm/IR/Module.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SourceMgr.h"
 
 using namespace llvm;
 using namespace llvm_dialects;
+
+enum class Action {
+  Build,
+  Verify,
+};
+
+cl::opt<Action> g_action(
+    cl::desc("Action to perform:"), cl::init(Action::Build),
+    cl::values(clEnumValN(Action::Build, "build", "Example IRBuilder use"),
+               clEnumValN(Action::Verify, "verify", "Verify an input module")));
+
+// Input sources
+cl::list<std::string> g_inputs(cl::Positional, cl::ZeroOrMore,
+                               cl::desc("Input file(s) (\"-\" for stdin)"));
 
 void createFunctionExample(Module &module, const Twine &name) {
   Builder b{module.getContext()};
@@ -72,12 +91,40 @@ std::unique_ptr<Module> createModuleExample(LLVMContext &context) {
 }
 
 int main(int argc, char **argv) {
+  llvm::cl::ParseCommandLineOptions(argc, argv);
+
   LLVMContext context;
   auto dialectContext = DialectContext::make<xd::ExampleDialect>(context);
 
-  auto module = createModuleExample(context);
+  if (g_action == Action::Build) {
+    auto module = createModuleExample(context);
+    module->print(llvm::outs(), nullptr, false);
+  } else if (g_action == Action::Verify) {
+    if (g_inputs.size() != 1) {
+      errs() << "Need exactly one input module\n";
+      return 1;
+    }
 
-  module->print(llvm::outs(), nullptr, false);
+    auto fileOrErr = MemoryBuffer::getFileOrSTDIN(g_inputs[0]);
+    if (std::error_code errorCode = fileOrErr.getError()) {
+      errs() << "Could not open input file " << g_inputs[0] << ": "
+             << errorCode.message() << '\n';
+      return 1;
+    }
+
+    SMDiagnostic error;
+    std::unique_ptr<Module> module = parseAssembly(**fileOrErr, error, context);
+    if (!module) {
+      error.print("llvm-dialects-example", errs());
+      errs() << "\n";
+      return 1;
+    }
+
+    if (!verify(*module, outs()))
+      return 1;
+  } else {
+    report_fatal_error("unhandled action");
+  }
 
   return 0;
 }

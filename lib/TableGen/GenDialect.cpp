@@ -103,6 +103,7 @@ class Builder;
 
       void anchor() override;
 
+    public:
       static Key& getKey();
 
     private:
@@ -226,6 +227,8 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
 #include "llvm-dialects/Dialect/Builder.h"
 #include "llvm-dialects/Dialect/OpDescription.h"
 #include "llvm-dialects/Dialect/Utils.h"
+#include "llvm-dialects/Dialect/Verifier.h"
+#include "llvm-dialects/Dialect/Visitor.h"
 #include "llvm/IR/InstrTypes.h"
 )";
 
@@ -251,6 +254,34 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
   if (!dialect->cppNamespace.empty())
     out << tgfmt("namespace $namespace {\n", &fmt);
 
+  // Extra code to be inserted in the make() method.
+  std::string makeExtra;
+  {
+    llvm::raw_string_ostream extra(makeExtra);
+    extra << R"(
+      auto verifierExtension = [](::llvm_dialects::VisitorBuilder<::llvm_dialects::VerifierState> &builder) {
+    )";
+
+    for (const auto &opPtr : dialect->operations) {
+      FmtContextScope scope{fmt};
+      fmt.withOp(opPtr->name);
+      extra << tgfmt(R"(
+        builder.add<$_op>([](::llvm_dialects::VerifierState &state, $_op &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      )",
+                     &fmt);
+    }
+
+    extra << tgfmt(R"(
+      };
+      static ::llvm_dialects::DialectExtensionRegistration<::llvm_dialects::VerifierExtension, $Dialect>
+          verifierExtensionRegistration(::llvm_dialects::getVerifierExtensionPoint(), verifierExtension);
+    )",
+                   &fmt);
+  }
+
   // Dialect class definitions.
   out << tgfmt(R"(
     void $Dialect::anchor() {}
@@ -261,12 +292,13 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
     }
 
     ::llvm_dialects::Dialect* $Dialect::make(::llvm::LLVMContext& context) {
+      $0
       return new $Dialect(context);
     }
 
     $Dialect::$Dialect(::llvm::LLVMContext& context) : DialectImpl(context) {
   )",
-               &fmt);
+               &fmt, makeExtra);
 
   if (!dialect->attribute_lists_empty()) {
     FmtContextScope scope{fmt};

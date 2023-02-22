@@ -69,6 +69,7 @@ class VisitorBase {
 protected:
   VisitorBase(VisitorBuilderBase builder);
 
+  void visit(void *payload, llvm::Instruction &inst) const;
   void visit(void *payload, llvm::Function &fn) const;
   void visit(void *payload, llvm::Module &module) const;
 
@@ -92,6 +93,10 @@ class Visitor : public detail::VisitorBase {
 public:
   Visitor(detail::VisitorBuilderBase builder)
       : VisitorBase(std::move(builder)) {}
+
+  void visit(PayloadT &payload, llvm::Instruction &inst) const {
+    VisitorBase::visit(static_cast<void *>(&payload), inst);
+  }
 
   void visit(PayloadT &payload, llvm::Function &fn) const {
     VisitorBase::visit(static_cast<void *>(&payload), fn);
@@ -129,15 +134,14 @@ class VisitorBuilder : public detail::VisitorBuilderBase {
 public:
   using Payload = PayloadT;
 
-  VisitorBuilder setStrategy(VisitorStrategy strategy) {
+  VisitorBuilder &setStrategy(VisitorStrategy strategy) {
     VisitorBuilderBase::setStrategy(strategy);
     return *this;
   }
 
   Visitor<PayloadT> build() { return {std::move(*this)}; }
 
-  template <typename OpT>
-  VisitorBuilder add(void (*fn)(PayloadT &, OpT &)) {
+  template <typename OpT> VisitorBuilder &add(void (*fn)(PayloadT &, OpT &)) {
     VisitorBuilderBase::add(
         OpDescription::get<OpT>(),
         (void *)fn,
