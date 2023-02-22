@@ -233,6 +233,18 @@ DialectContext& DialectContext::get(LLVMContext& context) {
   return *CurrentContextCache::get(&context);
 }
 
+void DialectExtensionPointBase::add(unsigned index, const void *extension) {
+  if (index >= m_extensions.size())
+    m_extensions.resize(index + 1, nullptr);
+  assert(m_extensions[index] == nullptr);
+  m_extensions[index] = extension;
+}
+
+void DialectExtensionPointBase::clear(unsigned index) {
+  assert(index < m_extensions.size() && m_extensions[index] != nullptr);
+  m_extensions[index] = nullptr;
+}
+
 bool llvm_dialects::detail::isSimpleOperationDecl(const Function *fn,
                                                   StringRef name) {
   return fn->getName() == name;
