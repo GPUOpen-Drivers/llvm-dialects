@@ -31,6 +31,8 @@ namespace llvm_dialects {
 class ContextExtensionBase;
 class Dialect;
 class DialectContext;
+template <typename ExtensionT, typename DialectT>
+class DialectExtensionRegistration;
 
 struct DialectDescriptor {
   unsigned index;
@@ -142,6 +144,12 @@ public:
     return getTrailingObjects<Dialect*>()[DialectT::getIndex()];
   }
 
+  bool hasDialectByIndex(unsigned index) const {
+    if (index >= m_dialectArraySize)
+      return false;
+    return getTrailingObjects<Dialect *>()[index] != nullptr;
+  }
+
   std::unique_ptr<ContextExtensionBase> &getExtensionSlot(unsigned index) {
     return getTrailingObjects<std::unique_ptr<ContextExtensionBase>>()[index];
   }
@@ -174,12 +182,75 @@ public:
 
 namespace detail {
 
+class DialectExtensionPointBase {
+protected:
+  /// Extensions indexed by the dialect ID.
+  llvm::SmallVector<const void *> m_extensions;
+
+  void add(unsigned index, const void *extension);
+  void clear(unsigned index);
+};
+
+} // namespace detail
+
+template <typename ExtensionT>
+class DialectExtensionPoint : public detail::DialectExtensionPointBase {
+  template <typename T, typename U> friend class DialectExtensionRegistration;
+
+  void add(unsigned index, const ExtensionT *extension) {
+    DialectExtensionPointBase::add(index,
+                                   reinterpret_cast<const void *>(extension));
+  }
+
+  void clear(unsigned index) { DialectExtensionPointBase::clear(index); }
+
+public:
+  /// Retrieve a list of extensions for the dialects registered with the given
+  /// context.
+  llvm::SmallVector<const ExtensionT *> getExtensions(DialectContext &context) {
+    llvm::SmallVector<const ExtensionT *> extensions;
+    for (unsigned i = 0; i < m_extensions.size(); ++i) {
+      if (m_extensions[i] && context.hasDialectByIndex(i))
+        extensions.push_back(
+            reinterpret_cast<const ExtensionT *>(m_extensions[i]));
+    }
+    return extensions;
+  }
+
+  llvm::SmallVector<const ExtensionT *>
+  getExtensions(llvm::LLVMContext &context) {
+    return getExtensions(DialectContext::get(context));
+  }
+};
+
+/// Helper class for registering a dialect extension.
+///
+/// Instantiate a static global of this type to register a dialect's extension
+/// for a given extension point.
+template <typename ExtensionT, typename DialectT>
+class DialectExtensionRegistration {
+public:
+  DialectExtensionRegistration(DialectExtensionPoint<ExtensionT> &point,
+                               const ExtensionT *extension)
+      : m_point(point) {
+    m_point.add(DialectT::getKey().getIndex(), extension);
+  }
+  ~DialectExtensionRegistration() {
+    m_point.clear(DialectT::getKey().getIndex());
+  }
+
+private:
+  DialectExtensionPoint<ExtensionT> &m_point;
+};
+
+namespace detail {
+
 bool isSimpleOperationDecl(const llvm::Function *fn, llvm::StringRef name);
 bool isOverloadedOperationDecl(const llvm::Function *fn, llvm::StringRef name);
 
 bool isSimpleOperation(const llvm::CallInst *i, llvm::StringRef name);
 bool isOverloadedOperation(const llvm::CallInst *i, llvm::StringRef name);
 
-} // namespae detail
+} // namespace detail
 
 } // namespace llvm_dialects
