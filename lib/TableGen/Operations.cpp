@@ -131,7 +131,7 @@ bool Operation::parse(raw_ostream &errs, GenDialectsContext *context,
 
   EvaluationPlanner evaluation(op->m_system);
 
-  for (const auto &arg : op->arguments) {
+  for (const auto &arg : op->getFullArguments()) {
     auto variable = op->m_scope.getVariable(arg.name);
     ConstraintSystem singletonSystem{*context, op->m_scope};
     if (!singletonSystem.addConstraint(errs, arg.constraint, variable))

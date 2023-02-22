@@ -1,6 +1,6 @@
 ; RUN: not llvm-dialects-example -verify %s | FileCheck --check-prefixes=CHECK %s
 
-define void @test1() {
+define void @test1(ptr %p) {
 entry:
 ; CHECK-LABEL: Verifier error in: %sizeof1 =
 ; CHECK:  unexpected value of $result:
@@ -25,9 +25,21 @@ entry:
 ; CHECK:    expected:  2
 ; CHECK:    actual:    4
   %fromfixedvector2 = call target("xd.vector", i32, 2) (...) @xd.fromfixedvector.txd.vector_i32_2t(<4 x i32> poison)
+
+; CHECK-LABEL: Verifier error in:   %stream.max1 =
+; CHECK:  unexpected value of $result:
+; CHECK:    expected:  i16
+; CHECK:    actual:    <2 x i16>
+  %stream.max1 = call <2 x i16> (...) @xd.stream.max.v2i16(ptr %p, i64 %trunc1, i16 0)
+
+; CHECK-LABEL: Verifier error in:   %stream.min1 =
+; CHECK:  wrong number of arguments: 2, expected 3
+  %stream.min1 = call i8 (...) @xd.stream.min.i8(ptr %p, i64 14)
   ret void
 }
 
 declare i32 @xd.sizeof(...)
 declare i64 @xd.itrunc.i64(...)
 declare target("xd.vector", i32, 2) @xd.fromfixedvector.txd.vector_i32_2t(...)
+declare <2 x i16> @xd.stream.max.v2i16(...)
+declare i8 @xd.stream.min.i8(...)

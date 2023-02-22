@@ -81,6 +81,10 @@ void createFunctionExample(Module &module, const Twine &name) {
   Value *y6 = b.create<xd::InsertElementOp>(y5, y2, b.getInt32(1));
   b.create<xd::WriteOp>(y6);
 
+  Value *p1 = b.create<xd::ReadOp>(b.getPtrTy(0));
+  Value *p2 = b.create<xd::StreamAddOp>(p1, b.getInt64(14), b.getInt8(0));
+  b.create<xd::WriteOp>(p2);
+
   b.CreateRetVoid();
 }
 

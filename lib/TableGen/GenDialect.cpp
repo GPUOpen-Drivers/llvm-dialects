@@ -148,7 +148,7 @@ class Builder;
     )", &fmt, opClass->superclass ? opClass->superclass->name : "::llvm::CallInst");
 
     for (const auto& arg : opClass->arguments) {
-      out << tgfmt("$0 get$1();\n", &fmt, arg.type->getCppType(),
+      out << tgfmt("$0 get$1();\n", &fmt, arg.type->getBuilderCppType(),
                    convertToCamelFromSnakeCase(arg.name, true));
     }
 
@@ -372,7 +372,9 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
         $0 $_op::get$1() {
           return $2;
         }
-      )", &fmt, arg.type->getCppType(), convertToCamelFromSnakeCase(arg.name, true), value);
+      )",
+                   &fmt, arg.type->getBuilderCppType(),
+                   convertToCamelFromSnakeCase(arg.name, true), value);
     }
 
     out << '\n';
