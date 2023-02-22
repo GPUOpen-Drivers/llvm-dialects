@@ -42,7 +42,7 @@ namespace xd {
         }
 
       private:
-        ::std::array<::llvm::AttributeList, 3> m_attributeLists;
+        ::std::array<::llvm::AttributeList, 4> m_attributeLists;
     };
 
     class XdVectorType : public ::llvm::TargetExtType {
@@ -66,6 +66,19 @@ uint32_t getNumElements() const;
 };
 
 
+      class StreamReduceOp : public ::llvm::CallInst {
+      public:
+        static bool classof(const ::llvm::CallInst* i);
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    ::llvm::Value * getPtr();
+::llvm::Value * getCount();
+::llvm::Value * getInitial();
+
+      };
+    
       class Add32Op : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.add32"};
 
@@ -263,6 +276,69 @@ bool verifier(::llvm::raw_ostream &errs);
 bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Type * getSizeofType();
+
+::llvm::Value * getResult();
+
+
+      };
+    
+      class StreamAddOp : public StreamReduceOp {
+        static const ::llvm::StringLiteral s_name; //{"xd.stream.add"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isOverloadedOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static StreamAddOp* create(::llvm_dialects::Builder& b, ::llvm::Value * ptr, ::llvm::Value * count, ::llvm::Value * initial);
+
+bool verifier(::llvm::raw_ostream &errs);
+
+
+::llvm::Value * getResult();
+
+
+      };
+    
+      class StreamMaxOp : public StreamReduceOp {
+        static const ::llvm::StringLiteral s_name; //{"xd.stream.max"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isOverloadedOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static StreamMaxOp* create(::llvm_dialects::Builder& b, ::llvm::Value * ptr, ::llvm::Value * count, ::llvm::Value * initial);
+
+bool verifier(::llvm::raw_ostream &errs);
+
+
+::llvm::Value * getResult();
+
+
+      };
+    
+      class StreamMinOp : public StreamReduceOp {
+        static const ::llvm::StringLiteral s_name; //{"xd.stream.min"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isOverloadedOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static StreamMinOp* create(::llvm_dialects::Builder& b, ::llvm::Value * ptr, ::llvm::Value * count, ::llvm::Value * initial);
+
+bool verifier(::llvm::raw_ostream &errs);
+
 
 ::llvm::Value * getResult();
 

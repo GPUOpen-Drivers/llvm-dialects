@@ -75,6 +75,21 @@ namespace xd {
             state.setError();
         });
       
+        builder.add<StreamAddOp>([](::llvm_dialects::VerifierState &state, StreamAddOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
+        builder.add<StreamMaxOp>([](::llvm_dialects::VerifierState &state, StreamMaxOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
+        builder.add<StreamMinOp>([](::llvm_dialects::VerifierState &state, StreamMinOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
         builder.add<WriteOp>([](::llvm_dialects::VerifierState &state, WriteOp &op) {
           if (!op.verifier(state.out()))
             state.setError();
@@ -105,8 +120,15 @@ m_attributeLists[1] = ::llvm::AttributeList::get(context, ::llvm::AttributeList:
 {
   ::llvm::AttrBuilder attrBuilder{context};
 attrBuilder.addAttribute(::llvm::Attribute::NoUnwind);
-attrBuilder.addMemoryAttr(::llvm::MemoryEffects(::llvm::MemoryEffects::Location::InaccessibleMem, ::llvm::ModRefInfo::ModRef));
+attrBuilder.addAttribute(::llvm::Attribute::WillReturn);
+attrBuilder.addMemoryAttr(::llvm::MemoryEffects(::llvm::ModRefInfo::Ref));
 m_attributeLists[2] = ::llvm::AttributeList::get(context, ::llvm::AttributeList::FunctionIndex, attrBuilder);
+}
+{
+  ::llvm::AttrBuilder attrBuilder{context};
+attrBuilder.addAttribute(::llvm::Attribute::NoUnwind);
+attrBuilder.addMemoryAttr(::llvm::MemoryEffects(::llvm::MemoryEffects::Location::InaccessibleMem, ::llvm::ModRefInfo::ModRef));
+m_attributeLists[3] = ::llvm::AttributeList::get(context, ::llvm::AttributeList::FunctionIndex, attrBuilder);
 }
 }
 
@@ -164,6 +186,31 @@ auto numElements = getNumElements();
 return true;
 }
 
+
+      bool StreamReduceOp::classof(const ::llvm::CallInst* i) {
+    
+        if (StreamAddOp::classof(i)) return true;
+      
+        if (StreamMaxOp::classof(i)) return true;
+      
+        if (StreamMinOp::classof(i)) return true;
+      
+        return false;
+      }
+
+    
+        ::llvm::Value * StreamReduceOp::getPtr() {
+          return getArgOperand(0);
+        }
+      
+        ::llvm::Value * StreamReduceOp::getCount() {
+          return getArgOperand(1);
+        }
+      
+        ::llvm::Value * StreamReduceOp::getInitial() {
+          return getArgOperand(2);
+        }
+      
 
       const ::llvm::StringLiteral Add32Op::s_name{"xd.add32"};
 
@@ -755,7 +802,7 @@ index,
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(2);
+          = ExampleDialect::get(context).getAttributeList(3);
     
       std::string mangledName =
           ::llvm_dialects::getMangledName(s_name, {dataType});
@@ -842,6 +889,231 @@ index,
         }
       
 ::llvm::Value *SizeOfOp::getResult() {return this;}
+
+
+
+      const ::llvm::StringLiteral StreamAddOp::s_name{"xd.stream.add"};
+
+    StreamAddOp* StreamAddOp::create(llvm_dialects::Builder& b, ::llvm::Value * ptr, ::llvm::Value * count, ::llvm::Value * initial) {
+    ::llvm::LLVMContext& context = b.getContext();
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(2);
+    
+      std::string mangledName =
+          ::llvm_dialects::getMangledName(s_name, {initial->getType()});
+    auto fnType = ::llvm::FunctionType::get(initial->getType(), true);
+
+    auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
+
+  ::llvm::Value* const args[] = {
+ptr,
+count,
+initial,
+
+      };
+
+      return ::llvm::cast<StreamAddOp>(b.CreateCall(fn, args));
+    }
+
+
+    bool StreamAddOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      using ::llvm_dialects::printable;
+
+      if (arg_size() != 3) {
+        errs << "  wrong number of arguments: " << arg_size()
+               << ", expected 3\n";
+        return false;
+      }
+  ::llvm::Type * const ptrType = getPtr()->getType();
+(void)ptrType;
+::llvm::Type * const countType = getCount()->getType();
+(void)countType;
+::llvm::Type * const initialType = getInitial()->getType();
+(void)initialType;
+::llvm::Type * const resultType = getResult()->getType();
+(void)resultType;
+
+        if (::llvm::PointerType::get(context, 0) != ptrType) {
+          errs << "  unexpected value of $ptr:\n";
+          errs << "    expected:  " << printable(::llvm::PointerType::get(context, 0)) << '\n';
+          errs << "    actual:    " << printable(ptrType) << '\n';
+          return false;
+        }
+      
+        if (::llvm::IntegerType::get(context, 64) != countType) {
+          errs << "  unexpected value of $count:\n";
+          errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 64)) << '\n';
+          errs << "    actual:    " << printable(countType) << '\n';
+          return false;
+        }
+      
+        if (initialType != resultType) {
+          errs << "  unexpected value of $result:\n";
+          errs << "    expected:  " << printable(initialType) << '\n';
+          errs << "    actual:    " << printable(resultType) << '\n';
+          return false;
+        }
+        return true;
+}
+
+
+::llvm::Value *StreamAddOp::getResult() {return this;}
+
+
+
+      const ::llvm::StringLiteral StreamMaxOp::s_name{"xd.stream.max"};
+
+    StreamMaxOp* StreamMaxOp::create(llvm_dialects::Builder& b, ::llvm::Value * ptr, ::llvm::Value * count, ::llvm::Value * initial) {
+    ::llvm::LLVMContext& context = b.getContext();
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(2);
+    
+      std::string mangledName =
+          ::llvm_dialects::getMangledName(s_name, {initial->getType()});
+    auto fnType = ::llvm::FunctionType::get(initial->getType(), true);
+
+    auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
+
+  ::llvm::Value* const args[] = {
+ptr,
+count,
+initial,
+
+      };
+
+      return ::llvm::cast<StreamMaxOp>(b.CreateCall(fn, args));
+    }
+
+
+    bool StreamMaxOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      using ::llvm_dialects::printable;
+
+      if (arg_size() != 3) {
+        errs << "  wrong number of arguments: " << arg_size()
+               << ", expected 3\n";
+        return false;
+      }
+  ::llvm::Type * const ptrType = getPtr()->getType();
+(void)ptrType;
+::llvm::Type * const countType = getCount()->getType();
+(void)countType;
+::llvm::Type * const initialType = getInitial()->getType();
+(void)initialType;
+::llvm::Type * const resultType = getResult()->getType();
+(void)resultType;
+
+        if (::llvm::PointerType::get(context, 0) != ptrType) {
+          errs << "  unexpected value of $ptr:\n";
+          errs << "    expected:  " << printable(::llvm::PointerType::get(context, 0)) << '\n';
+          errs << "    actual:    " << printable(ptrType) << '\n';
+          return false;
+        }
+      
+        if (::llvm::IntegerType::get(context, 64) != countType) {
+          errs << "  unexpected value of $count:\n";
+          errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 64)) << '\n';
+          errs << "    actual:    " << printable(countType) << '\n';
+          return false;
+        }
+      
+        if (initialType != resultType) {
+          errs << "  unexpected value of $result:\n";
+          errs << "    expected:  " << printable(initialType) << '\n';
+          errs << "    actual:    " << printable(resultType) << '\n';
+          return false;
+        }
+        return true;
+}
+
+
+::llvm::Value *StreamMaxOp::getResult() {return this;}
+
+
+
+      const ::llvm::StringLiteral StreamMinOp::s_name{"xd.stream.min"};
+
+    StreamMinOp* StreamMinOp::create(llvm_dialects::Builder& b, ::llvm::Value * ptr, ::llvm::Value * count, ::llvm::Value * initial) {
+    ::llvm::LLVMContext& context = b.getContext();
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(2);
+    
+      std::string mangledName =
+          ::llvm_dialects::getMangledName(s_name, {initial->getType()});
+    auto fnType = ::llvm::FunctionType::get(initial->getType(), true);
+
+    auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
+
+  ::llvm::Value* const args[] = {
+ptr,
+count,
+initial,
+
+      };
+
+      return ::llvm::cast<StreamMinOp>(b.CreateCall(fn, args));
+    }
+
+
+    bool StreamMinOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      using ::llvm_dialects::printable;
+
+      if (arg_size() != 3) {
+        errs << "  wrong number of arguments: " << arg_size()
+               << ", expected 3\n";
+        return false;
+      }
+  ::llvm::Type * const ptrType = getPtr()->getType();
+(void)ptrType;
+::llvm::Type * const countType = getCount()->getType();
+(void)countType;
+::llvm::Type * const initialType = getInitial()->getType();
+(void)initialType;
+::llvm::Type * const resultType = getResult()->getType();
+(void)resultType;
+
+        if (::llvm::PointerType::get(context, 0) != ptrType) {
+          errs << "  unexpected value of $ptr:\n";
+          errs << "    expected:  " << printable(::llvm::PointerType::get(context, 0)) << '\n';
+          errs << "    actual:    " << printable(ptrType) << '\n';
+          return false;
+        }
+      
+        if (::llvm::IntegerType::get(context, 64) != countType) {
+          errs << "  unexpected value of $count:\n";
+          errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 64)) << '\n';
+          errs << "    actual:    " << printable(countType) << '\n';
+          return false;
+        }
+      
+        if (initialType != resultType) {
+          errs << "  unexpected value of $result:\n";
+          errs << "    expected:  " << printable(initialType) << '\n';
+          errs << "    actual:    " << printable(resultType) << '\n';
+          return false;
+        }
+        return true;
+}
+
+
+::llvm::Value *StreamMinOp::getResult() {return this;}
 
 
 
@@ -960,6 +1232,30 @@ data,
       const ::llvm_dialects::OpDescription &
       ::llvm_dialects::OpDescription::get<xd::SizeOfOp>() {
         static const ::llvm_dialects::OpDescription desc{false, "xd.sizeof"};
+        return desc;
+      }
+
+    
+      template <>
+      const ::llvm_dialects::OpDescription &
+      ::llvm_dialects::OpDescription::get<xd::StreamAddOp>() {
+        static const ::llvm_dialects::OpDescription desc{true, "xd.stream.add"};
+        return desc;
+      }
+
+    
+      template <>
+      const ::llvm_dialects::OpDescription &
+      ::llvm_dialects::OpDescription::get<xd::StreamMaxOp>() {
+        static const ::llvm_dialects::OpDescription desc{true, "xd.stream.max"};
+        return desc;
+      }
+
+    
+      template <>
+      const ::llvm_dialects::OpDescription &
+      ::llvm_dialects::OpDescription::get<xd::StreamMinOp>() {
+        static const ::llvm_dialects::OpDescription desc{true, "xd.stream.min"};
         return desc;
       }
 

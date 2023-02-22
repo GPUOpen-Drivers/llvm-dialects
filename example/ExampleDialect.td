@@ -167,3 +167,29 @@ def IExtOp : ExampleOp<"iext", [Memory<[]>, NoUnwind, WillReturn]> {
     position.
   }];
 }
+
+def StreamReduceOp : OpClass<ExampleDialect> {
+  let arguments = (ins Ptr:$ptr, I64:$count, value:$initial);
+
+  let summary = "family of operations that reduce some array in memory";
+  let description = [{
+    Illustrate the use of the OpClass feature.
+  }];
+}
+
+class StreamReduceTemplate<string op>
+    : ExampleOp<"stream." # op, [Memory<[(read)]>, NoUnwind, WillReturn]> {
+  let superclass = StreamReduceOp;
+
+  let results = (outs (eq $initial):$result);
+  let arguments = (ins superclass);
+
+  let summary = "perform the " # op # " operation streaming from memory";
+  let description = [{
+    Illustrate the use of the OpClass feature.
+  }];
+}
+
+def StreamAddOp : StreamReduceTemplate<"add">;
+def StreamMaxOp : StreamReduceTemplate<"max">;
+def StreamMinOp : StreamReduceTemplate<"min">;
