@@ -88,6 +88,7 @@ target_sources(llvm_dialects PRIVATE
     lib/Dialect/Dialect.cpp
     lib/Dialect/OpDescription.cpp
     lib/Dialect/Utils.cpp
+    lib/Dialect/Verifier.cpp
     lib/Dialect/Visitor.cpp)
 
 target_include_directories(llvm_dialects_tablegen PRIVATE

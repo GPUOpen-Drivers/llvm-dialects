@@ -37,15 +37,18 @@ VisitorBase::VisitorBase(VisitorBuilderBase builder)
     : m_strategy(builder.m_strategy), m_cases(std::move(builder.m_cases)) {
 }
 
+void VisitorBase::visit(void *payload, Instruction &inst) const {
+  for (const auto &[desc, extra, callback] : m_cases) {
+    if (desc->matchInstruction(inst))
+      callback(extra, payload, &inst);
+  }
+}
+
 void VisitorBase::visit(void *payload, Function &fn) const {
   if (m_strategy == VisitorStrategy::ByInstruction) {
     for (BasicBlock &bb : fn) {
-      for (Instruction &inst : bb) {
-        for (const auto &[desc, extra, callback] : m_cases) {
-          if (desc->matchInstruction(inst))
-            callback(extra, payload, &inst);
-        }
-      }
+      for (Instruction &inst : bb)
+        visit(payload, inst);
     }
     return;
   }

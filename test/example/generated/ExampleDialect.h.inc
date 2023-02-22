@@ -28,6 +28,7 @@ namespace xd {
 
       void anchor() override;
 
+    public:
       static Key& getKey();
 
     private:

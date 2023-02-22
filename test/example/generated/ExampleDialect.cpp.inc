@@ -6,6 +6,8 @@
 #include "llvm-dialects/Dialect/Builder.h"
 #include "llvm-dialects/Dialect/OpDescription.h"
 #include "llvm-dialects/Dialect/Utils.h"
+#include "llvm-dialects/Dialect/Verifier.h"
+#include "llvm-dialects/Dialect/Visitor.h"
 #include "llvm/IR/InstrTypes.h"
 
 #include "llvm/Support/ModRef.h"
@@ -25,6 +27,63 @@ namespace xd {
     }
 
     ::llvm_dialects::Dialect* ExampleDialect::make(::llvm::LLVMContext& context) {
+      
+      auto verifierExtension = [](::llvm_dialects::VisitorBuilder<::llvm_dialects::VerifierState> &builder) {
+    
+        builder.add<Add32Op>([](::llvm_dialects::VerifierState &state, Add32Op &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
+        builder.add<CombineOp>([](::llvm_dialects::VerifierState &state, CombineOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
+        builder.add<ExtractElementOp>([](::llvm_dialects::VerifierState &state, ExtractElementOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
+        builder.add<FromFixedVectorOp>([](::llvm_dialects::VerifierState &state, FromFixedVectorOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
+        builder.add<IExtOp>([](::llvm_dialects::VerifierState &state, IExtOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
+        builder.add<ITruncOp>([](::llvm_dialects::VerifierState &state, ITruncOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
+        builder.add<InsertElementOp>([](::llvm_dialects::VerifierState &state, InsertElementOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
+        builder.add<ReadOp>([](::llvm_dialects::VerifierState &state, ReadOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
+        builder.add<SizeOfOp>([](::llvm_dialects::VerifierState &state, SizeOfOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
+        builder.add<WriteOp>([](::llvm_dialects::VerifierState &state, WriteOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
+      };
+      static ::llvm_dialects::DialectExtensionRegistration<::llvm_dialects::VerifierExtension, ExampleDialect>
+          verifierExtensionRegistration(::llvm_dialects::getVerifierExtensionPoint(), verifierExtension);
+    
       return new ExampleDialect(context);
     }
 
