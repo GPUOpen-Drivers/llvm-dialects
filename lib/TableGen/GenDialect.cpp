@@ -259,7 +259,7 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
   {
     llvm::raw_string_ostream extra(makeExtra);
     extra << R"(
-      auto verifierExtension = [](::llvm_dialects::VisitorBuilder<::llvm_dialects::VerifierState> &builder) {
+      auto verifierBuild = [](::llvm_dialects::VisitorBuilder<::llvm_dialects::VerifierState> &builder) {
     )";
 
     for (const auto &opPtr : dialect->operations) {
@@ -276,8 +276,11 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
 
     extra << tgfmt(R"(
       };
+      static const ::llvm_dialects::VerifierExtension verifierExtension = {
+        verifierBuild,
+      };
       static ::llvm_dialects::DialectExtensionRegistration<::llvm_dialects::VerifierExtension, $Dialect>
-          verifierExtensionRegistration(::llvm_dialects::getVerifierExtensionPoint(), verifierExtension);
+          verifierExtensionRegistration(::llvm_dialects::getVerifierExtensionPoint(), &verifierExtension);
     )",
                    &fmt);
   }

@@ -36,7 +36,7 @@ class ContextExtensionKey {
 
 public:
   ContextExtensionKey();
-  ~ContextExtensionKey();
+  virtual ~ContextExtensionKey();
 
   unsigned getIndex() const { return m_index; }
 

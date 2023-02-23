@@ -41,7 +41,9 @@ private:
   bool m_error = false;
 };
 
-using VerifierExtension = void(VisitorBuilder<VerifierState> &);
+struct VerifierExtension {
+  void (*build)(VisitorBuilder<VerifierState> &) = nullptr;
+};
 DialectExtensionPoint<VerifierExtension> &getVerifierExtensionPoint();
 
 bool verify(llvm::Module &module, llvm::raw_ostream &out);
