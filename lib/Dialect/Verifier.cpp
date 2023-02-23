@@ -32,8 +32,8 @@ struct VerifierContextExtension
   static Visitor<VerifierState> build(LLVMContext &context) {
     VisitorBuilder<VerifierState> builder;
     auto extensions = getVerifierExtensionPoint().getExtensions(context);
-    for (VerifierExtension *extension : extensions)
-      (*extension)(builder);
+    for (const VerifierExtension *extension : extensions)
+      (*extension->build)(builder);
     return builder.build();
   }
 

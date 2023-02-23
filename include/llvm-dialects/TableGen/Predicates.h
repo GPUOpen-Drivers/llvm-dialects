@@ -37,6 +37,8 @@ public:
     CppPredicate_Last = DialectType,
   };
 
+  virtual ~Predicate() = default;
+
   static std::unique_ptr<Predicate> parse(llvm::raw_ostream &errs,
                                           GenDialectsContext &context,
                                           llvm::Init *theInit);

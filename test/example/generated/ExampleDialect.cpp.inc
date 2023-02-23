@@ -28,7 +28,7 @@ namespace xd {
 
     ::llvm_dialects::Dialect* ExampleDialect::make(::llvm::LLVMContext& context) {
       
-      auto verifierExtension = [](::llvm_dialects::VisitorBuilder<::llvm_dialects::VerifierState> &builder) {
+      auto verifierBuild = [](::llvm_dialects::VisitorBuilder<::llvm_dialects::VerifierState> &builder) {
     
         builder.add<Add32Op>([](::llvm_dialects::VerifierState &state, Add32Op &op) {
           if (!op.verifier(state.out()))
@@ -81,8 +81,11 @@ namespace xd {
         });
       
       };
+      static const ::llvm_dialects::VerifierExtension verifierExtension = {
+        verifierBuild,
+      };
       static ::llvm_dialects::DialectExtensionRegistration<::llvm_dialects::VerifierExtension, ExampleDialect>
-          verifierExtensionRegistration(::llvm_dialects::getVerifierExtensionPoint(), verifierExtension);
+          verifierExtensionRegistration(::llvm_dialects::getVerifierExtensionPoint(), &verifierExtension);
     
       return new ExampleDialect(context);
     }
