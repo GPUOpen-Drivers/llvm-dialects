@@ -52,12 +52,20 @@ NamedValue::parseList(raw_ostream &errs, GenDialectsContext &context,
     if (auto *defInit = dyn_cast<DefInit>(valueInit)) {
       Record *def = defInit->getDef();
       if (def->getName() == "type") {
-        recognized = true;
-        if (mode != Parser::OperationResults &&
-            mode != Parser::ApplyArguments) {
-          value.type = MetaType::type();
-          accepted = true;
+        if (mode == Parser::OperationResults ||
+            mode == Parser::ApplyArguments) {
+          if (mode == Parser::OperationResults)
+            errs << "Operation result";
+          else
+            errs << "Predicate argument";
+          errs << " cannot be 'type'\n";
+          errs << "... in: " << init->getAsString() << '\n';
+          return {};
         }
+
+        value.type = MetaType::type();
+        recognized = true;
+        accepted = true;
       } else if (def->getName() == "value") {
         recognized = true;
         if (isOperation) {
@@ -88,10 +96,6 @@ NamedValue::parseList(raw_ostream &errs, GenDialectsContext &context,
         if (isOperation)
           value.type = MetaType::value();
         value.constraint = valueInit;
-        if (!value.constraint) {
-          errs << "... in: " << init->getAsString() << '\n';
-          return {};
-        }
       }
 
       if (!value.constraint)
