@@ -10,7 +10,7 @@ target_include_directories(llvm-dialects-example
     PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR})
 
-llvm_map_components_to_libnames(llvm_libs Support Core)
+llvm_map_components_to_libnames(llvm_libs AsmParser Support Core)
 target_link_libraries(llvm-dialects-example
     PRIVATE
     llvm_dialects
