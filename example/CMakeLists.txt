@@ -15,6 +15,7 @@ target_link_libraries(llvm-dialects-example
     PRIVATE
     llvm_dialects
     ${llvm_libs})
+set_compiler_options(llvm-dialects-example)
 
 ### TableGen for the Example dialect
 
