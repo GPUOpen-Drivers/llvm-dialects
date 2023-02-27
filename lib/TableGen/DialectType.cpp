@@ -234,7 +234,7 @@ void DialectType::emitDefinition(raw_ostream &out, GenDialect *dialect) const {
   auto getterArgs =
       ArrayRef<GetterArg>(m_getterArguments).drop_front(m_argBegin);
 
-  out << tgfmt("::llvm::Type *$types[$0] = {\n", &fmt, typeIdx);
+  out << tgfmt("::std::array<::llvm::Type *, $0> $types = {\n", &fmt, typeIdx);
   for (const auto &[argument, getterArg] :
        llvm::zip(typeArguments(), getterArgs)) {
     if (argument.type->isTypeArg())
@@ -242,7 +242,7 @@ void DialectType::emitDefinition(raw_ostream &out, GenDialect *dialect) const {
   }
   out << tgfmt(R"(
     };
-    unsigned $ints[$0] = {
+    ::std::array<unsigned, $0> $ints = {
   )",
                &fmt, intIdx);
   for (const auto &[argument, getterArg] :
