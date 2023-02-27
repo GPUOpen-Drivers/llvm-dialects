@@ -127,7 +127,6 @@ std::string llvm_dialects::getMangledName(StringRef name,
 
     bool hasUnnamedType = false;
     result += getMangledTypeStr(ty, hasUnnamedType);
-    assert(!hasUnnamedType);
   }
   return result;
 }

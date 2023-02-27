@@ -273,6 +273,20 @@ rhs->getType(),
 }, false);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << s_name << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
   ::llvm::Value* const args[] = {
 lhs,
@@ -367,6 +381,20 @@ uint32_t const extra = getExtra();
     auto fnType = ::llvm::FunctionType::get(lhs->getType(), true);
 
     auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << mangledName << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
   ::llvm::Value* const args[] = {
 lhs,
@@ -440,6 +468,20 @@ rhs,
     auto fnType = ::llvm::FunctionType::get(::llvm::cast<XdVectorType>(vector->getType())->getElementType(), true);
 
     auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << mangledName << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
   ::llvm::Value* const args[] = {
 vector,
@@ -521,6 +563,20 @@ index,
     auto fnType = ::llvm::FunctionType::get(XdVectorType::get(::llvm::cast<::llvm::FixedVectorType>(source->getType())->getElementType(), ::llvm::cast<::llvm::FixedVectorType>(source->getType())->getNumElements()), true);
 
     auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << mangledName << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
   ::llvm::Value* const args[] = {
 source,
@@ -601,6 +657,20 @@ source,
 }, false);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << s_name << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
   return ::llvm::cast<HandleGetOp>(b.CreateCall(fn));
 }
@@ -649,6 +719,20 @@ source,
     auto fnType = ::llvm::FunctionType::get(resultType, true);
 
     auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << mangledName << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
   ::llvm::Value* const args[] = {
 source,
@@ -727,6 +811,20 @@ source,
     auto fnType = ::llvm::FunctionType::get(resultType, true);
 
     auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << mangledName << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
   ::llvm::Value* const args[] = {
 source,
@@ -805,6 +903,20 @@ source,
     auto fnType = ::llvm::FunctionType::get(vector->getType(), true);
 
     auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << mangledName << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
   ::llvm::Value* const args[] = {
 vector,
@@ -901,6 +1013,20 @@ index,
 }, false);
 
     auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << mangledName << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
   return ::llvm::cast<ReadOp>(b.CreateCall(fn));
 }
@@ -939,6 +1065,20 @@ index,
     auto fnType = ::llvm::FunctionType::get(::llvm::IntegerType::get(context, 64), true);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << s_name << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
   ::llvm::Value* const args[] = {
 ::llvm::PoisonValue::get(sizeofType),
@@ -998,6 +1138,20 @@ index,
     auto fnType = ::llvm::FunctionType::get(initial->getType(), true);
 
     auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << mangledName << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
   ::llvm::Value* const args[] = {
 ptr,
@@ -1073,6 +1227,20 @@ initial,
     auto fnType = ::llvm::FunctionType::get(initial->getType(), true);
 
     auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << mangledName << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
   ::llvm::Value* const args[] = {
 ptr,
@@ -1148,6 +1316,20 @@ initial,
     auto fnType = ::llvm::FunctionType::get(initial->getType(), true);
 
     auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << mangledName << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
   ::llvm::Value* const args[] = {
 ptr,
@@ -1220,6 +1402,20 @@ initial,
     auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), true);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << s_name << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
   ::llvm::Value* const args[] = {
 data,

@@ -459,6 +459,20 @@ void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
   fmt.addSubst("fn", symbols.chooseName({"fn", "function"}));
   out << tgfmt(R"(
     auto $fn = $_module.getOrInsertFunction($fnName, $fnType, $attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>($fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>($fn.getCallee())->getFunctionType() != $fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << $fnName << "_" << i;
+      fn = $_module.getOrInsertFunction(newNameStream.str(), $fnType, $attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>($fn.getCallee()));
+    assert($fn.getFunctionType() == $fnType);
+    assert(::llvm::cast<::llvm::Function>($fn.getCallee())->getFunctionType() == $fn.getFunctionType());
 
   )", &fmt);
 
