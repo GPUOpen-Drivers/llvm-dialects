@@ -10,6 +10,15 @@ project(llvm-dialects)
 
 message(STATUS "Begin configuring llvm-dialects...")
 
+function(set_compiler_options PROJECT_NAME)
+  # Output with color if in terminal: https://github.com/ninja-build/ninja/wiki/FAQ
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options("${PROJECT_NAME}" PRIVATE -fdiagnostics-color=always)
+  elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      target_compile_options("${PROJECT_NAME}" PRIVATE -fcolor-diagnostics)
+  endif()
+endfunction()
+
 if(NOT DEFINED LLVM_VERSION_MAJOR)
     find_package(LLVM REQUIRED CONFIG)
 
@@ -71,6 +80,7 @@ else()
 endif()
 
 target_link_libraries(llvm-dialects-tblgen PRIVATE llvm_dialects_tablegen)
+set_compiler_options(llvm-dialects-tblgen)
 
 # The llvm_dialects library build depends on llvm/IR/Attributes.inc
 add_dependencies(llvm_dialects intrinsics_gen)
