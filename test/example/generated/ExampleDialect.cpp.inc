@@ -50,6 +50,11 @@ namespace xd {
             state.setError();
         });
       
+        builder.add<HandleGetOp>([](::llvm_dialects::VerifierState &state, HandleGetOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
         builder.add<IExtOp>([](::llvm_dialects::VerifierState &state, IExtOp &op) {
           if (!op.verifier(state.out()))
             state.setError();
@@ -135,6 +140,43 @@ m_attributeLists[3] = ::llvm::AttributeList::get(context, ::llvm::AttributeList:
 }
 }
 
+XdHandleType* XdHandleType::get(::llvm::LLVMContext & ctx) {
+::std::array<::llvm::Type *, 0> types = {
+
+    };
+    ::std::array<unsigned, 0> ints = {
+  
+      };
+
+      auto *type = ::llvm::cast<XdHandleType>(::llvm::TargetExtType::get(ctx, s_name, types, ints));
+      assert(::llvm_dialects::runTypeVerifier([type](llvm::raw_ostream &errs) {
+        return type->verifier(errs);
+      }, type));
+      return type;
+    }
+  
+    bool XdHandleType::verifier(::llvm::raw_ostream &errs) const {
+      ::llvm::LLVMContext &ctx = getContext();
+      (void)ctx;
+
+      using ::llvm_dialects::printable;
+
+      if (getNumTypeParameters() != 0) {
+        errs << "  wrong number of type parameters\n";
+        errs << "    expected: 0\n";
+        errs << "      actual: " << getNumTypeParameters() << '\n';
+        return false;
+      }
+
+      if (getNumIntParameters() != 0) {
+        errs << "  wrong number of int parameters\n";
+        errs << "    expected: 0\n";
+        errs << "      actual: " << getNumIntParameters() << '\n';
+        return false;
+      }
+  return true;
+}
+
 
       ::llvm::Type * XdVectorType::getElementType() const {
         return type_params()[0];
@@ -147,11 +189,11 @@ m_attributeLists[3] = ::llvm::AttributeList::get(context, ::llvm::AttributeList:
 
     XdVectorType* XdVectorType::get(::llvm::Type * elementType, uint32_t numElements) {
 ::llvm::LLVMContext &ctx = elementType->getContext();
-::llvm::Type *types[1] = {
+::std::array<::llvm::Type *, 1> types = {
 elementType,
 
     };
-    unsigned ints[1] = {
+    ::std::array<unsigned, 1> ints = {
   numElements,
 
       };
@@ -543,6 +585,52 @@ source,
         }
       
 ::llvm::Value *FromFixedVectorOp::getResult() {return this;}
+
+
+
+      const ::llvm::StringLiteral HandleGetOp::s_name{"xd.handle.get"};
+
+    HandleGetOp* HandleGetOp::create(llvm_dialects::Builder& b) {
+    ::llvm::LLVMContext& context = b.getContext();
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(1);
+    auto fnType = ::llvm::FunctionType::get(XdHandleType::get(context), {
+}, false);
+
+    auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
+
+  return ::llvm::cast<HandleGetOp>(b.CreateCall(fn));
+}
+
+
+    bool HandleGetOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      using ::llvm_dialects::printable;
+
+      if (arg_size() != 0) {
+        errs << "  wrong number of arguments: " << arg_size()
+               << ", expected 0\n";
+        return false;
+      }
+  ::llvm::Type * const resultType = getResult()->getType();
+(void)resultType;
+
+        if (XdHandleType::get(context) != resultType) {
+          errs << "  unexpected value of $result:\n";
+          errs << "    expected:  " << printable(XdHandleType::get(context)) << '\n';
+          errs << "    actual:    " << printable(resultType) << '\n';
+          return false;
+        }
+        return true;
+}
+
+
+::llvm::Value *HandleGetOp::getResult() {return this;}
 
 
 
@@ -1195,6 +1283,14 @@ data,
       const ::llvm_dialects::OpDescription &
       ::llvm_dialects::OpDescription::get<xd::FromFixedVectorOp>() {
         static const ::llvm_dialects::OpDescription desc{true, "xd.fromfixedvector"};
+        return desc;
+      }
+
+    
+      template <>
+      const ::llvm_dialects::OpDescription &
+      ::llvm_dialects::OpDescription::get<xd::HandleGetOp>() {
+        static const ::llvm_dialects::OpDescription desc{false, "xd.handle.get"};
         return desc;
       }
 

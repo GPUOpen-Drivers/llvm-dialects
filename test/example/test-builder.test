@@ -23,5 +23,6 @@
 ; CHECK-NEXT:    [[TMP14:%.*]] = call ptr @xd.read.p0()
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i8 (...) @xd.stream.add.i8(ptr [[TMP14]], i64 14, i8 0)
 ; CHECK-NEXT:    call void (...) @xd.write(i8 [[TMP15]])
+; CHECK-NEXT:    [[TMP16:%.*]] = call target("xd.handle") @xd.handle.get()
 ; CHECK-NEXT:    ret void
 ;

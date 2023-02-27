@@ -45,6 +45,25 @@ namespace xd {
         ::std::array<::llvm::AttributeList, 4> m_attributeLists;
     };
 
+    class XdHandleType : public ::llvm::TargetExtType {
+      static constexpr ::llvm::StringLiteral s_name{"xd.handle"};
+
+    public:
+      static bool classof(const ::llvm::TargetExtType *t) {
+        return t->getName() == s_name;
+      }
+      static bool classof(const ::llvm::Type* t) {
+        return llvm::isa<::llvm::TargetExtType>(t) &&
+                classof(llvm::cast<::llvm::TargetExtType>(t));
+      }
+
+      bool verifier(::llvm::raw_ostream &errs) const;
+
+  static XdHandleType *get(::llvm::LLVMContext & ctx);
+
+};
+
+
     class XdVectorType : public ::llvm::TargetExtType {
       static constexpr ::llvm::StringLiteral s_name{"xd.vector"};
 
@@ -165,6 +184,27 @@ bool verifier(::llvm::raw_ostream &errs);
 bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getSource();
+
+::llvm::Value * getResult();
+
+
+      };
+    
+      class HandleGetOp : public ::llvm::CallInst {
+        static const ::llvm::StringLiteral s_name; //{"xd.handle.get"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isSimpleOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static HandleGetOp* create(::llvm_dialects::Builder& b);
+
+bool verifier(::llvm::raw_ostream &errs);
+
 
 ::llvm::Value * getResult();
 

@@ -40,6 +40,17 @@ def XdVectorType : DialectType<ExampleDialect, "vector"> {
   }];
 }
 
+def XdHandleType : DialectType<ExampleDialect, "handle"> {
+  let typeArguments = (args);
+
+  let defaultGetterHasExplicitContextArgument = true;
+
+  let summary = "an opaque handle type";
+  let description = [{
+    Test that a type without arguments works correctly.
+  }];
+}
+
 class ExampleOp<string mnemonic_, list<Trait> traits_>
     : Op<ExampleDialect, mnemonic_, traits_>;
 
@@ -193,3 +204,13 @@ class StreamReduceTemplate<string op>
 def StreamAddOp : StreamReduceTemplate<"add">;
 def StreamMaxOp : StreamReduceTemplate<"max">;
 def StreamMinOp : StreamReduceTemplate<"min">;
+
+def HandleGetOp : ExampleOp<"handle.get", [Memory<[]>, NoUnwind, WillReturn]> {
+  let results = (outs XdHandleType:$result);
+  let arguments = (ins);
+
+  let summary = "obtain a handle";
+  let description = [{
+    Use a dialect type without type arguments.
+  }];
+}
