@@ -178,6 +178,9 @@ bool CppPredicate::init(raw_ostream &errs, GenDialectsContext &genContext,
       if (capture[i].empty())
         m_canCheckFromSelf = false;
     }
+  } else {
+    for (unsigned i = 0; i < m_arguments.size(); ++i)
+      m_canDerive.push_back(false);
   }
 
   return true;
