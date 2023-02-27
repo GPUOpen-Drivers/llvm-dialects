@@ -53,6 +53,23 @@ cl::opt<Action> g_action(
 cl::list<std::string> g_inputs(cl::Positional, cl::ZeroOrMore,
                                cl::desc("Input file(s) (\"-\" for stdin)"));
 
+cl::opt<bool> g_typedPointers("typed-pointers", cl::init(false),
+                               cl::desc("Disable opaque pointers"));
+
+/// Test intrinsics that are generic over unnamed struct types.
+void useUnnamedStructTypes(Builder &b) {
+  StructType *t1 = StructType::create({b.getInt32Ty()}, "");
+  StructType *t2 = StructType::create({b.getInt32Ty(), b.getInt32Ty()}, "");
+  StructType *t3 = StructType::create({b.getInt64Ty()}, "");
+
+  Value *z1 = b.create<xd::ReadOp>(t1);
+  Value *z2 = b.create<xd::ReadOp>(t2);
+  Value *z3 = b.create<xd::ReadOp>(t3);
+  b.create<xd::WriteOp>(z1);
+  b.create<xd::WriteOp>(z2);
+  b.create<xd::WriteOp>(z3);
+}
+
 void createFunctionExample(Module &module, const Twine &name) {
   Builder b{module.getContext()};
 
@@ -87,6 +104,8 @@ void createFunctionExample(Module &module, const Twine &name) {
 
   b.create<xd::HandleGetOp>();
 
+  useUnnamedStructTypes(b);
+
   b.CreateRetVoid();
 }
 
@@ -96,14 +115,33 @@ std::unique_ptr<Module> createModuleExample(LLVMContext &context) {
   return module;
 }
 
+/// A smaller example that does not need pointers and works with typed pointers.
+std::unique_ptr<Module> createModuleExampleTypedPtrs(LLVMContext &context) {
+  auto module = std::make_unique<Module>("example", context);
+  Builder b{context};
+
+  Function *fn = Function::Create(FunctionType::get(b.getVoidTy(), false),
+                                  GlobalValue::ExternalLinkage, "example-typed", *module);
+
+  BasicBlock *bb = BasicBlock::Create(context, "entry", fn);
+  b.SetInsertPoint(bb);
+
+  useUnnamedStructTypes(b);
+
+  b.CreateRetVoid();
+  return module;
+}
+
 int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
   LLVMContext context;
+  if (g_typedPointers)
+    context.setOpaquePointers(false);
   auto dialectContext = DialectContext::make<xd::ExampleDialect>(context);
 
   if (g_action == Action::Build) {
-    auto module = createModuleExample(context);
+    auto module = g_typedPointers ? createModuleExampleTypedPtrs(context) : createModuleExample(context);
     module->print(llvm::outs(), nullptr, false);
   } else if (g_action == Action::Verify) {
     if (g_inputs.size() != 1) {
