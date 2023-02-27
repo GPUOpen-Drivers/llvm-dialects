@@ -50,6 +50,7 @@ public:
   llvm::Init *getInit() const { return m_init; }
   llvm::ArrayRef<NamedValue> arguments() const { return m_arguments; }
   bool canDerive(unsigned argumentIndex) const {
+    assert(argumentIndex < m_canDerive.size());
     return m_canDerive[argumentIndex];
   }
   bool canCheckFromSelf() const { return m_canCheckFromSelf; }
