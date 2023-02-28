@@ -43,7 +43,7 @@ jobs:
       - name: Fetch the latest prebuilt AMDVLK
         run: docker pull "$IMAGE_TAG"
       - name: Build and Test with Docker
-        run: docker build . --file docker/Dockerfile
+        run: docker build . --file docker/dialects.Dockerfile
                              --build-arg AMDVLK_IMAGE="$IMAGE_TAG"
                              --build-arg DIALECTS_REPO_NAME="${GITHUB_REPOSITORY}"
                              --build-arg DIALECTS_REPO_REF="${GITHUB_REF}"

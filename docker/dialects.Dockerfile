@@ -2,7 +2,7 @@
 # Dockerfile for llvm-dialects Continuous Integration.
 # Sample invocation:
 #    docker build .                                                                                       \
-#      --file docker/Dockerfile                                                                           \
+#      --file docker/dialects.Dockerfile                                                                  \
 #      --build-arg AMDVLK_IMAGE=amdvlkadmin/amdvlk_release_gcc_assertions:nightly                         \
 #      --build-arg DIALECTS_REPO_NAME=GPUOpen-Drivers/llvm-dialects                                       \
 #      --build-arg DIALECTS_REPO_REF=<GIT_REF>                                                            \
@@ -11,7 +11,7 @@
 #
 # Required arguments:
 # - AMDVLK_IMAGE: Base image name for prebuilt amdvlk
-# - DIALECTS_REPO_NAME: Name of the llpc repository to clone
+# - DIALECTS_REPO_NAME: Name of the llvm-dialects repository to clone
 # - DIALECTS_REPO_REF: ref name to checkout
 # - DIALECTS_REPO_SHA: SHA of the commit to checkout
 #

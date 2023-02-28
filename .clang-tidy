@@ -1,0 +1,36 @@
+Checks: '-*,clang-analyzer-*,clang-diagnostic-*,-clang-analyzer-core.CallAndMessage,-clang-analyzer-core.DivideZero,-clang-analyzer-core.NonNullParamChecker,-clang-analyzer-core.NullDereference,-clang-analyzer-core.uninitialized.UndefReturn,-clang-analyzer-core.UndefinedBinaryOperatorResult,-clang-analyzer-optin.cplusplus.VirtualCall,llvm-*,-llvm-include-order,-llvm-qualified-auto,-llvm-header-guard,performance-*,misc-*,-misc-no-recursion,-misc-unused-parameters,-misc-non-private-member-variables-in-classes,readability-simplify-boolean-expr,readability-redundant-nullptr-comparison,readability-redundant-parentheses,readability-declaration-inline-comment'
+CheckOptions:
+  - { key: readability-identifier-naming.ParameterCase, value: camelBack }
+  - { key: readability-identifier-naming.ParameterRemovePrefixes, value: 'p,b,pfn' }
+  - { key: readability-identifier-naming.VariableCase, value: camelBack }
+  - { key: readability-identifier-naming.VariableRemovePrefixes, value: 'p,b,pfn' }
+  # Need to ignore static field 'ID' because otherwise clang-tidy dives into an llvm
+  # include file and changes 'ID' to 'm_id' there, which is bad.
+  - { key: readability-identifier-naming.ClassMemberIgnoredRegexp, value: '^ID|mm.*$' }
+  - { key: readability-identifier-naming.ClassMemberCase, value: camelBack }
+  - { key: readability-identifier-naming.ClassMemberRemovePrefixes, value: 'p,b,pfn,m_p,m_b' }
+  - { key: readability-identifier-naming.ClassMemberPrefix, value: m_ }
+  - { key: readability-identifier-naming.ClassConstantCase, value: CamelCase }
+  - { key: readability-identifier-naming.ClassConstantRemovePrefixes, value: 'p,b,pfn,m_p,m_b' }
+  - { key: readability-identifier-naming.StaticVariableCase, value: CamelCase }
+  - { key: readability-identifier-naming.StaticVariableRemovePrefixes, value: 'p,b,pfn,s_,s_p' }
+  - { key: readability-identifier-naming.GlobalVariableIgnoredRegexp, value: 'mm.*' }
+  - { key: readability-identifier-naming.GlobalVariableCase, value: CamelCase }
+  - { key: readability-identifier-naming.GlobalVariableRemovePrefixes, value: 'p,b,pfn,g_,g_p' }
+  - { key: readability-identifier-naming.ConstantMemberIgnoredRegexp, value: 'mm.*' }
+  - { key: readability-identifier-naming.ConstantMemberCase, value: camelBack }
+  - { key: readability-identifier-naming.ConstantMemberRemovePrefixes, value: 'p,b,pfn,m_p,m_b' }
+  - { key: readability-identifier-naming.ConstantMemberPrefix, value: m_ }
+  - { key: readability-identifier-naming.PublicMemberCase, value: camelBack }
+  - { key: readability-identifier-naming.PublicMemberIgnoredRegexp, value: '^pSymName$' }
+  - { key: readability-identifier-naming.PublicMemberPrefix, value: '' }
+  - { key: readability-identifier-naming.PublicMemberRemovePrefixes, value: 'p,b,pfn,m_,m_p,m_b' }
+  - { key: readability-identifier-naming.MemberCase, value: camelBack }
+  - { key: readability-identifier-naming.MemberPrefix, value: m_ }
+  - { key: readability-identifier-naming.MemberRemovePrefixes, value: 'p,b,pfn,m_p,m_b' }
+  - { key: readability-identifier-naming.MethodCase, value: camelBack }
+  - { key: readability-identifier-naming.MethodIgnoredRegexp, value: '^Create$|^CreateACos$|^CreateACosh$|^CreateASin$|^CreateASinh$|^CreateATan$|^CreateATan2$|^CreateATanh$|^CreateBarrier$|^CreateBinaryIntrinsic$|^CreateCosh$|^CreateCrossProduct$|^CreateCubeFace.*$|^CreateDemoteToHelperInvocation$|^CreateDerivative$|^CreateDeterminant$|^CreateDotProduct$|^CreateEmitVertex$|^CreateEndPrimitive$|^CreateExp$|^CreateExtract.*$|^CreateFaceForward$|^CreateFClamp$|^CreateFindSMsb$|^CreateFma$|^CreateFMax$|^CreateFMax3$|^CreateFMid3$|^CreateFMin$|^CreateFMin3$|^CreateFMod$|^CreateFpTruncWithRounding$|^CreateFract$|^CreateFSign$|^CreateGet.*$|^CreateImage.*$|^CreateIndexDescPtr$|^CreateInsertBitField$|^CreateIntrinsic$|^CreateInverseSqrt$|^CreateIs.*$|^CreateKill$|^CreateLdexp$|^CreateLoad.*$|^CreateLog$|^CreateMapToInt32$|^CreateMatrix.*$|^CreateNormalizeVector$|^CreateOuterProduct$|^CreatePower$|^CreateQuantizeToFp16$|^CreateRead.*$|^CreateReflect$|^CreateRefract$|^CreateSAbs$|^CreateSinh$|^CreateSMod$|^CreateSmoothStep$|^CreateSSign$|^CreateSubgroup.*$|^CreateTan$|^CreateTanh$|^CreateTransposeMatrix$|^CreateUnaryIntrinsic$|^CreateVectorTimesMatrix$|^CreateWrite.*Output$|^Serialize$|^Merge$|^Destroy$|^ConvertColorBufferFormatToExportFormat$|^BuildShaderModule$|^BuildGraphicsPipeline$|^BuildComputePipeline$|^IsVertexFormatSupported$|^DumpSpirvBinary$|^BeginPipelineDump$|^EndPipelineDump$|^DumpPipelineBinary$|^DumpPipelineExtraInfo$|^GetShaderHash$|^GetPipelineHash$|^GetPipelineName$|^CreateShaderCache$|^ReadFromBuffer$|^GetSectionIndex$|^GetSymbolsBySectionIndex$|^GetSectionData$' }
+  - { key: readability-identifier-naming.FunctionIgnoredRegexp, value: 'EnableOuts|EnableErrs' }
+  - { key: readability-identifier-naming.FunctionCase, value: camelBack }
+  - { key: readability-identifier-naming.TypeCase, value: CamelCase }
+  - { key: readability-identifier-naming.TypeRemovePrefixes, value: PFN_ }
