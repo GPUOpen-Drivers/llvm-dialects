@@ -27,6 +27,37 @@ bool llvm_dialects::areTypesEqual(ArrayRef<Type *> types) {
   return llvm::all_equal(types);
 }
 
+static std::string typeToStr(Type *Ty) {
+  switch (Ty->getTypeID()) {
+  case Type::VoidTyID:
+    return "isVoid";
+  case Type::MetadataTyID:
+    return "Metadata";
+  case Type::HalfTyID:
+    return "f16";
+  case Type::BFloatTyID:
+    return "bf16";
+  case Type::FloatTyID:
+    return "f32";
+  case Type::DoubleTyID:
+    return "f64";
+  case Type::X86_FP80TyID:
+    return "f80";
+  case Type::FP128TyID:
+    return "f128";
+  case Type::PPC_FP128TyID:
+    return "ppcf128";
+  case Type::X86_MMXTyID:
+    return "x86mmx";
+  case Type::X86_AMXTyID:
+    return "x86amx";
+  case Type::IntegerTyID:
+    return "i" + utostr(cast<IntegerType>(Ty)->getBitWidth());
+  default:
+      llvm_unreachable("Unhandled type");
+  }
+}
+
 // The following function is copied verbatim from
 // llvm-project/llvm/lib/IR/Function.cpp
 //
@@ -59,12 +90,14 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
   } else if (StructType *STyp = dyn_cast<StructType>(Ty)) {
     if (!STyp->isLiteral()) {
       Result += "s_";
+
       if (STyp->hasName())
         Result += STyp->getName();
       else
         HasUnnamedType = true;
     } else {
       Result += "sl_";
+
       for (auto Elem : STyp->elements())
         Result += getMangledTypeStr(Elem, HasUnnamedType);
     }
@@ -74,34 +107,21 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
     Result += "f_" + getMangledTypeStr(FT->getReturnType(), HasUnnamedType);
     for (size_t i = 0; i < FT->getNumParams(); i++)
       Result += getMangledTypeStr(FT->getParamType(i), HasUnnamedType);
+
     if (FT->isVarArg())
       Result += "vararg";
+
     // Ensure nested function types are distinguishable.
     Result += "f";
   } else if (VectorType *VTy = dyn_cast<VectorType>(Ty)) {
     ElementCount EC = VTy->getElementCount();
     if (EC.isScalable())
       Result += "nx";
+
     Result += "v" + utostr(EC.getKnownMinValue()) +
               getMangledTypeStr(VTy->getElementType(), HasUnnamedType);
   } else if (Ty) {
-    switch (Ty->getTypeID()) {
-    default: llvm_unreachable("Unhandled type");
-    case Type::VoidTyID:      Result += "isVoid";   break;
-    case Type::MetadataTyID:  Result += "Metadata"; break;
-    case Type::HalfTyID:      Result += "f16";      break;
-    case Type::BFloatTyID:    Result += "bf16";     break;
-    case Type::FloatTyID:     Result += "f32";      break;
-    case Type::DoubleTyID:    Result += "f64";      break;
-    case Type::X86_FP80TyID:  Result += "f80";      break;
-    case Type::FP128TyID:     Result += "f128";     break;
-    case Type::PPC_FP128TyID: Result += "ppcf128";  break;
-    case Type::X86_MMXTyID:   Result += "x86mmx";   break;
-    case Type::X86_AMXTyID:   Result += "x86amx";   break;
-    case Type::IntegerTyID:
-      Result += "i" + utostr(cast<IntegerType>(Ty)->getBitWidth());
-      break;
-    }
+    Result += typeToStr(Ty);
   }
   return Result;
 }
