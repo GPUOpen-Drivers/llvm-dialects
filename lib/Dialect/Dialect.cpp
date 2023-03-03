@@ -66,7 +66,7 @@ class CurrentContextCache {
 
   CurrentContextCache() {
     auto &map = ContextMap::get();
-    auto lock = std::lock_guard(map.m_mutex);
+    std::lock_guard<std::mutex> lock(map.m_mutex);
     m_next = map.m_caches;
     if (m_next)
       m_next->m_pprev = &m_next;
@@ -76,7 +76,7 @@ class CurrentContextCache {
 
   ~CurrentContextCache() {
     auto &map = ContextMap::get();
-    auto lock = std::lock_guard(map.m_mutex);
+    std::lock_guard<std::mutex> lock(map.m_mutex);
     if (m_next)
       m_next->m_pprev = m_pprev;
     *m_pprev = m_next;
@@ -88,7 +88,7 @@ public:
     static thread_local CurrentContextCache cache;
     if (cache.m_llvmContext.load(std::memory_order_relaxed) != llvmContext) {
       auto &map = ContextMap::get();
-      auto lock = std::lock_guard(map.m_mutex);
+      std::lock_guard<std::mutex> lock(map.m_mutex);
       cache.m_llvmContext.store(llvmContext, std::memory_order_relaxed);
       cache.m_dialectContext = map.m_map.lookup(llvmContext);
     }
@@ -98,7 +98,7 @@ public:
 
 void ContextMap::insert(LLVMContext *llvmContext,
                         DialectContext *dialectContext) {
-  auto lock = std::lock_guard(m_mutex);
+  std::lock_guard<std::mutex> lock(m_mutex);
   bool inserted = m_map.try_emplace(llvmContext, dialectContext).second;
   (void)inserted;
   assert(inserted);
@@ -106,7 +106,7 @@ void ContextMap::insert(LLVMContext *llvmContext,
 
 void ContextMap::remove(LLVMContext *llvmContext,
                         DialectContext *dialectContext) {
-  auto lock = std::lock_guard(m_mutex);
+  std::lock_guard<std::mutex> lock(m_mutex);
   assert(m_map.lookup(llvmContext) == dialectContext);
   m_map.erase(llvmContext);
 
