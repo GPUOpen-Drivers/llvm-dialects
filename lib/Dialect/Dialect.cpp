@@ -92,6 +92,9 @@ public:
       cache.m_llvmContext.store(llvmContext, std::memory_order_relaxed);
       cache.m_dialectContext = map.m_map.lookup(llvmContext);
     }
+    assert(cache.m_dialectContext &&
+           "No DialectContext. Maybe you forgot to use "
+           "llvm_dialects::DialectContext::make.");
     return cache.m_dialectContext;
   }
 };
