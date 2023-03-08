@@ -16,6 +16,7 @@
 
 #include "llvm-dialects/Dialect/Visitor.h"
 
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -60,7 +61,18 @@ VisitorBuilderBase::~VisitorBuilderBase() {
 
     // Copy all cases to the root.
     ancestor->m_cases.append(m_cases.begin(), m_cases.end());
+
+    ancestor->setStrategy(m_strategy);
   }
+}
+
+void VisitorBuilderBase::setStrategy(VisitorStrategy strategy) {
+  if (strategy == VisitorStrategy::Default)
+    return;
+
+  assert(m_strategy == VisitorStrategy::Default || m_strategy == strategy);
+
+  m_strategy = strategy;
 }
 
 void VisitorBuilderBase::add(const OpDescription &desc, void *extra, VisitorCallback *fn) {
@@ -76,6 +88,9 @@ VisitorBase::VisitorBase(VisitorBuilderBase &&builder)
     : m_strategy(builder.m_strategy), m_cases(std::move(builder.m_cases)),
       m_projections(std::move(builder.m_projections)) {
   assert(!builder.m_parent);
+
+  if (m_strategy == VisitorStrategy::Default)
+    m_strategy = VisitorStrategy::ByFunctionDeclaration;
 }
 
 void VisitorBase::call(const VisitorCase &theCase, void *payload,
@@ -109,6 +124,15 @@ void VisitorBase::visit(void *payload, Function &fn) const {
     return;
   }
 
+  if (m_strategy == VisitorStrategy::ReversePostOrder) {
+    ReversePostOrderTraversal<Function *> rpot(&fn);
+    for (BasicBlock *bb : rpot) {
+      for (Instruction &inst : *bb)
+        visit(payload, inst);
+    }
+    return;
+  }
+
   for (Function &decl : fn.getParent()->functions()) {
     if (!decl.isDeclaration())
       continue;
@@ -133,7 +157,7 @@ void VisitorBase::visit(void *payload, Function &fn) const {
 }
 
 void VisitorBase::visit(void *payload, Module &module) const {
-  if (m_strategy == VisitorStrategy::ByInstruction) {
+  if (m_strategy != VisitorStrategy::ByFunctionDeclaration) {
     for (Function &fn : module.functions()) {
       if (!fn.isDeclaration())
         visit(payload, fn);

@@ -32,10 +32,16 @@ namespace llvm_dialects {
 template <typename PayloadT>
 class Visitor;
 
-/// The strategy for implementation a visitor of dialect ops, 
+/// The iteration strategy of Visitor.
 enum class VisitorStrategy {
+  /// Pick a reasonable default.
+  Default,
+
   /// Iterate over all instructions to find the ones that match.
   ByInstruction,
+
+  /// Iterate over all instructions in reverse post-order.
+  ReversePostOrder,
 
   /// Iterate over the function declarations in a module, filter out those for
   /// relevant dialect ops, and then iterate over their users.
@@ -116,7 +122,7 @@ public:
   explicit VisitorBuilderBase(VisitorBuilderBase *parent) : m_parent(parent) {}
   ~VisitorBuilderBase();
 
-  void setStrategy(VisitorStrategy strategy) { m_strategy = strategy; }
+  void setStrategy(VisitorStrategy strategy);
 
   void add(const OpDescription &desc, void *extra, VisitorCallback *fn);
 
@@ -126,7 +132,7 @@ public:
 
 private:
   VisitorBuilderBase *m_parent = nullptr;
-  VisitorStrategy m_strategy = VisitorStrategy::ByFunctionDeclaration;
+  VisitorStrategy m_strategy = VisitorStrategy::Default;
   llvm::SmallVector<VisitorCase> m_cases;
   llvm::SmallVector<PayloadProjection> m_projections;
 };
@@ -155,7 +161,8 @@ private:
 /// See @ref VisitorBuilder for how to instantiate this class.
 ///
 /// Instructions are not necessarily visited in the order in which they appear
-/// in the containing function or even basic block.
+/// in the containing function or even basic block. If a fixed order is
+/// required, select the ReversePostOrder strategy at VisitorBuilder time.
 ///
 /// Callbacks must not delete or remove their instruction argument.
 template <typename PayloadT>
