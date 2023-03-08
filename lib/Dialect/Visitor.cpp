@@ -19,6 +19,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 
@@ -27,8 +28,26 @@
 using namespace llvm_dialects;
 using namespace llvm;
 
-using llvm_dialects::detail::VisitorBuilderBase;
 using llvm_dialects::detail::VisitorBase;
+using llvm_dialects::detail::VisitorBuilderBase;
+using llvm_dialects::detail::VisitorKey;
+
+bool VisitorKey::matchInstruction(Instruction &inst) const {
+  if (m_kind == Kind::Intrinsic) {
+    if (auto *intrinsicInst = dyn_cast<IntrinsicInst>(&inst))
+      return intrinsicInst->getIntrinsicID() == m_intrinsicId;
+    return false;
+  }
+
+  return m_description->matchInstruction(inst);
+}
+
+bool VisitorKey::matchDeclaration(Function &decl) const {
+  if (m_kind == Kind::Intrinsic)
+    return decl.getIntrinsicID() == m_intrinsicId;
+
+  return m_description->matchDeclaration(decl);
+}
 
 VisitorBuilderBase::~VisitorBuilderBase() {
   if (m_parent) {
@@ -75,9 +94,8 @@ void VisitorBuilderBase::setStrategy(VisitorStrategy strategy) {
   m_strategy = strategy;
 }
 
-void VisitorBuilderBase::add(const OpDescription &desc, void *extra, VisitorCallback *fn) {
-  VisitorCase theCase;
-  theCase.description = &desc;
+void VisitorBuilderBase::add(VisitorKey key, void *extra, VisitorCallback *fn) {
+  VisitorCase theCase{key};
   theCase.callback = fn;
   theCase.callbackData = extra;
   theCase.projection = 0;
@@ -89,8 +107,13 @@ VisitorBase::VisitorBase(VisitorBuilderBase &&builder)
       m_projections(std::move(builder.m_projections)) {
   assert(!builder.m_parent);
 
-  if (m_strategy == VisitorStrategy::Default)
-    m_strategy = VisitorStrategy::ByFunctionDeclaration;
+  if (m_strategy == VisitorStrategy::Default) {
+    bool matchDeclarations = all_of(m_cases, [](const VisitorCase &theCase) {
+      return theCase.key.canMatchDeclaration();
+    });
+    m_strategy = matchDeclarations ? VisitorStrategy::ByFunctionDeclaration
+                                   : VisitorStrategy::ByInstruction;
+  }
 }
 
 void VisitorBase::call(const VisitorCase &theCase, void *payload,
@@ -110,7 +133,7 @@ void VisitorBase::call(const VisitorCase &theCase, void *payload,
 
 void VisitorBase::visit(void *payload, Instruction &inst) const {
   for (const auto &theCase : m_cases) {
-    if (theCase.description->matchInstruction(inst))
+    if (theCase.key.matchInstruction(inst))
       call(theCase, payload, inst);
   }
 }
@@ -140,7 +163,7 @@ void VisitorBase::visit(void *payload, Function &fn) const {
     LLVM_DEBUG(dbgs() << "visit " << decl.getName() << '\n');
 
     for (const auto &theCase : m_cases) {
-      if (theCase.description->matchDeclaration(decl)) {
+      if (theCase.key.matchDeclaration(decl)) {
         for (Use &use : decl.uses()) {
           if (auto *inst = dyn_cast<Instruction>(use.getUser())) {
             if (inst->getFunction() != &fn)
@@ -170,7 +193,7 @@ void VisitorBase::visit(void *payload, Module &module) const {
       continue;
 
     for (const auto &theCase : m_cases) {
-      if (theCase.description->matchDeclaration(decl)) {
+      if (theCase.key.matchDeclaration(decl)) {
         for (Use &use : decl.uses()) {
           if (auto *callInst = dyn_cast<CallInst>(use.getUser())) {
             if (&use == &callInst->getCalledOperandUse())

@@ -30,6 +30,8 @@
 
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/Support/CommandLine.h"
@@ -173,10 +175,24 @@ template <bool rpot> const Visitor<VisitorContainer> &getExampleVisitor() {
             b.add<xd::ReadOp>([](VisitorNest &self, xd::ReadOp &op) {
               *self.out << "visiting ReadOp: " << op << '\n';
             });
+            b.add<UnaryInstruction>(
+                [](VisitorNest &self, UnaryInstruction &inst) {
+                  *self.out << "visiting UnaryInstruction: " << inst << '\n';
+                });
+            b.add<BinaryOperator>([](VisitorNest &self, BinaryOperator &inst) {
+              *self.out << "visiting BinaryOperator: " << inst << '\n';
+            });
             b.nest<raw_ostream>([](VisitorBuilder<raw_ostream> &b) {
               b.add<xd::WriteOp>([](raw_ostream &out, xd::WriteOp &op) {
                 out << "visiting WriteOp: " << op << '\n';
               });
+              b.add<ReturnInst>([](raw_ostream &out, ReturnInst &ret) {
+                out << "visiting ReturnInst: " << ret << '\n';
+              });
+              b.addIntrinsic(
+                  Intrinsic::umax, [](raw_ostream &out, IntrinsicInst &umax) {
+                    out << "visiting umax intrinsic: " << umax << '\n';
+                  });
             });
             b.nest<VisitorInnermost>([](VisitorBuilder<VisitorInnermost> &b) {
               b.add<xd::ITruncOp>([](VisitorInnermost &inner,
