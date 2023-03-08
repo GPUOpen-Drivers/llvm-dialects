@@ -16,7 +16,10 @@
 
 #pragma once
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+
+#include <vector>
 
 namespace llvm {
 class Function;
@@ -25,21 +28,47 @@ class Instruction;
 
 namespace llvm_dialects {
 
-/// @brief Reflect an operation defined by a dialect
+/// @brief Reflect an operation.
 class OpDescription {
 public:
+  enum class Kind {
+    Core,
+    Dialect,
+    DialectWithOverloads,
+    Intrinsic,
+  };
+
+public:
   OpDescription(bool hasOverloads, llvm::StringRef mnemonic)
-      : m_hasOverloads(hasOverloads), m_mnemonic(mnemonic) {}
+      : m_kind(hasOverloads ? Kind::DialectWithOverloads : Kind::Dialect),
+        m_op(mnemonic) {}
+  OpDescription(Kind kind, unsigned opcode) : m_kind(kind), m_op(opcode) {}
+  OpDescription(Kind kind, llvm::MutableArrayRef<unsigned> opcodes);
 
   template <typename OpT>
   static const OpDescription& get();
 
+  Kind getKind() const { return m_kind; }
+  llvm::ArrayRef<unsigned> getOpcodes() const;
+
   bool matchInstruction(llvm::Instruction &inst) const;
   bool matchDeclaration(llvm::Function &decl) const;
 
+  bool canMatchDeclaration() const {
+    return m_kind == Kind::Dialect || m_kind == Kind::DialectWithOverloads ||
+           m_kind == Kind::Intrinsic;
+  }
+
 private:
-  bool m_hasOverloads;
-  llvm::StringRef m_mnemonic;
+  bool matchIntrinsic(unsigned intrinsicId) const;
+
+  Kind m_kind;
+
+  // Holds one of:
+  //  - core instruction opcode or intrinsic ID
+  //  - sorted array of opcodes or intrinsic IDs
+  //  - mnemonic
+  std::variant<unsigned, llvm::ArrayRef<unsigned>, llvm::StringRef> m_op;
 };
 
 } // namespace llvm_dialects

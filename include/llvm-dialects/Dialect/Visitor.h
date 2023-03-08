@@ -24,6 +24,7 @@
 namespace llvm {
 class Function;
 class Instruction;
+class IntrinsicInst;
 class Module;
 } // namespace llvm
 
@@ -90,6 +91,43 @@ namespace detail {
 
 class VisitorBase;
 
+/// @brief Key describing the condition of a visitor case
+class VisitorKey {
+  friend class VisitorBase;
+
+public:
+  template <typename OpT> static VisitorKey op() {
+    VisitorKey key{Kind::OpDescription};
+    key.m_description = &OpDescription::get<OpT>();
+    return key;
+  }
+
+  static VisitorKey intrinsic(unsigned id) {
+    VisitorKey key{Kind::Intrinsic};
+    key.m_intrinsicId = id;
+    return key;
+  }
+
+  bool matchInstruction(llvm::Instruction &inst) const;
+  bool matchDeclaration(llvm::Function &decl) const;
+
+  bool canMatchDeclaration() const {
+    return m_kind == Kind::Intrinsic || m_description->canMatchDeclaration();
+  }
+
+private:
+  enum class Kind {
+    OpDescription,
+    Intrinsic,
+  };
+
+  VisitorKey(Kind kind) : m_kind(kind) {}
+
+  Kind m_kind;
+  const OpDescription *m_description = nullptr;
+  unsigned m_intrinsicId = 0;
+};
+
 using VisitorCallback = void (void *, void *, llvm::Instruction *);
 using PayloadProjectionCallback = void *(void *);
 
@@ -101,13 +139,15 @@ struct PayloadProjection {
 };
 
 struct VisitorCase {
-  const OpDescription *description = nullptr;
+  VisitorKey key;
   VisitorCallback *callback = nullptr;
   void *callbackData = nullptr;
 
   // If non-negative, a byte offset to apply to the payload. If negative,
   // a shifted index into the projections vector.
   ssize_t projection = 0;
+
+  explicit VisitorCase(VisitorKey key) : key(key) {}
 };
 
 template <typename PayloadT, typename NestedPayloadT>
@@ -124,7 +164,7 @@ public:
 
   void setStrategy(VisitorStrategy strategy);
 
-  void add(const OpDescription &desc, void *extra, VisitorCallback *fn);
+  void add(VisitorKey key, void *extra, VisitorCallback *fn);
 
 public:
   PayloadProjectionCallback *m_projection = nullptr;
@@ -223,13 +263,13 @@ public:
   Visitor<PayloadT> build() { return std::move(*this); }
 
   template <typename OpT> VisitorBuilder &add(void (*fn)(PayloadT &, OpT &)) {
-    VisitorBuilderBase::add(
-        OpDescription::get<OpT>(),
-        (void *)fn,
-        [](void *extra, void *payload, llvm::Instruction *op) {
-          auto fn = (void (*)(PayloadT &, OpT &))extra;
-          fn(*static_cast<PayloadT *>(payload), *llvm::cast<OpT>(op));
-        });
+    addCase<OpT>(detail::VisitorKey::op<OpT>(), fn);
+    return *this;
+  }
+
+  VisitorBuilder &addIntrinsic(unsigned id,
+                               void (*fn)(PayloadT &, llvm::IntrinsicInst &)) {
+    addCase<llvm::IntrinsicInst>(detail::VisitorKey::intrinsic(id), fn);
     return *this;
   }
 
@@ -258,6 +298,17 @@ public:
 private:
   explicit VisitorBuilder(VisitorBuilderBase *parent)
       : VisitorBuilderBase(parent) {}
+
+  template <typename OpT>
+  void addCase(detail::VisitorKey key, void (*fn)(PayloadT &, OpT &)) {
+    VisitorBuilderBase::add(key, (void *)fn, &VisitorBuilder::forwarder<OpT>);
+  }
+
+  template <typename OpT>
+  static void forwarder(void *extra, void *payload, llvm::Instruction *op) {
+    auto fn = (void (*)(PayloadT &, OpT &))extra;
+    fn(*static_cast<PayloadT *>(payload), *llvm::cast<OpT>(op));
+  }
 };
 
 } // namespace llvm_dialects
