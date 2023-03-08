@@ -45,37 +45,107 @@ enum class VisitorStrategy {
   ByFunctionDeclaration,
 };
 
+/// @brief Auxiliary template to support nested visitor clients.
+///
+/// It can be convenient to write visitor clients in a modular fashion and
+/// combine them together to use a single @ref Visitor. Each client module
+/// may use a different payload type.
+///
+/// In this case, each nested client module's payload must be reachable from
+/// the top-level payload, and a specialization of this template must be
+/// provided that "projects" parent payload references to child payload
+/// references.
+///
+/// In cases where the nested payload is a field of the parent payload, the
+/// @ref LLVM_DIALECTS_VISITOR_PAYLOAD_PROJECT_FIELD can be used instead.
+template <typename PayloadT, typename NestedPayloadT>
+struct VisitorPayloadProjection {
+  // Template specializations must implement this static method:
+  //
+  //   static NestedPayloadT &project(PayloadT &);
+};
+
+/// Declare that `PayloadT` can be projected to a nested payload type via
+/// `field`.
+///
+/// This creates a specialization of @ref VisitorPayloadProjection and must
+/// therefore typically be outside of any namespace. The nested type is derived
+/// automatically.
+#define LLVM_DIALECTS_VISITOR_PAYLOAD_PROJECT_FIELD(PayloadT, field)           \
+  template <>                                                                  \
+  struct llvm_dialects::detail::VisitorPayloadOffsetProjection<                \
+      PayloadT,                                                                \
+      std::remove_reference_t<decltype(std::declval<PayloadT>().field)>> {     \
+    static constexpr bool useOffsetof = true;                                  \
+    static constexpr std::size_t offset = offsetof(PayloadT, field);           \
+  };
+
 namespace detail {
 
 class VisitorBase;
 
 using VisitorCallback = void (void *, void *, llvm::Instruction *);
-using VisitorCase = std::tuple<const OpDescription *, void *, VisitorCallback *>;
+using PayloadProjectionCallback = void *(void *);
+
+/// Apply first the byte offset and then the projection function. If projection
+/// is null, stop the projection sequence.
+struct PayloadProjection {
+  std::size_t offset = 0;
+  PayloadProjectionCallback *projection = nullptr;
+};
+
+struct VisitorCase {
+  const OpDescription *description = nullptr;
+  VisitorCallback *callback = nullptr;
+  void *callbackData = nullptr;
+
+  // If non-negative, a byte offset to apply to the payload. If negative,
+  // a shifted index into the projections vector.
+  ssize_t projection = 0;
+};
+
+template <typename PayloadT, typename NestedPayloadT>
+struct VisitorPayloadOffsetProjection {
+  static constexpr bool useOffsetof = false;
+};
 
 class VisitorBuilderBase {
   friend class VisitorBase;
 public:
+  VisitorBuilderBase() = default;
+  explicit VisitorBuilderBase(VisitorBuilderBase *parent) : m_parent(parent) {}
+  ~VisitorBuilderBase();
+
   void setStrategy(VisitorStrategy strategy) { m_strategy = strategy; }
 
-protected:
   void add(const OpDescription &desc, void *extra, VisitorCallback *fn);
 
+public:
+  PayloadProjectionCallback *m_projection = nullptr;
+  size_t m_offsetProjection = 0;
+
 private:
+  VisitorBuilderBase *m_parent = nullptr;
   VisitorStrategy m_strategy = VisitorStrategy::ByFunctionDeclaration;
   llvm::SmallVector<VisitorCase> m_cases;
+  llvm::SmallVector<PayloadProjection> m_projections;
 };
 
 class VisitorBase {
 protected:
-  VisitorBase(VisitorBuilderBase builder);
+  VisitorBase(VisitorBuilderBase &&builder);
 
   void visit(void *payload, llvm::Instruction &inst) const;
   void visit(void *payload, llvm::Function &fn) const;
   void visit(void *payload, llvm::Module &module) const;
 
 private:
+  void call(const VisitorCase &theCase, void *payload,
+            llvm::Instruction &inst) const;
+
   VisitorStrategy m_strategy;
   llvm::SmallVector<VisitorCase> m_cases;
+  llvm::SmallVector<PayloadProjection> m_projections;
 };
 
 } // namespace detail
@@ -91,7 +161,7 @@ private:
 template <typename PayloadT>
 class Visitor : public detail::VisitorBase {
 public:
-  Visitor(detail::VisitorBuilderBase builder)
+  Visitor(detail::VisitorBuilderBase &&builder)
       : VisitorBase(std::move(builder)) {}
 
   void visit(PayloadT &payload, llvm::Instruction &inst) const {
@@ -130,16 +200,20 @@ public:
 /// myVisitor(myPayload, module);
 /// @endcode
 template <typename PayloadT>
-class VisitorBuilder : public detail::VisitorBuilderBase {
+class VisitorBuilder : private detail::VisitorBuilderBase {
+  template <typename OtherT> friend class VisitorBuilder;
+
 public:
   using Payload = PayloadT;
+
+  VisitorBuilder() = default;
 
   VisitorBuilder &setStrategy(VisitorStrategy strategy) {
     VisitorBuilderBase::setStrategy(strategy);
     return *this;
   }
 
-  Visitor<PayloadT> build() { return {std::move(*this)}; }
+  Visitor<PayloadT> build() { return std::move(*this); }
 
   template <typename OpT> VisitorBuilder &add(void (*fn)(PayloadT &, OpT &)) {
     VisitorBuilderBase::add(
@@ -151,6 +225,32 @@ public:
         });
     return *this;
   }
+
+  template <typename NestedPayloadT>
+  VisitorBuilder &nest(void (*registration)(VisitorBuilder<NestedPayloadT> &)) {
+    VisitorBuilder<NestedPayloadT> nested{this};
+
+    if constexpr (detail::VisitorPayloadOffsetProjection<
+                      PayloadT, NestedPayloadT>::useOffsetof) {
+      nested.m_offsetProjection =
+          detail::VisitorPayloadOffsetProjection<PayloadT,
+                                                 NestedPayloadT>::offset;
+    } else {
+      nested.m_projection = [](void *payload) -> void * {
+        return static_cast<void *>(
+            &VisitorPayloadProjection<PayloadT, NestedPayloadT>::project(
+                *static_cast<PayloadT *>(payload)));
+      };
+    }
+
+    (*registration)(nested);
+
+    return *this;
+  }
+
+private:
+  explicit VisitorBuilder(VisitorBuilderBase *parent)
+      : VisitorBuilderBase(parent) {}
 };
 
 } // namespace llvm_dialects

@@ -29,18 +29,74 @@ using namespace llvm;
 using llvm_dialects::detail::VisitorBuilderBase;
 using llvm_dialects::detail::VisitorBase;
 
-void VisitorBuilderBase::add(const OpDescription &desc, void *extra, VisitorCallback *fn) {
-  m_cases.emplace_back(&desc, extra, fn);
+VisitorBuilderBase::~VisitorBuilderBase() {
+  if (m_parent) {
+    // Build up the projection sequence by walking all the way to the root.
+    SmallVector<PayloadProjection> projectionSequence;
+    projectionSequence.emplace_back();
+
+    VisitorBuilderBase *ancestor = this;
+    for (; ancestor->m_parent; ancestor = ancestor->m_parent) {
+      if (ancestor->m_projection) {
+        PayloadProjection next;
+        next.projection = ancestor->m_projection;
+        projectionSequence.push_back(next);
+      } else {
+        projectionSequence.back().offset += ancestor->m_offsetProjection;
+      }
+    }
+
+    ssize_t projection = 0;
+    if (projectionSequence.size() == 1) {
+      projection = projectionSequence[0].offset;
+    } else {
+      projection = -(1 + ancestor->m_projections.size());
+      ancestor->m_projections.append(projectionSequence.rbegin(),
+                                     projectionSequence.rend());
+    }
+
+    for (auto &theCase : m_cases)
+      theCase.projection = projection;
+
+    // Copy all cases to the root.
+    ancestor->m_cases.append(m_cases.begin(), m_cases.end());
+  }
 }
 
-VisitorBase::VisitorBase(VisitorBuilderBase builder)
-    : m_strategy(builder.m_strategy), m_cases(std::move(builder.m_cases)) {
+void VisitorBuilderBase::add(const OpDescription &desc, void *extra, VisitorCallback *fn) {
+  VisitorCase theCase;
+  theCase.description = &desc;
+  theCase.callback = fn;
+  theCase.callbackData = extra;
+  theCase.projection = 0;
+  m_cases.emplace_back(theCase);
+}
+
+VisitorBase::VisitorBase(VisitorBuilderBase &&builder)
+    : m_strategy(builder.m_strategy), m_cases(std::move(builder.m_cases)),
+      m_projections(std::move(builder.m_projections)) {
+  assert(!builder.m_parent);
+}
+
+void VisitorBase::call(const VisitorCase &theCase, void *payload,
+                       Instruction &inst) const {
+  if (theCase.projection >= 0) {
+    payload = (char *)payload + theCase.projection;
+  } else {
+    for (size_t idx = -theCase.projection - 1;; ++idx) {
+      payload = (char *)payload + m_projections[idx].offset;
+      if (!m_projections[idx].projection)
+        break;
+      payload = m_projections[idx].projection(payload);
+    }
+  }
+  theCase.callback(theCase.callbackData, payload, &inst);
 }
 
 void VisitorBase::visit(void *payload, Instruction &inst) const {
-  for (const auto &[desc, extra, callback] : m_cases) {
-    if (desc->matchInstruction(inst))
-      callback(extra, payload, &inst);
+  for (const auto &theCase : m_cases) {
+    if (theCase.description->matchInstruction(inst))
+      call(theCase, payload, inst);
   }
 }
 
@@ -59,15 +115,15 @@ void VisitorBase::visit(void *payload, Function &fn) const {
 
     LLVM_DEBUG(dbgs() << "visit " << decl.getName() << '\n');
 
-    for (const auto &[desc, extra, callback] : m_cases) {
-      if (desc->matchDeclaration(decl)) {
+    for (const auto &theCase : m_cases) {
+      if (theCase.description->matchDeclaration(decl)) {
         for (Use &use : decl.uses()) {
           if (auto *inst = dyn_cast<Instruction>(use.getUser())) {
             if (inst->getFunction() != &fn)
               continue;
-            if (auto *call = dyn_cast<CallInst>(inst)) {
-              if (&use == &call->getCalledOperandUse())
-                callback(extra, payload, call);
+            if (auto *callInst = dyn_cast<CallInst>(inst)) {
+              if (&use == &callInst->getCalledOperandUse())
+                call(theCase, payload, *callInst);
             }
           }
         }
@@ -89,12 +145,12 @@ void VisitorBase::visit(void *payload, Module &module) const {
     if (!decl.isDeclaration())
       continue;
 
-    for (const auto &[desc, extra, callback] : m_cases) {
-      if (desc->matchDeclaration(decl)) {
+    for (const auto &theCase : m_cases) {
+      if (theCase.description->matchDeclaration(decl)) {
         for (Use &use : decl.uses()) {
-          if (auto *call = dyn_cast<CallInst>(use.getUser())) {
-            if (&use == &call->getCalledOperandUse())
-              callback(extra, payload, call);
+          if (auto *callInst = dyn_cast<CallInst>(use.getUser())) {
+            if (&use == &callInst->getCalledOperandUse())
+              call(theCase, payload, *callInst);
           }
         }
       }
