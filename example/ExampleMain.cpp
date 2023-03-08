@@ -58,6 +58,9 @@ cl::list<std::string> g_inputs(cl::Positional, cl::ZeroOrMore,
 cl::opt<bool> g_typedPointers("typed-pointers", cl::init(false),
                                cl::desc("Disable opaque pointers"));
 
+cl::opt<bool> g_rpot("rpot", cl::init(false),
+                     cl::desc("Visit functions in reverse post-order"));
+
 /// Test intrinsics that are generic over unnamed struct types.
 void useUnnamedStructTypes(Builder &b) {
   StructType *t1 = StructType::create({b.getInt32Ty()}, "");
@@ -156,8 +159,15 @@ struct llvm_dialects::VisitorPayloadProjection<VisitorNest, raw_ostream> {
 LLVM_DIALECTS_VISITOR_PAYLOAD_PROJECT_FIELD(VisitorContainer, nest)
 LLVM_DIALECTS_VISITOR_PAYLOAD_PROJECT_FIELD(VisitorNest, inner)
 
-void exampleVisit(Module &module) {
-  auto visitor =
+// Get a visitor with RPOT or default strategy.
+//
+// Using a template in this way is a bit convoluted, but the point here is to
+// demonstrate the pattern of constructing a visitor as a function-local
+// static variable whose initialization doesn't refer to any runtime values,
+// i.e. if C++ had a strong enough compile-time evaluation (constexpr), it
+// should be possible to evaluate the initialization entirely at compile-time.
+template <bool rpot> const Visitor<VisitorContainer> &getExampleVisitor() {
+  static const auto visitor =
       VisitorBuilder<VisitorContainer>()
           .nest<VisitorNest>([](VisitorBuilder<VisitorNest> &b) {
             b.add<xd::ReadOp>([](VisitorNest &self, xd::ReadOp &op) {
@@ -173,7 +183,15 @@ void exampleVisit(Module &module) {
                                      xd::ITruncOp &op) { inner.counter++; });
             });
           })
+          .setStrategy(rpot ? VisitorStrategy::ReversePostOrder
+                            : VisitorStrategy::Default)
           .build();
+  return visitor;
+}
+
+void exampleVisit(Module &module) {
+  const auto &visitor =
+      g_rpot ? getExampleVisitor<true>() : getExampleVisitor<false>();
 
   VisitorContainer container;
   container.nest.out = &outs();
