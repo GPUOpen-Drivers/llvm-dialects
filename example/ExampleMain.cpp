@@ -42,12 +42,14 @@ using namespace llvm_dialects;
 enum class Action {
   Build,
   Verify,
+  Visit,
 };
 
 cl::opt<Action> g_action(
     cl::desc("Action to perform:"), cl::init(Action::Build),
     cl::values(clEnumValN(Action::Build, "build", "Example IRBuilder use"),
-               clEnumValN(Action::Verify, "verify", "Verify an input module")));
+               clEnumValN(Action::Verify, "verify", "Verify an input module"),
+               clEnumValN(Action::Visit, "visit", "Example Visitor use")));
 
 // Input sources
 cl::list<std::string> g_inputs(cl::Positional, cl::ZeroOrMore,
@@ -132,6 +134,54 @@ std::unique_ptr<Module> createModuleExampleTypedPtrs(LLVMContext &context) {
   return module;
 }
 
+struct VisitorInnermost {
+  int counter = 0;
+};
+
+struct VisitorNest {
+  raw_ostream *out = nullptr;
+  VisitorInnermost inner;
+};
+
+struct VisitorContainer {
+  int padding;
+  VisitorNest nest;
+};
+
+template <>
+struct llvm_dialects::VisitorPayloadProjection<VisitorNest, raw_ostream> {
+  static raw_ostream &project(VisitorNest &nest) { return *nest.out; }
+};
+
+LLVM_DIALECTS_VISITOR_PAYLOAD_PROJECT_FIELD(VisitorContainer, nest)
+LLVM_DIALECTS_VISITOR_PAYLOAD_PROJECT_FIELD(VisitorNest, inner)
+
+void exampleVisit(Module &module) {
+  auto visitor =
+      VisitorBuilder<VisitorContainer>()
+          .nest<VisitorNest>([](VisitorBuilder<VisitorNest> &b) {
+            b.add<xd::ReadOp>([](VisitorNest &self, xd::ReadOp &op) {
+              *self.out << "visiting ReadOp: " << op << '\n';
+            });
+            b.nest<raw_ostream>([](VisitorBuilder<raw_ostream> &b) {
+              b.add<xd::WriteOp>([](raw_ostream &out, xd::WriteOp &op) {
+                out << "visiting WriteOp: " << op << '\n';
+              });
+            });
+            b.nest<VisitorInnermost>([](VisitorBuilder<VisitorInnermost> &b) {
+              b.add<xd::ITruncOp>([](VisitorInnermost &inner,
+                                     xd::ITruncOp &op) { inner.counter++; });
+            });
+          })
+          .build();
+
+  VisitorContainer container;
+  container.nest.out = &outs();
+  visitor.visit(container, module);
+
+  outs() << "inner.counter = " << container.nest.inner.counter << '\n';
+}
+
 int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
@@ -143,7 +193,7 @@ int main(int argc, char **argv) {
   if (g_action == Action::Build) {
     auto module = g_typedPointers ? createModuleExampleTypedPtrs(context) : createModuleExample(context);
     module->print(llvm::outs(), nullptr, false);
-  } else if (g_action == Action::Verify) {
+  } else {
     if (g_inputs.size() != 1) {
       errs() << "Need exactly one input module\n";
       return 1;
@@ -164,10 +214,14 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    if (!verify(*module, outs()))
-      return 1;
-  } else {
-    report_fatal_error("unhandled action");
+    if (g_action == Action::Verify) {
+      if (!verify(*module, outs()))
+        return 1;
+    } else if (g_action == Action::Visit) {
+      exampleVisit(*module);
+    } else {
+      report_fatal_error("unhandled action");
+    }
   }
 
   return 0;
