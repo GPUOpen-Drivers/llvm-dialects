@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 
@@ -90,10 +91,11 @@ struct VisitorPayloadProjection {
 namespace detail {
 
 class VisitorBase;
+class VisitorTemplate;
 
 /// @brief Key describing the condition of a visitor case
 class VisitorKey {
-  friend class VisitorBase;
+  friend class VisitorTemplate;
 
 public:
   template <typename OpT> static VisitorKey op() {
@@ -106,13 +108,6 @@ public:
     VisitorKey key{Kind::Intrinsic};
     key.m_intrinsicId = id;
     return key;
-  }
-
-  bool matchInstruction(llvm::Instruction &inst) const;
-  bool matchDeclaration(llvm::Function &decl) const;
-
-  bool canMatchDeclaration() const {
-    return m_kind == Kind::Intrinsic || m_description->canMatchDeclaration();
   }
 
 private:
@@ -131,6 +126,15 @@ private:
 using VisitorCallback = void (void *, void *, llvm::Instruction *);
 using PayloadProjectionCallback = void *(void *);
 
+struct VisitorHandler {
+  VisitorCallback *callback = nullptr;
+  void *callbackData = nullptr;
+
+  // If non-negative, a byte offset to apply to the payload. If negative,
+  // a shifted index into the payload projections vector.
+  ssize_t projection = 0;
+};
+
 /// Apply first the byte offset and then the projection function. If projection
 /// is null, stop the projection sequence.
 struct PayloadProjection {
@@ -138,60 +142,107 @@ struct PayloadProjection {
   PayloadProjectionCallback *projection = nullptr;
 };
 
-struct VisitorCase {
-  VisitorKey key;
-  VisitorCallback *callback = nullptr;
-  void *callbackData = nullptr;
-
-  // If non-negative, a byte offset to apply to the payload. If negative,
-  // a shifted index into the projections vector.
-  ssize_t projection = 0;
-
-  explicit VisitorCase(VisitorKey key) : key(key) {}
-};
-
 template <typename PayloadT, typename NestedPayloadT>
 struct VisitorPayloadOffsetProjection {
   static constexpr bool useOffsetof = false;
 };
 
+/// @brief Visitor description during build
+///
+/// These structures are built up incrementally when a visitor is setup. They
+/// are optimized when the final visitor is built.
+class VisitorTemplate {
+  friend class VisitorBase;
+  friend class VisitorBuilderBase;
+
+public:
+  void setStrategy(VisitorStrategy strategy);
+  void add(VisitorKey key, void *extra, VisitorCallback *fn,
+           ssize_t projection);
+
+private:
+  VisitorStrategy m_strategy = VisitorStrategy::Default;
+  std::vector<PayloadProjection> m_projections;
+  std::vector<VisitorHandler> m_handlers;
+  llvm::DenseMap<unsigned, llvm::SmallVector<unsigned>> m_coreOpcodeMap;
+  llvm::DenseMap<unsigned, llvm::SmallVector<unsigned>> m_intrinsicIdMap;
+  std::vector<std::pair<const OpDescription *, llvm::SmallVector<unsigned>>>
+      m_dialectCases;
+};
+
+/// @brief Base class for VisitorBuilders
+///
+/// This class provides common functionality in a payload-type-erased manner.
 class VisitorBuilderBase {
   friend class VisitorBase;
+
 public:
-  VisitorBuilderBase() = default;
-  explicit VisitorBuilderBase(VisitorBuilderBase *parent) : m_parent(parent) {}
-  ~VisitorBuilderBase();
+  VisitorBuilderBase();
+  VisitorBuilderBase(VisitorBuilderBase *parent,
+                     PayloadProjectionCallback *projection);
+  VisitorBuilderBase(VisitorBuilderBase *parent, size_t offset);
+
+  VisitorBuilderBase(VisitorBuilderBase &&rhs)
+      : m_ownedTemplate(std::move(rhs.m_ownedTemplate)),
+        m_projection(rhs.m_projection) {
+    assert(rhs.m_template == &rhs.m_ownedTemplate);
+    m_template = &m_ownedTemplate;
+  }
+  VisitorBuilderBase &operator=(VisitorBuilderBase &&rhs) {
+    assert(rhs.m_template == &rhs.m_ownedTemplate);
+    if (this != &rhs) {
+      m_ownedTemplate = std::move(rhs.m_ownedTemplate);
+      m_template = &m_ownedTemplate;
+      m_projection = rhs.m_projection;
+    }
+    return *this;
+  }
 
   void setStrategy(VisitorStrategy strategy);
 
   void add(VisitorKey key, void *extra, VisitorCallback *fn);
 
-public:
-  PayloadProjectionCallback *m_projection = nullptr;
-  size_t m_offsetProjection = 0;
+  VisitorBase build();
 
 private:
-  VisitorBuilderBase *m_parent = nullptr;
-  VisitorStrategy m_strategy = VisitorStrategy::Default;
-  llvm::SmallVector<VisitorCase> m_cases;
-  llvm::SmallVector<PayloadProjection> m_projections;
+  VisitorBuilderBase(const VisitorBuilderBase &rhs) = delete;
+  VisitorBuilderBase &operator=(const VisitorBuilderBase &rhs) = delete;
+
+  VisitorTemplate m_ownedTemplate;
+  VisitorTemplate *m_template;
+  ssize_t m_projection;
 };
 
+/// @brief Base class for Visitors
+///
+/// Provides visitor functionality in a payload-type-erased manner.
 class VisitorBase {
-protected:
-  VisitorBase(VisitorBuilderBase &&builder);
+public:
+  VisitorBase(VisitorTemplate &&templ);
 
   void visit(void *payload, llvm::Instruction &inst) const;
   void visit(void *payload, llvm::Function &fn) const;
   void visit(void *payload, llvm::Module &module) const;
 
 private:
-  void call(const VisitorCase &theCase, void *payload,
+  class BuildHelper;
+  using HandlerRange = std::pair<unsigned, unsigned>;
+
+  void call(HandlerRange handlers, void *payload,
+            llvm::Instruction &inst) const;
+  void call(const VisitorHandler &handler, void *payload,
             llvm::Instruction &inst) const;
 
+  template <typename FilterT>
+  void visitByDeclarations(void *payload, llvm::Module &module,
+                           FilterT &&filter) const;
+
   VisitorStrategy m_strategy;
-  llvm::SmallVector<VisitorCase> m_cases;
-  llvm::SmallVector<PayloadProjection> m_projections;
+  std::vector<PayloadProjection> m_projections;
+  std::vector<VisitorHandler> m_handlers;
+  llvm::DenseMap<unsigned, HandlerRange> m_coreOpcodeMap;
+  llvm::DenseMap<unsigned, HandlerRange> m_intrinsicIdMap;
+  std::vector<std::pair<const OpDescription *, HandlerRange>> m_dialectCases;
 };
 
 } // namespace detail
@@ -205,11 +256,9 @@ private:
 /// required, select the ReversePostOrder strategy at VisitorBuilder time.
 ///
 /// Callbacks must not delete or remove their instruction argument.
-template <typename PayloadT>
-class Visitor : public detail::VisitorBase {
+template <typename PayloadT> class Visitor : private detail::VisitorBase {
 public:
-  Visitor(detail::VisitorBuilderBase &&builder)
-      : VisitorBase(std::move(builder)) {}
+  Visitor(detail::VisitorBase &&base) : VisitorBase(std::move(base)) {}
 
   void visit(PayloadT &payload, llvm::Instruction &inst) const {
     VisitorBase::visit(static_cast<void *>(&payload), inst);
@@ -260,7 +309,7 @@ public:
     return *this;
   }
 
-  Visitor<PayloadT> build() { return std::move(*this); }
+  Visitor<PayloadT> build() { return VisitorBuilderBase::build(); }
 
   template <typename OpT> VisitorBuilder &add(void (*fn)(PayloadT &, OpT &)) {
     addCase<OpT>(detail::VisitorKey::op<OpT>(), fn);
@@ -275,29 +324,33 @@ public:
 
   template <typename NestedPayloadT>
   VisitorBuilder &nest(void (*registration)(VisitorBuilder<NestedPayloadT> &)) {
-    VisitorBuilder<NestedPayloadT> nested{this};
-
     if constexpr (detail::VisitorPayloadOffsetProjection<
                       PayloadT, NestedPayloadT>::useOffsetof) {
-      nested.m_offsetProjection =
+      size_t offset =
           detail::VisitorPayloadOffsetProjection<PayloadT,
                                                  NestedPayloadT>::offset;
+      VisitorBuilder<NestedPayloadT> nested{this, offset};
+      (*registration)(nested);
     } else {
-      nested.m_projection = [](void *payload) -> void * {
+      auto projection = [](void *payload) -> void * {
         return static_cast<void *>(
             &VisitorPayloadProjection<PayloadT, NestedPayloadT>::project(
                 *static_cast<PayloadT *>(payload)));
       };
-    }
 
-    (*registration)(nested);
+      VisitorBuilder<NestedPayloadT> nested{this, projection};
+      (*registration)(nested);
+    }
 
     return *this;
   }
 
 private:
-  explicit VisitorBuilder(VisitorBuilderBase *parent)
-      : VisitorBuilderBase(parent) {}
+  VisitorBuilder(VisitorBuilderBase *parent, size_t offset)
+      : VisitorBuilderBase(parent, offset) {}
+  VisitorBuilder(VisitorBuilderBase *parent,
+                 detail::PayloadProjectionCallback *projection)
+      : VisitorBuilderBase(parent, projection) {}
 
   template <typename OpT>
   void addCase(detail::VisitorKey key, void (*fn)(PayloadT &, OpT &)) {
