@@ -123,16 +123,31 @@ private:
   unsigned m_intrinsicId = 0;
 };
 
-using VisitorCallback = void (void *, void *, llvm::Instruction *);
+struct VisitorCallbackData {
+private:
+  static constexpr size_t SizeofMemberFunctionPointer =
+      sizeof(void(VisitorCallbackData::*)());
+  static constexpr size_t SizeofFunctionPointer = sizeof(void (*)());
+
+public:
+  // Size is 16 bytes in the 64-bit Itanium ABI.
+  static constexpr size_t Size =
+      std::max(SizeofFunctionPointer, SizeofMemberFunctionPointer);
+
+  char data[Size];
+};
+
+using VisitorCallback = void(const VisitorCallbackData &, void *,
+                             llvm::Instruction *);
 using PayloadProjectionCallback = void *(void *);
 
 struct VisitorHandler {
-  VisitorCallback *callback = nullptr;
-  void *callbackData = nullptr;
-
   // If non-negative, a byte offset to apply to the payload. If negative,
   // a shifted index into the payload projections vector.
   ssize_t projection = 0;
+
+  VisitorCallback *callback = nullptr;
+  VisitorCallbackData data;
 };
 
 /// Apply first the byte offset and then the projection function. If projection
@@ -157,7 +172,7 @@ class VisitorTemplate {
 
 public:
   void setStrategy(VisitorStrategy strategy);
-  void add(VisitorKey key, void *extra, VisitorCallback *fn,
+  void add(VisitorKey key, VisitorCallback *fn, VisitorCallbackData data,
            ssize_t projection);
 
 private:
@@ -200,7 +215,7 @@ public:
 
   void setStrategy(VisitorStrategy strategy);
 
-  void add(VisitorKey key, void *extra, VisitorCallback *fn);
+  void add(VisitorKey key, VisitorCallback *fn, VisitorCallbackData data);
 
   VisitorBase build();
 
@@ -316,9 +331,20 @@ public:
     return *this;
   }
 
+  template <typename OpT> VisitorBuilder &add(void (PayloadT::*fn)(OpT &)) {
+    addMemberFnCase<OpT>(detail::VisitorKey::op<OpT>(), fn);
+    return *this;
+  }
+
   VisitorBuilder &addIntrinsic(unsigned id,
                                void (*fn)(PayloadT &, llvm::IntrinsicInst &)) {
     addCase<llvm::IntrinsicInst>(detail::VisitorKey::intrinsic(id), fn);
+    return *this;
+  }
+
+  VisitorBuilder &addIntrinsic(unsigned id,
+                               void (PayloadT::*fn)(llvm::IntrinsicInst &)) {
+    addMemberFnCase<llvm::IntrinsicInst>(detail::VisitorKey::intrinsic(id), fn);
     return *this;
   }
 
@@ -354,13 +380,35 @@ private:
 
   template <typename OpT>
   void addCase(detail::VisitorKey key, void (*fn)(PayloadT &, OpT &)) {
-    VisitorBuilderBase::add(key, (void *)fn, &VisitorBuilder::forwarder<OpT>);
+    detail::VisitorCallbackData data{};
+    static_assert(sizeof(fn) <= sizeof(data.data));
+    memcpy(&data.data, &fn, sizeof(fn));
+    VisitorBuilderBase::add(key, &VisitorBuilder::forwarder<OpT>, data);
   }
 
   template <typename OpT>
-  static void forwarder(void *extra, void *payload, llvm::Instruction *op) {
-    auto fn = (void (*)(PayloadT &, OpT &))extra;
+  void addMemberFnCase(detail::VisitorKey key, void (PayloadT::*fn)(OpT &)) {
+    detail::VisitorCallbackData data{};
+    static_assert(sizeof(fn) <= sizeof(data.data));
+    memcpy(&data.data, &fn, sizeof(fn));
+    VisitorBuilderBase::add(key, &VisitorBuilder::memberFnForwarder<OpT>, data);
+  }
+
+  template <typename OpT>
+  static void forwarder(const detail::VisitorCallbackData &data, void *payload,
+                        llvm::Instruction *op) {
+    void (*fn)(PayloadT &, OpT &);
+    memcpy(&fn, &data.data, sizeof(fn));
     fn(*static_cast<PayloadT *>(payload), *llvm::cast<OpT>(op));
+  }
+
+  template <typename OpT>
+  static void memberFnForwarder(const detail::VisitorCallbackData &data,
+                                void *payload, llvm::Instruction *op) {
+    void (PayloadT::*fn)(OpT &);
+    memcpy(&fn, &data.data, sizeof(fn));
+    PayloadT *self = static_cast<PayloadT *>(payload);
+    (self->*fn)(*llvm::cast<OpT>(op));
   }
 };
 

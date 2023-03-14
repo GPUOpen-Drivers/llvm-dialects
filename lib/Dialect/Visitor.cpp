@@ -30,6 +30,7 @@ using namespace llvm;
 
 using llvm_dialects::detail::VisitorBase;
 using llvm_dialects::detail::VisitorBuilderBase;
+using llvm_dialects::detail::VisitorCallbackData;
 using llvm_dialects::detail::VisitorHandler;
 using llvm_dialects::detail::VisitorKey;
 using llvm_dialects::detail::VisitorTemplate;
@@ -43,11 +44,11 @@ void VisitorTemplate::setStrategy(VisitorStrategy strategy) {
   m_strategy = strategy;
 }
 
-void VisitorTemplate::add(VisitorKey key, void *extra, VisitorCallback *fn,
-                          ssize_t projection) {
+void VisitorTemplate::add(VisitorKey key, VisitorCallback *fn,
+                          VisitorCallbackData data, ssize_t projection) {
   VisitorHandler handler;
   handler.callback = fn;
-  handler.callbackData = extra;
+  handler.data = data;
   handler.projection = projection;
   m_handlers.emplace_back(handler);
 
@@ -140,8 +141,9 @@ void VisitorBuilderBase::setStrategy(VisitorStrategy strategy) {
   m_template->setStrategy(strategy);
 }
 
-void VisitorBuilderBase::add(VisitorKey key, void *extra, VisitorCallback *fn) {
-  m_template->add(key, extra, fn, m_projection);
+void VisitorBuilderBase::add(VisitorKey key, VisitorCallback *fn,
+                             VisitorCallbackData data) {
+  m_template->add(key, fn, data, m_projection);
 }
 
 VisitorBase VisitorBuilderBase::build() {
@@ -220,7 +222,7 @@ void VisitorBase::call(const VisitorHandler &handler, void *payload,
       payload = m_projections[idx].projection(payload);
     }
   }
-  handler.callback(handler.callbackData, payload, &inst);
+  handler.callback(handler.data, payload, &inst);
 }
 
 void VisitorBase::visit(void *payload, Instruction &inst) const {
