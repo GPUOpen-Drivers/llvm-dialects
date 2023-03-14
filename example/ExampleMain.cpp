@@ -146,6 +146,10 @@ struct VisitorInnermost {
 struct VisitorNest {
   raw_ostream *out = nullptr;
   VisitorInnermost inner;
+
+  void visitBinaryOperator(BinaryOperator &inst) {
+    *out << "visiting BinaryOperator: " << inst << '\n';
+  }
 };
 
 struct VisitorContainer {
@@ -179,9 +183,7 @@ template <bool rpot> const Visitor<VisitorContainer> &getExampleVisitor() {
                 [](VisitorNest &self, UnaryInstruction &inst) {
                   *self.out << "visiting UnaryInstruction: " << inst << '\n';
                 });
-            b.add<BinaryOperator>([](VisitorNest &self, BinaryOperator &inst) {
-              *self.out << "visiting BinaryOperator: " << inst << '\n';
-            });
+            b.add(&VisitorNest::visitBinaryOperator);
             b.nest<raw_ostream>([](VisitorBuilder<raw_ostream> &b) {
               b.add<xd::WriteOp>([](raw_ostream &out, xd::WriteOp &op) {
                 out << "visiting WriteOp: " << op << '\n';
