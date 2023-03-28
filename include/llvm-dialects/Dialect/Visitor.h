@@ -142,9 +142,36 @@ using VisitorCallback = void(const VisitorCallbackData &, void *,
 using PayloadProjectionCallback = void *(void *);
 
 struct VisitorHandler {
-  // If non-negative, a byte offset to apply to the payload. If negative,
-  // a shifted index into the payload projections vector.
-  ssize_t projection = 0;
+  // Either a byte offset to apply to the payload or an index into the payload
+  // projections vector for more complex projections.
+  struct Projection {
+    static constexpr std::size_t Msb = (std::size_t)1
+                                       << (8 * sizeof(std::size_t) - 1);
+
+    std::size_t data = 0;
+
+    void setOffset(std::size_t offset) {
+      assert((offset & Msb) == 0);
+      data = offset;
+    }
+
+    void setIndex(std::size_t index) {
+      assert((index & Msb) == 0);
+      data = index | Msb;
+    }
+
+    bool isOffset() const { return (data & Msb) == 0; }
+    std::size_t getOffset() const {
+      assert((data & Msb) == 0);
+      return data;
+    }
+    std::size_t getIndex() const {
+      assert((data & Msb) != 0);
+      return data & ~Msb;
+    }
+  };
+
+  Projection projection;
 
   VisitorCallback *callback = nullptr;
   VisitorCallbackData data;
@@ -173,7 +200,7 @@ class VisitorTemplate {
 public:
   void setStrategy(VisitorStrategy strategy);
   void add(VisitorKey key, VisitorCallback *fn, VisitorCallbackData data,
-           ssize_t projection);
+           VisitorHandler::Projection projection);
 
 private:
   VisitorStrategy m_strategy = VisitorStrategy::Default;
@@ -225,7 +252,7 @@ private:
 
   VisitorTemplate m_ownedTemplate;
   VisitorTemplate *m_template;
-  ssize_t m_projection;
+  VisitorHandler::Projection m_projection;
 };
 
 /// @brief Base class for Visitors
