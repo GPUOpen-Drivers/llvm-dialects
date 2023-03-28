@@ -45,7 +45,8 @@ void VisitorTemplate::setStrategy(VisitorStrategy strategy) {
 }
 
 void VisitorTemplate::add(VisitorKey key, VisitorCallback *fn,
-                          VisitorCallbackData data, ssize_t projection) {
+                          VisitorCallbackData data,
+                          VisitorHandler::Projection projection) {
   VisitorHandler handler;
   handler.callback = fn;
   handler.data = data;
@@ -84,8 +85,7 @@ void VisitorTemplate::add(VisitorKey key, VisitorCallback *fn,
   }
 }
 
-VisitorBuilderBase::VisitorBuilderBase()
-    : m_template(&m_ownedTemplate), m_projection(0) {}
+VisitorBuilderBase::VisitorBuilderBase() : m_template(&m_ownedTemplate) {}
 
 VisitorBuilderBase::VisitorBuilderBase(VisitorBuilderBase *parent,
                                        PayloadProjectionCallback *projection)
@@ -93,11 +93,11 @@ VisitorBuilderBase::VisitorBuilderBase(VisitorBuilderBase *parent,
   // Extract and update the parent's projection.
   SmallVector<PayloadProjection> sequence;
 
-  if (parent->m_projection >= 0) {
+  if (parent->m_projection.isOffset()) {
     sequence.emplace_back();
-    sequence.back().offset = parent->m_projection;
+    sequence.back().offset = parent->m_projection.getOffset();
   } else {
-    for (size_t idx = -parent->m_projection - 1;; ++idx) {
+    for (size_t idx = parent->m_projection.getIndex();; ++idx) {
       sequence.push_back(m_template->m_projections[idx]);
       if (!sequence.back().projection)
         break;
@@ -108,7 +108,7 @@ VisitorBuilderBase::VisitorBuilderBase(VisitorBuilderBase *parent,
   sequence.emplace_back();
 
   // Setup our projection.
-  m_projection = -(m_template->m_projections.size() + 1);
+  m_projection.setIndex(m_template->m_projections.size());
   m_template->m_projections.insert(m_template->m_projections.end(),
                                    sequence.begin(), sequence.end());
 }
@@ -118,12 +118,12 @@ VisitorBuilderBase::VisitorBuilderBase(VisitorBuilderBase *parent,
     : m_template(parent->m_template) {
   if (offset == 0) {
     m_projection = parent->m_projection;
-  } else if (parent->m_projection >= 0) {
-    m_projection = parent->m_projection + offset;
+  } else if (parent->m_projection.isOffset()) {
+    m_projection.setOffset(parent->m_projection.getOffset() + offset);
   } else {
     // Extract and update the parent's projection.
     SmallVector<PayloadProjection> sequence;
-    for (size_t idx = -parent->m_projection - 1;; ++idx) {
+    for (size_t idx = parent->m_projection.getIndex();; ++idx) {
       sequence.push_back(m_template->m_projections[idx]);
       if (!sequence.back().projection)
         break;
@@ -131,7 +131,7 @@ VisitorBuilderBase::VisitorBuilderBase(VisitorBuilderBase *parent,
     sequence.back().offset += offset;
 
     // Setup our projection.
-    m_projection = -(m_template->m_projections.size() + 1);
+    m_projection.setIndex(m_template->m_projections.size());
     m_template->m_projections.insert(m_template->m_projections.end(),
                                      sequence.begin(), sequence.end());
   }
@@ -212,10 +212,10 @@ void VisitorBase::call(HandlerRange handlers, void *payload,
 
 void VisitorBase::call(const VisitorHandler &handler, void *payload,
                        Instruction &inst) const {
-  if (handler.projection >= 0) {
-    payload = (char *)payload + handler.projection;
+  if (handler.projection.isOffset()) {
+    payload = (char *)payload + handler.projection.getOffset();
   } else {
-    for (size_t idx = -handler.projection - 1;; ++idx) {
+    for (size_t idx = handler.projection.getIndex();; ++idx) {
       payload = (char *)payload + m_projections[idx].offset;
       if (!m_projections[idx].projection)
         break;
