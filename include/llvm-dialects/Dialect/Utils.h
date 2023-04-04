@@ -42,23 +42,27 @@ bool runInstructionVerifier(
 bool runTypeVerifier(llvm::function_ref<bool(llvm::raw_ostream &)> verifier,
                      llvm::Type *type, llvm::raw_ostream *errs = nullptr);
 
+/// Wrap a value to be printed to an llvm::raw_ostream.
+///
+/// Specialize this struct if you use AttrEnum arguments in operations or
+/// types.
 template <typename T> struct Printable {
   T x;
 
   explicit Printable(const T &x) : x(x) {}
+
+  void print(llvm::raw_ostream &out) const {
+    if constexpr (std::is_pointer_v<T>) {
+      out << *x;
+    } else {
+      out << x;
+    }
+  }
 };
 
 template <typename T>
-llvm::raw_ostream &operator<<(llvm::raw_ostream &out,
-                              const Printable<T> &p) {
-  out << p.x;
-  return out;
-}
-
-template <typename T>
-llvm::raw_ostream &operator<<(llvm::raw_ostream &out,
-                              const Printable<T *> &p) {
-  out << *p.x;
+llvm::raw_ostream &operator<<(llvm::raw_ostream &out, const Printable<T> &p) {
+  p.print(out);
   return out;
 }
 

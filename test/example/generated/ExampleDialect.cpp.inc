@@ -643,6 +643,59 @@ source,
           errs << "    actual:    " << printable(::llvm::cast<::llvm::FixedVectorType>(sourceType)->getNumElements()) << '\n';
           return false;
         }
+      if (![&]() {
+
+      {
+        std::array<std::string, 2> orErrors;
+        if (true
+    
+      && !([&]() {
+        ::llvm::raw_string_ostream errs(orErrors[0]);
+    
+        if (xd::VectorKind::LittleEndian != ::llvm::cast<XdVectorType>(resultType)->getKind()) {
+          errs << "  inconsistent value of eq:$rhs found\n";
+          errs << "  while checking VectorKindLittleEndian:\n";
+          errs << "    here:       " << printable(xd::VectorKind::LittleEndian) << '\n';
+          errs << "    previously: " << printable(::llvm::cast<XdVectorType>(resultType)->getKind()) << '\n';
+          return false;
+        }
+      return true;
+}())
+
+      && !([&]() {
+        ::llvm::raw_string_ostream errs(orErrors[1]);
+    
+        if (xd::VectorKind::BigEndian != ::llvm::cast<XdVectorType>(resultType)->getKind()) {
+          errs << "  inconsistent value of eq:$rhs found\n";
+          errs << "  while checking VectorKindBigEndian:\n";
+          errs << "    here:       " << printable(xd::VectorKind::BigEndian) << '\n';
+          errs << "    previously: " << printable(::llvm::cast<XdVectorType>(resultType)->getKind()) << '\n';
+          return false;
+        }
+      return true;
+}())
+) {
+
+      errs << "  eq:$rhs (" << printable(::llvm::cast<XdVectorType>(resultType)->getKind())
+             << ") does not match any available option\n";
+    
+      errs << "  failed option 0 (VectorKindLittleEndian):\n"
+             << orErrors[0];
+    
+      errs << "  failed option 1 (VectorKindBigEndian):\n"
+             << orErrors[1];
+    return false;
+}
+}
+
+          return true;
+        }()) {
+          errs << "  while checking (isReasonableVectorKind ?:$kind)\n";
+          
+    errs << "  with $kind = " << printable(::llvm::cast<XdVectorType>(resultType)->getKind()) << '\n';
+  
+          return false;
+        }
         return true;
 }
 

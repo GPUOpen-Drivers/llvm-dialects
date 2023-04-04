@@ -36,6 +36,8 @@ enum class VectorKind {
   MiddleEndian = 2,
 };
 
+const char *toString(VectorKind kind);
+
 } // namespace xd
 
 #define GET_DIALECT_DECLS

@@ -209,6 +209,13 @@ def or;
 /// Misc. predicates
 // ============================================================================
 
+class CppConstant<string cppExpr_> : Predicate, CppPredicateMixin {
+  let arguments = (args any:$self);
+  let evaluate = cppExpr_;
+  let check = "$self == " # cppExpr_;
+  let capture = [];
+}
+
 def ScalarOrFixedVector : TgPredicate<
     (args type:$self, type:$scalar_type),
     (or (eq $self, $scalar_type),
@@ -251,6 +258,10 @@ def : AttrLlvmType<AttrI64, I64>;
 
 // Define a custom enum attribute that can be used in operations and dialect
 // types
+//
+// An overload of operator<< for llvm::raw_ostream must be provided in the same
+// namespace that defines the enum type, or automatically generated verifier
+// code may fail to compile.
 multiclass AttrEnum<string cppType_> {
   def NAME : Attr<cppType_> {
     let toLlvmValue = "::llvm::ConstantInt::get($1, static_cast<unsigned>($0))";
