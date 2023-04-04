@@ -131,8 +131,6 @@ public:
   /// detected.
   bool check();
 
-  void setEmitComments(bool comments) { m_comments = comments; }
-
 private:
   void checkErrors();
   std::string evaluateImpl(Variable *variable);

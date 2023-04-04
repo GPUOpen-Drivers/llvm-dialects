@@ -21,6 +21,7 @@
 #include "llvm-dialects/TableGen/Format.h"
 #include "llvm-dialects/TableGen/Predicates.h"
 
+#include "llvm/Support/Debug.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace llvm;
@@ -58,6 +59,16 @@ Variable *Scope::createVariable(StringRef name, Predicate *predicate) {
   Variable *variable = owner.get();
   m_variables.push_back(std::move(owner));
   return variable;
+}
+
+void ConstraintSystem::print(raw_ostream &out, StringRef prefix) const {
+  for (const auto &constraintPtr : m_constraints)
+    constraintPtr->print(out, prefix);
+}
+
+void ConstraintSystem::dump() const {
+  dbgs() << "Constraint system:\n";
+  print(dbgs(), "  ");
 }
 
 bool ConstraintSystem::addConstraint(raw_ostream &errs, Init *init,
@@ -232,9 +243,46 @@ std::string Constraint::toString() const {
   return (Twine(m_init->getAsString()) + ":" + m_self->toString()).str();
 }
 
+void Constraint::printVariables(raw_ostream &out) const {
+  bool isFirst = true;
+  for (const Variable *var : m_variables) {
+    if (!isFirst)
+      out << ", ";
+    out << var->toString();
+    isFirst = false;
+  }
+}
+
 void Constraint::addVariable(Variable *variable) {
   if (!llvm::is_contained(m_variables, variable))
     m_variables.push_back(variable);
+}
+
+void Apply::print(raw_ostream &out, StringRef prefix) const {
+  out << prefix << "apply " << m_predicate->getInit()->getAsString() << ": ";
+  bool isFirst = true;
+  for (Variable *var : m_arguments) {
+    if (!isFirst)
+      out << ", ";
+    if (var)
+      out << var->toString();
+    else
+      out << "(null)";
+    isFirst = false;
+  }
+  out << '\n';
+
+  out << prefix << "  free variables: ";
+  printVariables(out);
+  out << '\n';
+}
+
+void LogicOr::print(raw_ostream &out, StringRef prefix) const {
+  out << prefix << "or, free variables: ";
+  printVariables(out);
+  out << '\n';
+  for (const auto &branch : m_branches)
+    branch.print(out, (Twine(prefix) + "  ").str());
 }
 
 MetaType *MetaType::type() {
