@@ -41,8 +41,7 @@ public:
   template <typename DialectT>
   DialectT& getDialect() const {return m_dialects.getDialect<DialectT>();}
 
-  template <typename Op, typename ...Args>
-  llvm::Instruction *create(Args&&... args) {
+  template <typename Op, typename... Args> Op *create(Args &&...args) {
     Op *op = Op::create(*this, std::forward<Args>(args)...);
     assert(runInstructionVerifier([op](llvm::raw_ostream &errs) {
       return op->verifier(errs);

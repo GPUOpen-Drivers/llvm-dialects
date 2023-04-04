@@ -107,10 +107,10 @@ void createFunctionExample(Module &module, const Twine &name) {
   Value *y3 = b.create<xd::ExtractElementOp>(y1, b.getInt32(2));
   Value *y4 = b.CreateAdd(y2, y3);
   Value *y5 = b.create<xd::InsertElementOp>(q2, y4, x1);
-  Value *y6 = b.create<xd::InsertElementOp>(y5, y2, b.getInt32(5));
+  auto *y6 = b.create<xd::InsertElementOp>(y5, y2, b.getInt32(5));
   b.create<xd::WriteOp>(y6);
 
-  cast<xd::InsertElementOp>(y6)->setIndex(b.getInt32(1));
+  y6->setIndex(b.getInt32(1));
 
   Value *p1 = b.create<xd::ReadOp>(b.getPtrTy(0));
   Value *p2 = b.create<xd::StreamAddOp>(p1, b.getInt64(14), b.getInt8(0));
