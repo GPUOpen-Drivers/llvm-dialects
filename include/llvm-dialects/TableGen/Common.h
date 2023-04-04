@@ -22,4 +22,6 @@ namespace llvm_dialects {
 
 void emitHeader(llvm::raw_ostream& out);
 
+bool shouldEmitComments();
+
 } // namespace llvm_dialects

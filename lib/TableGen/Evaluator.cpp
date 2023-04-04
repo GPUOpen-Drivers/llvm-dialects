@@ -16,6 +16,7 @@
 
 #include "llvm-dialects/TableGen/Evaluator.h"
 
+#include "llvm-dialects/TableGen/Common.h"
 #include "llvm-dialects/TableGen/Constraints.h"
 #include "llvm-dialects/TableGen/Format.h"
 #include "llvm-dialects/TableGen/Predicates.h"
@@ -204,6 +205,8 @@ Evaluator::Evaluator(SymbolTable &symbols, Assignment &assignment,
     if (!assignment.lookup(variable).empty())
       m_planner.setKnown(variable);
   }
+
+  m_comments = shouldEmitComments();
 }
 
 Evaluator::~Evaluator() { checkErrors(); }
@@ -279,7 +282,6 @@ std::string Evaluator::evaluateImpl(Variable *goal) {
     SymbolScope symbolScope{&m_symbols};
     Evaluator nested(*m_symbols, nestedAssignment, tg->getSystem(), m_out,
                      m_fmt);
-    nested.setEmitComments(m_comments);
     std::string value = nested.evaluate(tg->variables()[plan->argumentIndex]);
     if (value.empty()) {
       m_errs << "TgPredicate expression evaluation failed\n";
@@ -304,6 +306,11 @@ std::string Evaluator::evaluateImpl(Variable *goal) {
 }
 
 bool Evaluator::check() {
+  if (m_comments) {
+    m_out << "// Checking the constraint system:\n";
+    m_system.print(m_out, "//   ");
+  }
+
   SmallVector<bool> checkedConstraints;
   checkedConstraints.resize(m_system.m_constraints.size(), false);
 

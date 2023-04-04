@@ -78,6 +78,9 @@ public:
   bool addConstraint(llvm::raw_ostream &errs, llvm::Init *init, Variable *self);
   void merge(ConstraintSystem &&rhs);
 
+  void print(llvm::raw_ostream &out, llvm::StringRef prefix) const;
+  void dump() const;
+
 private:
   bool addConstraintImpl(llvm::raw_ostream &errs, llvm::Init *init,
                          Variable *self);
@@ -103,6 +106,8 @@ public:
 
   virtual ~Constraint() = default;
 
+  virtual void print(llvm::raw_ostream &out, llvm::StringRef prefix) const = 0;
+
   Kind getKind() const { return m_kind; }
   llvm::Init *getInit() const { return m_init; }
   Variable *getSelf() const { return m_self; }
@@ -113,6 +118,7 @@ public:
 protected:
   Constraint(Kind kind) : m_kind(kind) {}
 
+  void printVariables(llvm::raw_ostream &out) const;
   void addVariable(Variable *variable);
 
 private:
@@ -140,6 +146,8 @@ public:
     return c->getKind() == Kind::Apply;
   }
 
+  void print(llvm::raw_ostream &out, llvm::StringRef prefix) const override;
+
   Predicate *getPredicate() const { return m_predicate; }
   llvm::ArrayRef<Variable *> arguments() const { return m_arguments; }
 
@@ -158,6 +166,8 @@ public:
   LogicOr() : Constraint(Kind::Or) {}
 
   static bool classof(const Constraint *c) { return c->getKind() == Kind::Or; }
+
+  void print(llvm::raw_ostream &out, llvm::StringRef prefix) const override;
 
   llvm::ArrayRef<ConstraintSystem> branches() const { return m_branches; }
   llvm::ArrayRef<llvm::Init *> branchInits() const { return m_branchInits; }
