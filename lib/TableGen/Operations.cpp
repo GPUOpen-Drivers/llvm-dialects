@@ -25,10 +25,6 @@
 using namespace llvm;
 using namespace llvm_dialects;
 
-// Default destructor instantiated explicitly to avoid having to add more
-// includes in the header.
-Operation::~Operation() = default;
-
 static std::optional<std::vector<NamedValue>>
 parseArguments(raw_ostream &errs, GenDialectsContext &context, Record *rec) {
   Record *superClassRec = rec->getValueAsDef("superclass");
@@ -54,38 +50,78 @@ parseArguments(raw_ostream &errs, GenDialectsContext &context, Record *rec) {
                                NamedValue::Parser::OperationArguments);
 }
 
-std::unique_ptr<OpClass>
-OpClass::parse(raw_ostream &errs, GenDialectsContext &context, Record *record) {
-  auto opClass = std::make_unique<OpClass>();
-  opClass->dialect = context.getDialect(record->getValueAsDef("dialect"));
-  opClass->name = record->getName();
-  opClass->superclass = context.getOpClass(record->getValueAsDef("superclass"));
+bool OperationBase::init(raw_ostream &errs, GenDialectsContext &context,
+                         Record *record) {
+  m_dialect = context.getDialect(record->getValueAsDef("dialect"));
+  m_superclass = context.getOpClass(record->getValueAsDef("superclass"));
 
   auto arguments = parseArguments(errs, context, record);
   if (!arguments.has_value())
-    return {};
-  opClass->arguments = std::move(*arguments);
+    return false;
+  m_arguments = std::move(*arguments);
 
-  OpClass *ptr = opClass.get();
-  opClass->dialect->opClasses.push_back(opClass.get());
-  if (opClass->superclass)
-    opClass->superclass->subclasses.push_back(ptr);
-
-  return opClass;
+  return true;
 }
 
-SmallVector<NamedValue> OpClass::getFullArguments() const {
+SmallVector<NamedValue> OperationBase::getFullArguments() const {
   SmallVector<NamedValue> args;
-  if (superclass)
-    args = superclass->getFullArguments();
-  args.insert(args.end(), arguments.begin(), arguments.end());
+  if (m_superclass)
+    args = m_superclass->getFullArguments();
+  args.insert(args.end(), m_arguments.begin(), m_arguments.end());
   return args;
 }
 
-unsigned OpClass::getNumFullArguments() const {
-  if (superclass)
-    return superclass->getNumFullArguments() + arguments.size();
-  return arguments.size();
+unsigned OperationBase::getNumFullArguments() const {
+  if (m_superclass)
+    return m_superclass->getNumFullArguments() + m_arguments.size();
+  return m_arguments.size();
+}
+
+void OperationBase::emitArgumentAccessorDeclarations(llvm::raw_ostream &out,
+                                                     FmtContext &fmt) const {
+  for (const auto &arg : m_arguments) {
+    out << tgfmt("$0 get$1();\n", &fmt, arg.type->getBuilderCppType(),
+                 convertToCamelFromSnakeCase(arg.name, true));
+  }
+}
+
+void OperationBase::emitArgumentAccessorDefinitions(llvm::raw_ostream &out,
+                                                    FmtContext &fmt) const {
+  unsigned numSuperclassArgs = 0;
+  if (m_superclass)
+    numSuperclassArgs = m_superclass->getNumFullArguments();
+  for (auto indexedArg : llvm::enumerate(m_arguments)) {
+    const NamedValue &arg = indexedArg.value();
+    std::string value = llvm::formatv("getArgOperand({0})",
+                                      numSuperclassArgs + indexedArg.index());
+    if (auto *attr = dyn_cast<Attr>(arg.type))
+      value = tgfmt(attr->getFromLlvmValue(), &fmt, value);
+    else if (arg.type->isTypeArg())
+      value += "->getType()";
+    out << tgfmt(R"(
+      $0 $_op::get$1() {
+        return $2;
+      }
+    )",
+                 &fmt, arg.type->getBuilderCppType(),
+                 convertToCamelFromSnakeCase(arg.name, true), value);
+  }
+}
+
+std::unique_ptr<OpClass>
+OpClass::parse(raw_ostream &errs, GenDialectsContext &context, Record *record) {
+  auto opClass = std::make_unique<OpClass>();
+  opClass->name = record->getName();
+
+  if (!opClass->init(errs, context, record))
+    return {};
+
+  OpClass *ptr = opClass.get();
+  opClass->dialect()->opClasses.push_back(opClass.get());
+  if (opClass->superclass())
+    opClass->superclass()->subclasses.push_back(ptr);
+
+  return opClass;
 }
 
 static std::string evaluateAttrLlvmType(raw_ostream &errs, raw_ostream &out,
@@ -113,21 +149,26 @@ static std::string evaluateAttrLlvmType(raw_ostream &errs, raw_ostream &out,
   return attrType;
 }
 
+// Default destructor instantiated explicitly to avoid having to add more
+// includes in the header.
+Operation::~Operation() = default;
+
 bool Operation::parse(raw_ostream &errs, GenDialectsContext *context,
                       GenDialect *dialect, Record *record) {
   auto op = std::make_unique<Operation>(*context);
-  op->superclass = context->getOpClass(record->getValueAsDef("superclass"));
-  if (op->superclass)
-    op->superclass->operations.push_back(op.get());
+
+  if (!op->init(errs, *context, record))
+    return false;
+
+  assert(op->dialect() == dialect);
+
+  if (op->superclass())
+    op->superclass()->operations.push_back(op.get());
+
   op->name = record->getName();
   op->mnemonic = record->getValueAsString("mnemonic");
   for (Record *traitRec : record->getValueAsListOfDefs("traits"))
     op->traits.push_back(context->getTrait(traitRec));
-
-  auto arguments = parseArguments(errs, *context, record);
-  if (!arguments.has_value())
-    return false;
-  op->arguments = std::move(*arguments);
 
   EvaluationPlanner evaluation(op->m_system);
 
@@ -263,20 +304,6 @@ bool Operation::parse(raw_ostream &errs, GenDialectsContext *context,
   dialect->operations.push_back(std::move(op));
 
   return true;
-}
-
-SmallVector<NamedValue> Operation::getFullArguments() const {
-  SmallVector<NamedValue> args;
-  if (superclass)
-    args = superclass->getFullArguments();
-  args.insert(args.end(), arguments.begin(), arguments.end());
-  return args;
-}
-
-unsigned Operation::getNumFullArguments() const {
-  if (superclass)
-    return superclass->getNumFullArguments() + arguments.size();
-  return arguments.size();
 }
 
 void Operation::emitVerifierMethod(llvm::raw_ostream &out,

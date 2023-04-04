@@ -254,18 +254,18 @@ return true;
       }
 
     
-        ::llvm::Value * StreamReduceOp::getPtr() {
-          return getArgOperand(0);
-        }
-      
-        ::llvm::Value * StreamReduceOp::getCount() {
-          return getArgOperand(1);
-        }
-      
-        ::llvm::Value * StreamReduceOp::getInitial() {
-          return getArgOperand(2);
-        }
-      
+      ::llvm::Value * StreamReduceOp::getPtr() {
+        return getArgOperand(0);
+      }
+    
+      ::llvm::Value * StreamReduceOp::getCount() {
+        return getArgOperand(1);
+      }
+    
+      ::llvm::Value * StreamReduceOp::getInitial() {
+        return getArgOperand(2);
+      }
+    
 
       const ::llvm::StringLiteral Add32Op::s_name{"xd.add32"};
 
@@ -361,18 +361,18 @@ uint32_t const extra = getExtra();
 }
 
 
-        ::llvm::Value * Add32Op::getLhs() {
-          return getArgOperand(0);
-        }
-      
-        ::llvm::Value * Add32Op::getRhs() {
-          return getArgOperand(1);
-        }
-      
-        uint32_t Add32Op::getExtra() {
-          return  ::llvm::cast<::llvm::ConstantInt>(getArgOperand(2))->getZExtValue() ;
-        }
-      
+      ::llvm::Value * Add32Op::getLhs() {
+        return getArgOperand(0);
+      }
+    
+      ::llvm::Value * Add32Op::getRhs() {
+        return getArgOperand(1);
+      }
+    
+      uint32_t Add32Op::getExtra() {
+        return  ::llvm::cast<::llvm::ConstantInt>(getArgOperand(2))->getZExtValue() ;
+      }
+    
 ::llvm::Value *Add32Op::getResult() {return this;}
 
 
@@ -452,14 +452,14 @@ rhs,
 }
 
 
-        ::llvm::Value * CombineOp::getLhs() {
-          return getArgOperand(0);
-        }
-      
-        ::llvm::Value * CombineOp::getRhs() {
-          return getArgOperand(1);
-        }
-      
+      ::llvm::Value * CombineOp::getLhs() {
+        return getArgOperand(0);
+      }
+    
+      ::llvm::Value * CombineOp::getRhs() {
+        return getArgOperand(1);
+      }
+    
 ::llvm::Value *CombineOp::getResult() {return this;}
 
 
@@ -547,14 +547,14 @@ index,
 }
 
 
-        ::llvm::Value * ExtractElementOp::getVector() {
-          return getArgOperand(0);
-        }
-      
-        ::llvm::Value * ExtractElementOp::getIndex() {
-          return getArgOperand(1);
-        }
-      
+      ::llvm::Value * ExtractElementOp::getVector() {
+        return getArgOperand(0);
+      }
+    
+      ::llvm::Value * ExtractElementOp::getIndex() {
+        return getArgOperand(1);
+      }
+    
 ::llvm::Value *ExtractElementOp::getResult() {return this;}
 
 
@@ -700,10 +700,10 @@ source,
 }
 
 
-        ::llvm::Value * FromFixedVectorOp::getSource() {
-          return getArgOperand(0);
-        }
-      
+      ::llvm::Value * FromFixedVectorOp::getSource() {
+        return getArgOperand(0);
+      }
+    
 ::llvm::Value *FromFixedVectorOp::getResult() {return this;}
 
 
@@ -852,10 +852,10 @@ source,
 }
 
 
-        ::llvm::Value * IExtOp::getSource() {
-          return getArgOperand(0);
-        }
-      
+      ::llvm::Value * IExtOp::getSource() {
+        return getArgOperand(0);
+      }
+    
 ::llvm::Value *IExtOp::getResult() {return this;}
 
 
@@ -944,10 +944,10 @@ source,
 }
 
 
-        ::llvm::Value * ITruncOp::getSource() {
-          return getArgOperand(0);
-        }
-      
+      ::llvm::Value * ITruncOp::getSource() {
+        return getArgOperand(0);
+      }
+    
 ::llvm::Value *ITruncOp::getResult() {return this;}
 
 
@@ -1045,18 +1045,18 @@ index,
 }
 
 
-        ::llvm::Value * InsertElementOp::getVector() {
-          return getArgOperand(0);
-        }
-      
-        ::llvm::Value * InsertElementOp::getValue() {
-          return getArgOperand(1);
-        }
-      
-        ::llvm::Value * InsertElementOp::getIndex() {
-          return getArgOperand(2);
-        }
-      
+      ::llvm::Value * InsertElementOp::getVector() {
+        return getArgOperand(0);
+      }
+    
+      ::llvm::Value * InsertElementOp::getValue() {
+        return getArgOperand(1);
+      }
+    
+      ::llvm::Value * InsertElementOp::getIndex() {
+        return getArgOperand(2);
+      }
+    
 ::llvm::Value *InsertElementOp::getResult() {return this;}
 
 
@@ -1179,10 +1179,10 @@ index,
 }
 
 
-        ::llvm::Type * SizeOfOp::getSizeofType() {
-          return getArgOperand(0)->getType();
-        }
-      
+      ::llvm::Type * SizeOfOp::getSizeofType() {
+        return getArgOperand(0)->getType();
+      }
+    
 ::llvm::Value *SizeOfOp::getResult() {return this;}
 
 
@@ -1507,10 +1507,10 @@ data,
 }
 
 
-        ::llvm::Value * WriteOp::getData() {
-          return getArgOperand(0);
-        }
-      
+      ::llvm::Value * WriteOp::getData() {
+        return getArgOperand(0);
+      }
+    
 
 
 } // namespace xd
