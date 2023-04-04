@@ -109,6 +109,9 @@ bool ConstraintSystem::addConstraintImpl(raw_ostream &errs, Init *init,
       result->m_init = init;
       result->m_self = self;
 
+      if (self)
+        result->addVariable(self);
+
       for (size_t i = 0; i < dag->getNumArgs(); ++i) {
         if (!dag->getArgNameStr(i).empty()) {
           errs << "'or' operands cannot be captured\n";
@@ -197,8 +200,10 @@ bool ConstraintSystem::addConstraintImpl(raw_ostream &errs, Init *init,
           return false;
       }
 
-      if (variable)
+      if (variable) {
         addVariable(variable);
+        result->addVariable(variable);
+      }
       result->m_arguments.push_back(variable);
     }
   } else {

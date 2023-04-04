@@ -26,5 +26,29 @@
 #include "ExampleDialect.h"
 
 #define GET_INCLUDES
+#include "ExampleDialect.cpp.inc"
+
+namespace xd {
+
+const char *toString(VectorKind kind) {
+  switch (kind) {
+  case VectorKind::LittleEndian:
+    return "LittleEndian";
+  case VectorKind::BigEndian:
+    return "BigEndian";
+  case VectorKind::MiddleEndian:
+    return "MiddleEndian";
+  default:
+    return "(bad)";
+  }
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &out, VectorKind x) {
+  out << toString(x);
+  return out;
+}
+
+} // namespace xd
+
 #define GET_DIALECT_DEFS
 #include "ExampleDialect.cpp.inc"

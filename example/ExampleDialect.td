@@ -32,6 +32,14 @@ def ExampleDialect : Dialect {
 
 defm AttrVectorKind : AttrEnum<"VectorKind">;
 
+def VectorKindLittleEndian : CppConstant<"xd::VectorKind::LittleEndian">;
+def VectorKindBigEndian : CppConstant<"xd::VectorKind::BigEndian">;
+def VectorKindMiddleEndian : CppConstant<"xd::VectorKind::MiddleEndian">;
+
+def isReasonableVectorKind : TgPredicate<
+    (args AttrVectorKind:$kind),
+    (eq $kind, (or VectorKindLittleEndian, VectorKindBigEndian))>;
+
 def XdVectorType : DialectType<ExampleDialect, "vector"> {
   let typeArguments = (args AttrVectorKind:$kind, type:$element_type,
                             AttrI32:$num_elements);
@@ -148,6 +156,10 @@ def FromFixedVectorOp : ExampleOp<"fromfixedvector", [Memory<[]>, NoUnwind,
   let arguments = (ins (FixedVectorType $scalar_type, $num_elements):$source);
 
   let defaultBuilderHasExplicitResultType = true;
+
+  let verifier = [
+    (isReasonableVectorKind $kind),
+  ];
 
   let summary = "convert <n x T> to our custom vector type";
   let description = [{

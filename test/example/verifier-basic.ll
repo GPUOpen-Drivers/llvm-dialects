@@ -35,11 +35,29 @@ entry:
 ; CHECK-LABEL: Verifier error in:   %stream.min1 =
 ; CHECK:  wrong number of arguments: 2, expected 3
   %stream.min1 = call i8 (...) @xd.stream.min.i8(ptr %p, i64 14)
+
+; CHECK-LABEL: Verifier error in:   %fromfixedvector3 =
+; CHECK:  eq:$rhs (MiddleEndian) does not match any available option
+; CHECK:  failed option 0 (VectorKindLittleEndian):
+; CHECK:  inconsistent value of eq:$rhs found
+; CHECK:  while checking VectorKindLittleEndian:
+; CHECK:    here:       LittleEndian
+; CHECK:    previously: MiddleEndian
+; CHECK:  failed option 1 (VectorKindBigEndian):
+; CHECK:  inconsistent value of eq:$rhs found
+; CHECK:  while checking VectorKindBigEndian:
+; CHECK:    here:       BigEndian
+; CHECK:    previously: MiddleEndian
+; CHECK:  while checking (isReasonableVectorKind ?:$kind)
+; CHECK:  with $kind = MiddleEndian
+  %fromfixedvector3 = call target("xd.vector", i32, 2, 2) (...) @xd.fromfixedvector.txd.vector_i32_2_2t(<2 x i32> poison)
+
   ret void
 }
 
 declare i32 @xd.sizeof(...)
 declare i64 @xd.itrunc.i64(...)
 declare target("xd.vector", i32, 0, 2) @xd.fromfixedvector.txd.vector_i32_0_2t(...)
+declare target("xd.vector", i32, 2, 2) @xd.fromfixedvector.txd.vector_i32_2_2t(...)
 declare <2 x i16> @xd.stream.max.v2i16(...)
 declare i8 @xd.stream.min.i8(...)

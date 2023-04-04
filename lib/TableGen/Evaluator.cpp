@@ -507,6 +507,7 @@ bool Evaluator::checkApplyCapture(const Apply *apply) {
       m_fmt.addSubst("with", with);
 
       m_out << tgfmt(R"(
+          return true;
         }()) {
           $_errs << "  while checking $constraint\n";
           $with
@@ -571,7 +572,7 @@ bool Evaluator::checkApplyCapture(const Apply *apply) {
 
 bool Evaluator::checkLogicOr(const LogicOr *logicOr) {
   for (Variable *variable : logicOr->variables()) {
-    if (variable->isNamed() && m_assignment.lookup(variable).empty()) {
+    if (m_assignment.lookup(variable).empty()) {
       m_errs << "cannot check " << logicOr->toString() << '\n';
       m_errs << "because " << variable->toString() << " is not known\n";
       return false;
@@ -584,7 +585,7 @@ bool Evaluator::checkLogicOr(const LogicOr *logicOr) {
   {
     m_out << tgfmt(R"(
       {
-        std::array<std::string, $0> $orErrors;
+        std::array<std::string, $0> $_orErrors;
         if (true
     )",
                    &m_fmt, logicOr->branches().size());
@@ -596,7 +597,7 @@ bool Evaluator::checkLogicOr(const LogicOr *logicOr) {
 
     m_out << tgfmt(R"(
       && !([&]() {
-        ::llvm::raw_string_ostream $_errs($orErrors[$0]);
+        ::llvm::raw_string_ostream $_errs($_orErrors[$0]);
     )",
                    &m_fmt, index);
 
@@ -621,7 +622,7 @@ bool Evaluator::checkLogicOr(const LogicOr *logicOr) {
     m_fmt.addSubst("value", m_assignment.lookup(self));
 
     m_out << tgfmt(R"(
-      $_errs << "  $name (" << printable($value))
+      $_errs << "  $name (" << printable($value)
              << ") does not match any available option\n";
     )",
                    &m_fmt);
@@ -635,7 +636,7 @@ bool Evaluator::checkLogicOr(const LogicOr *logicOr) {
                    &m_fmt, i, logicOr->branchInits()[i]->getAsString());
   }
 
-  m_out << "}\n\n";
+  m_out << "return false;\n}\n}\n";
   return true;
 }
 
