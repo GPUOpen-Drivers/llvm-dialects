@@ -290,6 +290,9 @@ std::unique_ptr<Attr> Attr::parse(raw_ostream &errs,
   attr->m_cppType = record->getValueAsString("cppType");
   attr->m_toLlvmValue = record->getValueAsString("toLlvmValue");
   attr->m_fromLlvmValue = record->getValueAsString("fromLlvmValue");
+  attr->m_toUnsigned = record->getValueAsString("toUnsigned");
+  attr->m_fromUnsigned = record->getValueAsString("fromUnsigned");
+  attr->m_check = record->getValueAsString("check");
 
   return attr;
 }

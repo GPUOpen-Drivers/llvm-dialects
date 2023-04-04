@@ -203,6 +203,7 @@ void DialectType::emitDefinition(raw_ostream &out, GenDialect *dialect) const {
       ++typeIdx;
     } else {
       expr = tgfmt("int_params()[$0]", &fmt, intIdx);
+      expr = tgfmt(cast<Attr>(argument.type)->getFromUnsigned(), &fmt, expr);
       ++intIdx;
     }
 
@@ -234,6 +235,13 @@ void DialectType::emitDefinition(raw_ostream &out, GenDialect *dialect) const {
   auto getterArgs =
       ArrayRef<GetterArg>(m_getterArguments).drop_front(m_argBegin);
 
+  for (const auto &[argument, getterArg] :
+       llvm::zip(typeArguments(), getterArgs)) {
+    if (auto *attr = dyn_cast<Attr>(argument.type)) {
+      out << tgfmt(attr->getCheck(), &fmt, getterArg.name) << '\n';
+    }
+  }
+
   out << tgfmt("::std::array<::llvm::Type *, $0> $types = {\n", &fmt, typeIdx);
   for (const auto &[argument, getterArg] :
        llvm::zip(typeArguments(), getterArgs)) {
@@ -247,8 +255,11 @@ void DialectType::emitDefinition(raw_ostream &out, GenDialect *dialect) const {
                &fmt, intIdx);
   for (const auto &[argument, getterArg] :
        llvm::zip(typeArguments(), getterArgs)) {
-    if (!argument.type->isTypeArg())
-      out << getterArg.name << ",\n";
+    if (!argument.type->isTypeArg()) {
+      std::string expr = tgfmt(cast<Attr>(argument.type)->getToUnsigned(), &fmt,
+                               getterArg.name);
+      out << expr << ",\n";
+    }
   }
 
   out << tgfmt(R"(

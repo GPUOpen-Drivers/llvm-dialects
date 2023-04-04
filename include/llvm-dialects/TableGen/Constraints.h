@@ -212,6 +212,9 @@ public:
   llvm::Init *getLlvmType() const { return m_llvmType; }
   llvm::StringRef getToLlvmValue() const { return m_toLlvmValue; }
   llvm::StringRef getFromLlvmValue() const { return m_fromLlvmValue; }
+  llvm::StringRef getToUnsigned() const { return m_toUnsigned; }
+  llvm::StringRef getFromUnsigned() const { return m_fromUnsigned; }
+  llvm::StringRef getCheck() const { return m_check; }
 
   // Set the LLVMType once -- used during initialization to break a circular
   // dependency in how IntegerType is defined.
@@ -227,6 +230,9 @@ private:
   llvm::Init *m_llvmType = nullptr;
   std::string m_toLlvmValue;
   std::string m_fromLlvmValue;
+  std::string m_toUnsigned;
+  std::string m_fromUnsigned;
+  std::string m_check;
 };
 
 } // namespace llvm_dialects

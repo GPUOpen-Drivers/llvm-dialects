@@ -95,9 +95,11 @@ void createFunctionExample(Module &module, const Twine &name) {
   b.create<xd::WriteOp>(x4);
 
   Value *q1 = b.create<xd::ReadOp>(FixedVectorType::get(b.getInt32Ty(), 2));
-  Value *q2 = b.create<xd::FromFixedVectorOp>(q1);
+  Value *q2 = b.create<xd::FromFixedVectorOp>(
+      xd::XdVectorType::get(xd::VectorKind::BigEndian, b.getInt32Ty(), 2), q1);
 
-  Value *y1 = b.create<xd::ReadOp>(xd::XdVectorType::get(b.getInt32Ty(), 4));
+  Value *y1 = b.create<xd::ReadOp>(
+      xd::XdVectorType::get(xd::VectorKind::BigEndian, b.getInt32Ty(), 4));
   Value *y2 = b.create<xd::ExtractElementOp>(y1, x1);
   Value *y3 = b.create<xd::ExtractElementOp>(y1, b.getInt32(2));
   Value *y4 = b.CreateAdd(y2, y3);

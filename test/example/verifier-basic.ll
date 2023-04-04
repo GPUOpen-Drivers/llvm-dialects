@@ -18,13 +18,13 @@ entry:
 ; CHECK:  unexpected value of $scalar_type:
 ; CHECK:    expected:  i32
 ; CHECK:    actual:    i64
-  %fromfixedvector1 = call target("xd.vector", i32, 2) (...) @xd.fromfixedvector.txd.vector_i32_2t(<2 x i64> poison)
+  %fromfixedvector1 = call target("xd.vector", i32, 0, 2) (...) @xd.fromfixedvector.txd.vector_i32_0_2t(<2 x i64> poison)
 
 ; CHECK-LABEL: Verifier error in:   %fromfixedvector2 =
 ; CHECK:  unexpected value of $num_elements:
 ; CHECK:    expected:  2
 ; CHECK:    actual:    4
-  %fromfixedvector2 = call target("xd.vector", i32, 2) (...) @xd.fromfixedvector.txd.vector_i32_2t(<4 x i32> poison)
+  %fromfixedvector2 = call target("xd.vector", i32, 0, 2) (...) @xd.fromfixedvector.txd.vector_i32_0_2t(<4 x i32> poison)
 
 ; CHECK-LABEL: Verifier error in:   %stream.max1 =
 ; CHECK:  unexpected value of $result:
@@ -40,6 +40,6 @@ entry:
 
 declare i32 @xd.sizeof(...)
 declare i64 @xd.itrunc.i64(...)
-declare target("xd.vector", i32, 2) @xd.fromfixedvector.txd.vector_i32_2t(...)
+declare target("xd.vector", i32, 0, 2) @xd.fromfixedvector.txd.vector_i32_0_2t(...)
 declare <2 x i16> @xd.stream.max.v2i16(...)
 declare i8 @xd.stream.min.i8(...)

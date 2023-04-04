@@ -26,5 +26,17 @@
 #pragma once
 
 #define GET_INCLUDES
+#include "ExampleDialect.h.inc"
+
+namespace xd {
+
+enum class VectorKind {
+  LittleEndian = 0,
+  BigEndian = 1,
+  MiddleEndian = 2,
+};
+
+} // namespace xd
+
 #define GET_DIALECT_DECLS
 #include "ExampleDialect.h.inc"

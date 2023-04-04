@@ -30,8 +30,11 @@ def ExampleDialect : Dialect {
   let cppNamespace = "xd";
 }
 
+defm AttrVectorKind : AttrEnum<"VectorKind">;
+
 def XdVectorType : DialectType<ExampleDialect, "vector"> {
-  let typeArguments = (args type:$element_type, AttrI32:$num_elements);
+  let typeArguments = (args AttrVectorKind:$kind, type:$element_type,
+                            AttrI32:$num_elements);
 
   let summary = "a custom vector type";
   let description = [{
@@ -114,7 +117,7 @@ def SizeOfOp : ExampleOp<"sizeof", [Memory<[]>, NoUnwind, WillReturn]> {
 def ExtractElementOp : ExampleOp<"extractelement", [Memory<[]>, NoUnwind,
                                                     WillReturn]> {
   let results = (outs value:$result);
-  let arguments = (ins (XdVectorType $result, any):$vector, I32:$index);
+  let arguments = (ins (XdVectorType any, $result, any):$vector, I32:$index);
 
   let summary = "extract an element from a vector";
   let description = [{
@@ -128,7 +131,7 @@ def InsertElementOp : ExampleOp<"insertelement", [Memory<[]>, NoUnwind,
   let arguments = (ins value:$vector, value:$value, I32:$index);
 
   let verifier = [
-    (XdVectorType $result, $value, any),
+    (XdVectorType $result, any, $value, any),
     (eq $result, $vector),
   ];
 
@@ -141,8 +144,10 @@ def InsertElementOp : ExampleOp<"insertelement", [Memory<[]>, NoUnwind,
 
 def FromFixedVectorOp : ExampleOp<"fromfixedvector", [Memory<[]>, NoUnwind,
                                                       WillReturn]> {
-  let results = (outs (XdVectorType $scalar_type, $num_elements):$result);
+  let results = (outs (XdVectorType $kind, $scalar_type, $num_elements):$result);
   let arguments = (ins (FixedVectorType $scalar_type, $num_elements):$source);
+
+  let defaultBuilderHasExplicitResultType = true;
 
   let summary = "convert <n x T> to our custom vector type";
   let description = [{
