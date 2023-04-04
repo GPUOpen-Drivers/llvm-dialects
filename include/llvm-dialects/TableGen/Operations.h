@@ -35,6 +35,7 @@ class BuilderMethod;
 class FmtContext;
 class GenDialectsContext;
 class GenDialect;
+class OpClass;
 class Operation;
 class Trait;
 
@@ -48,38 +49,53 @@ struct OverloadKey {
   unsigned index;
 };
 
-class OpClass {
+// Base class for OpClass and Operation
+class OperationBase {
 public:
-  GenDialect *dialect = nullptr;
-  OpClass *superclass = nullptr;
-  std::string name;
+  GenDialect *dialect() const { return m_dialect; }
+  OpClass *superclass() const { return m_superclass; }
+
+  llvm::SmallVector<NamedValue> getFullArguments() const;
+  unsigned getNumFullArguments() const;
+
+  void emitArgumentAccessorDeclarations(llvm::raw_ostream &out,
+                                        FmtContext &fmt) const;
+  void emitArgumentAccessorDefinitions(llvm::raw_ostream &out,
+                                       FmtContext &fmt) const;
+
+protected:
+  bool init(llvm::raw_ostream &errs, GenDialectsContext &context,
+            llvm::Record *record);
+
+private:
+  GenDialect *m_dialect = nullptr;
+  OpClass *m_superclass = nullptr;
 
   /// List of arguments specific to this class; does not contain superclass
   /// arguments, if any.
-  std::vector<NamedValue> arguments;
+  std::vector<NamedValue> m_arguments;
+};
+
+class OpClass : public OperationBase {
+public:
+  std::string name;
+
   std::vector<OpClass *> subclasses;
   std::vector<Operation *> operations;
 
   static std::unique_ptr<OpClass> parse(llvm::raw_ostream &errs,
                                         GenDialectsContext &context,
                                         llvm::Record *record);
-
-  llvm::SmallVector<NamedValue> getFullArguments() const;
-  unsigned getNumFullArguments() const;
 };
 
-class Operation {
+class Operation : public OperationBase {
   friend class BuilderMethod;
 
 public:
-  OpClass *superclass = nullptr;
   std::string name;
   std::string mnemonic;
   std::vector<Trait *> traits;
 
-  /// List of arguments specific to this operation; does not contain superclass
-  /// arguments, if any.
-  std::vector<NamedValue> arguments;
   std::vector<NamedValue> results;
 
   Operation(GenDialectsContext &context) : m_system(context, m_scope) {}
@@ -92,9 +108,6 @@ public:
   bool haveArgumentOverloads() const { return m_haveArgumentOverloads; }
 
   llvm::ArrayRef<BuilderMethod> builders() const { return m_builders; }
-
-  llvm::SmallVector<NamedValue> getFullArguments() const;
-  unsigned getNumFullArguments() const;
 
   int getAttributeListIdx() const { return m_attributeListIdx; }
 

@@ -145,12 +145,12 @@ class Builder;
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    )", &fmt, opClass->superclass ? opClass->superclass->name : "::llvm::CallInst");
+    )",
+                 &fmt,
+                 opClass->superclass() ? opClass->superclass()->name
+                                       : "::llvm::CallInst");
 
-    for (const auto& arg : opClass->arguments) {
-      out << tgfmt("$0 get$1();\n", &fmt, arg.type->getBuilderCppType(),
-                   convertToCamelFromSnakeCase(arg.name, true));
-    }
+    opClass->emitArgumentAccessorDeclarations(out, fmt);
 
     out << R"(
       };
@@ -178,7 +178,8 @@ class Builder;
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
     )",
-                 &fmt, op.superclass ? op.superclass->name : "::llvm::CallInst",
+                 &fmt,
+                 op.superclass() ? op.superclass()->name : "::llvm::CallInst",
                  !op.haveResultOverloads() ? "isSimpleOperation"
                                            : "isOverloadedOperation");
 
@@ -188,10 +189,7 @@ class Builder;
 
     out << "bool verifier(::llvm::raw_ostream &errs);\n\n";
 
-    for (const auto& arg : op.arguments) {
-      out << tgfmt("$0 get$1();\n", &fmt, arg.type->getBuilderCppType(),
-                   convertToCamelFromSnakeCase(arg.name, true));
-    }
+    op.emitArgumentAccessorDeclarations(out, fmt);
 
     out << '\n';
 
@@ -359,23 +357,7 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
     )", &fmt);
 
     // Emit argument getters.
-    unsigned numSuperclassArgs = 0;
-    if (opClass->superclass)
-      numSuperclassArgs = opClass->superclass->getNumFullArguments();
-    for (auto indexedArg : llvm::enumerate(opClass->arguments)) {
-      const NamedValue& arg = indexedArg.value();
-      std::string value = llvm::formatv("getArgOperand({0})",
-                                        numSuperclassArgs + indexedArg.index());
-      if (auto* attr = dyn_cast<Attr>(arg.type))
-        value = tgfmt(attr->getFromLlvmValue(), &fmt, value);
-      out << tgfmt(R"(
-        $0 $_op::get$1() {
-          return $2;
-        }
-      )",
-                   &fmt, arg.type->getBuilderCppType(),
-                   convertToCamelFromSnakeCase(arg.name, true), value);
-    }
+    opClass->emitArgumentAccessorDefinitions(out, fmt);
 
     out << '\n';
   }
@@ -399,26 +381,7 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
     op.emitVerifierMethod(out, fmt);
 
     // Emit argument getters.
-    unsigned numSuperclassArgs = 0;
-    if (op.superclass)
-      numSuperclassArgs = op.superclass->getNumFullArguments();
-    for (auto indexedArg : llvm::enumerate(op.arguments)) {
-      const NamedValue& arg = indexedArg.value();
-      std::string value = llvm::formatv("getArgOperand({0})",
-                                        numSuperclassArgs + indexedArg.index());
-      if (auto* attr = dyn_cast<Attr>(arg.type))
-        value = tgfmt(attr->getFromLlvmValue(), &fmt, value);
-      else if (arg.type->isTypeArg())
-        value += "->getType()";
-
-      out << tgfmt(R"(
-        $0 $_op::get$1() {
-          return $2;
-        }
-      )",
-                   &fmt, arg.type->getBuilderCppType(),
-                   convertToCamelFromSnakeCase(arg.name, true), value);
-    }
+    op.emitArgumentAccessorDefinitions(out, fmt);
 
     out << '\n';
 
