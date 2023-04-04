@@ -93,10 +93,16 @@ uint32_t getNumElements() const;
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    ::llvm::Value * getPtr();
-::llvm::Value * getCount();
-::llvm::Value * getInitial();
-
+    
+      ::llvm::Value * getPtr();
+      void setPtr(::llvm::Value * ptr);
+    
+      ::llvm::Value * getCount();
+      void setCount(::llvm::Value * count);
+    
+      ::llvm::Value * getInitial();
+      void setInitial(::llvm::Value * initial);
+    
       };
     
       class Add32Op : public ::llvm::CallInst {
@@ -114,10 +120,16 @@ uint32_t getNumElements() const;
 
 bool verifier(::llvm::raw_ostream &errs);
 
-::llvm::Value * getLhs();
-::llvm::Value * getRhs();
-uint32_t getExtra();
 
+      ::llvm::Value * getLhs();
+      void setLhs(::llvm::Value * lhs);
+    
+      ::llvm::Value * getRhs();
+      void setRhs(::llvm::Value * rhs);
+    
+      uint32_t getExtra();
+      void setExtra(uint32_t extra);
+    
 ::llvm::Value * getResult();
 
 
@@ -138,9 +150,13 @@ uint32_t getExtra();
 
 bool verifier(::llvm::raw_ostream &errs);
 
-::llvm::Value * getLhs();
-::llvm::Value * getRhs();
 
+      ::llvm::Value * getLhs();
+      void setLhs(::llvm::Value * lhs);
+    
+      ::llvm::Value * getRhs();
+      void setRhs(::llvm::Value * rhs);
+    
 ::llvm::Value * getResult();
 
 
@@ -161,9 +177,13 @@ bool verifier(::llvm::raw_ostream &errs);
 
 bool verifier(::llvm::raw_ostream &errs);
 
-::llvm::Value * getVector();
-::llvm::Value * getIndex();
 
+      ::llvm::Value * getVector();
+      void setVector(::llvm::Value * vector);
+    
+      ::llvm::Value * getIndex();
+      void setIndex(::llvm::Value * index);
+    
 ::llvm::Value * getResult();
 
 
@@ -184,8 +204,10 @@ bool verifier(::llvm::raw_ostream &errs);
 
 bool verifier(::llvm::raw_ostream &errs);
 
-::llvm::Value * getSource();
 
+      ::llvm::Value * getSource();
+      void setSource(::llvm::Value * source);
+    
 ::llvm::Value * getResult();
 
 
@@ -227,8 +249,10 @@ bool verifier(::llvm::raw_ostream &errs);
 
 bool verifier(::llvm::raw_ostream &errs);
 
-::llvm::Value * getSource();
 
+      ::llvm::Value * getSource();
+      void setSource(::llvm::Value * source);
+    
 ::llvm::Value * getResult();
 
 
@@ -249,8 +273,10 @@ bool verifier(::llvm::raw_ostream &errs);
 
 bool verifier(::llvm::raw_ostream &errs);
 
-::llvm::Value * getSource();
 
+      ::llvm::Value * getSource();
+      void setSource(::llvm::Value * source);
+    
 ::llvm::Value * getResult();
 
 
@@ -271,10 +297,16 @@ bool verifier(::llvm::raw_ostream &errs);
 
 bool verifier(::llvm::raw_ostream &errs);
 
-::llvm::Value * getVector();
-::llvm::Value * getValue();
-::llvm::Value * getIndex();
 
+      ::llvm::Value * getVector();
+      void setVector(::llvm::Value * vector);
+    
+      ::llvm::Value * getValue();
+      void setValue(::llvm::Value * value);
+    
+      ::llvm::Value * getIndex();
+      void setIndex(::llvm::Value * index);
+    
 ::llvm::Value * getResult();
 
 
@@ -316,8 +348,10 @@ bool verifier(::llvm::raw_ostream &errs);
 
 bool verifier(::llvm::raw_ostream &errs);
 
-::llvm::Type * getSizeofType();
 
+      ::llvm::Type * getSizeofType();
+      void setSizeofType(::llvm::Type * sizeof_type);
+    
 ::llvm::Value * getResult();
 
 
@@ -401,8 +435,10 @@ bool verifier(::llvm::raw_ostream &errs);
 
 bool verifier(::llvm::raw_ostream &errs);
 
-::llvm::Value * getData();
 
+      ::llvm::Value * getData();
+      void setData(::llvm::Value * data);
+    
 
 
       };
