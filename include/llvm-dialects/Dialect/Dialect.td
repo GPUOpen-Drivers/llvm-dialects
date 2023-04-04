@@ -58,6 +58,16 @@ class Attr<string cppType_> : MetaType {
 
   // $0 is the LLVM value.
   string fromLlvmValue = ?;
+
+  // For use in dialect types. $0 is the C++ value
+  string toUnsigned = "$0";
+
+  // For use in dialect types. $0 is the "type-erased" unsigned value
+  string fromUnsigned = "$0";
+
+  // A check statement that is issued before using the C++ value in builders.
+  // $0 is the C++ value.
+  string check = "";
 }
 
 class IntegerAttr<string cppType_> : Attr<cppType_> {
@@ -234,6 +244,24 @@ def : AttrLlvmType<AttrI8, I8>;
 def : AttrLlvmType<AttrI16, I16>;
 def : AttrLlvmType<AttrI32, I32>;
 def : AttrLlvmType<AttrI64, I64>;
+
+// ============================================================================
+/// More general attributes
+// ============================================================================
+
+// Define a custom enum attribute that can be used in operations and dialect
+// types
+multiclass AttrEnum<string cppType_> {
+  def NAME : Attr<cppType_> {
+    let toLlvmValue = "::llvm::ConstantInt::get($1, static_cast<unsigned>($0))";
+    let fromLlvmValue = "static_cast<" # cppType_ # ">(::llvm::cast<::llvm::ConstantInt>($0)->getZExtValue())";
+    let toUnsigned = "static_cast<unsigned>($0)";
+    let fromUnsigned = "static_cast<" # cppType_ # ">($0)";
+    let check = "static_assert(sizeof($0) <= sizeof(unsigned));";
+  }
+
+  def : AttrLlvmType<!cast<Attr>(NAME), I32>;
+}
 
 // ============================================================================
 /// Traits

@@ -78,8 +78,9 @@ namespace xd {
 
       bool verifier(::llvm::raw_ostream &errs) const;
 
-  static XdVectorType *get(::llvm::Type * elementType, uint32_t numElements);
+  static XdVectorType *get(VectorKind kind, ::llvm::Type * elementType, uint32_t numElements);
 
+VectorKind getKind() const;
 ::llvm::Type * getElementType() const;
 uint32_t getNumElements() const;
 };
@@ -179,7 +180,7 @@ bool verifier(::llvm::raw_ostream &errs);
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static FromFixedVectorOp* create(::llvm_dialects::Builder& b, ::llvm::Value * source);
+    static FromFixedVectorOp* create(::llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * source);
 
 bool verifier(::llvm::raw_ostream &errs);
 

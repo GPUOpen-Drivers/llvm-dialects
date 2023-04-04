@@ -477,21 +477,19 @@ void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
   )", &fmt);
 
   if (!fullArguments.empty()) {
-    SmallVector<std::string> argTypes;
     for (const auto &[opArg, builderArg, attrType] :
          llvm::zip(fullArguments, opArgBuilderArgs, m_attrTypes)) {
-      if (!attrType.empty())
-        argTypes.push_back(attrType);
-      else
-        argTypes.push_back("<skip>");
+      if (auto *attr = dyn_cast<Attr>(opArg.type)) {
+        out << tgfmt(attr->getCheck(), &fmt, builderArg.name) << '\n';
+      }
     }
 
     fmt.addSubst("args", symbols.chooseName({"args", "arguments"}));
     out << tgfmt("::llvm::Value* const $args[] = {\n", &fmt);
-    for (const auto& [opArg, builderArg, argType]
-              : llvm::zip_first(fullArguments, opArgBuilderArgs, argTypes)) {
+    for (const auto& [opArg, builderArg, attrType]
+              : llvm::zip_first(fullArguments, opArgBuilderArgs, m_attrTypes)) {
       if (auto* attr = dyn_cast<Attr>(opArg.type)) {
-        out << tgfmt(attr->getToLlvmValue(), &fmt, builderArg.name, argType);
+        out << tgfmt(attr->getToLlvmValue(), &fmt, builderArg.name, attrType);
       } else if (opArg.type->isTypeArg()) {
         out << tgfmt("::llvm::PoisonValue::get($0)", &fmt, builderArg.name);
       } else {

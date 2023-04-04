@@ -178,23 +178,31 @@ XdHandleType* XdHandleType::get(::llvm::LLVMContext & ctx) {
 }
 
 
+      VectorKind XdVectorType::getKind() const {
+        return static_cast<VectorKind>(int_params()[0]);
+      }
+
+    
       ::llvm::Type * XdVectorType::getElementType() const {
         return type_params()[0];
       }
 
     
       uint32_t XdVectorType::getNumElements() const {
-        return int_params()[0];
+        return int_params()[1];
       }
 
-    XdVectorType* XdVectorType::get(::llvm::Type * elementType, uint32_t numElements) {
+    XdVectorType* XdVectorType::get(VectorKind kind, ::llvm::Type * elementType, uint32_t numElements) {
 ::llvm::LLVMContext &ctx = elementType->getContext();
+static_assert(sizeof(kind) <= sizeof(unsigned));
+
 ::std::array<::llvm::Type *, 1> types = {
 elementType,
 
     };
-    ::std::array<unsigned, 1> ints = {
-  numElements,
+    ::std::array<unsigned, 2> ints = {
+  static_cast<unsigned>(kind),
+numElements,
 
       };
 
@@ -218,13 +226,15 @@ elementType,
         return false;
       }
 
-      if (getNumIntParameters() != 1) {
+      if (getNumIntParameters() != 2) {
         errs << "  wrong number of int parameters\n";
-        errs << "    expected: 1\n";
+        errs << "    expected: 2\n";
         errs << "      actual: " << getNumIntParameters() << '\n';
         return false;
       }
-  auto elementType = getElementType();
+  auto kind = getKind();
+(void)kind;
+auto elementType = getElementType();
 (void)elementType;
 auto numElements = getNumElements();
 (void)numElements;
@@ -288,7 +298,8 @@ rhs->getType(),
     assert(fn.getFunctionType() == fnType);
     assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
-  ::llvm::Value* const args[] = {
+  
+::llvm::Value* const args[] = {
 lhs,
 rhs,
  ::llvm::ConstantInt::get(::llvm::IntegerType::get(context, 32), extra) ,
@@ -519,7 +530,7 @@ index,
         }
       
         if (!(::llvm::isa<XdVectorType>(vectorType))) {
-          errs << "  failed check for (XdVectorType ?:$result, any):$vector\n";
+          errs << "  failed check for (XdVectorType any, ?:$result, any):$vector\n";
           
     errs << "  with $vector = " << printable(vectorType) << '\n';
   
@@ -550,7 +561,7 @@ index,
 
       const ::llvm::StringLiteral FromFixedVectorOp::s_name{"xd.fromfixedvector"};
 
-    FromFixedVectorOp* FromFixedVectorOp::create(llvm_dialects::Builder& b, ::llvm::Value * source) {
+    FromFixedVectorOp* FromFixedVectorOp::create(llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * source) {
     ::llvm::LLVMContext& context = b.getContext();
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
   
@@ -559,8 +570,8 @@ index,
           = ExampleDialect::get(context).getAttributeList(1);
     
       std::string mangledName =
-          ::llvm_dialects::getMangledName(s_name, {XdVectorType::get(::llvm::cast<::llvm::FixedVectorType>(source->getType())->getElementType(), ::llvm::cast<::llvm::FixedVectorType>(source->getType())->getNumElements())});
-    auto fnType = ::llvm::FunctionType::get(XdVectorType::get(::llvm::cast<::llvm::FixedVectorType>(source->getType())->getElementType(), ::llvm::cast<::llvm::FixedVectorType>(source->getType())->getNumElements()), true);
+          ::llvm_dialects::getMangledName(s_name, {resultType});
+    auto fnType = ::llvm::FunctionType::get(resultType, true);
 
     auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
     ::llvm::SmallString<32> newName;
@@ -612,7 +623,7 @@ source,
         }
       
         if (!(::llvm::isa<XdVectorType>(resultType))) {
-          errs << "  failed check for (XdVectorType ?:$scalar_type, ?:$num_elements):$result\n";
+          errs << "  failed check for (XdVectorType ?:$kind, ?:$scalar_type, ?:$num_elements):$result\n";
           
     errs << "  with $result = " << printable(resultType) << '\n';
   
@@ -964,7 +975,7 @@ index,
         }
       
         if (!(::llvm::isa<XdVectorType>(resultType))) {
-          errs << "  failed check for (XdVectorType ?:$result, ?:$value, any)\n";
+          errs << "  failed check for (XdVectorType ?:$result, any, ?:$value, any)\n";
           
     errs << "  with $result = " << printable(resultType) << '\n';
   
