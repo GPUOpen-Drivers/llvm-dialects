@@ -25,6 +25,12 @@
 using namespace llvm;
 using namespace llvm_dialects;
 
+static std::string evaluateAttrLlvmType(raw_ostream &errs, raw_ostream &out,
+                                        FmtContext &fmt, Attr *attr,
+                                        StringRef name,
+                                        GenDialectsContext &context,
+                                        SymbolTable &symbols);
+
 static std::optional<std::vector<NamedValue>>
 parseArguments(raw_ostream &errs, GenDialectsContext &context, Record *rec) {
   Record *superClassRec = rec->getValueAsDef("superclass");
@@ -60,6 +66,33 @@ bool OperationBase::init(raw_ostream &errs, GenDialectsContext &context,
     return false;
   m_arguments = std::move(*arguments);
 
+  for (const auto &arg : m_arguments) {
+    std::string attrType;
+
+    if (auto *attr = dyn_cast<Attr>(arg.type)) {
+      SymbolTable symbols;
+      std::string prelude;
+      raw_string_ostream preludes(prelude);
+      FmtContext fmt;
+      fmt.withContext("getContext()");
+
+      attrType = evaluateAttrLlvmType(errs, preludes, fmt, attr, arg.name,
+                                      context, symbols);
+      if (attrType.empty())
+        return false;
+
+      if (!prelude.empty()) {
+        errs << "got a non-empty prelude when determining the LLVM type of "
+             << arg.name << '\n';
+        errs << prelude;
+        errs << "this is currently unsupported\n";
+        return false;
+      }
+    }
+
+    m_attrTypes.push_back(attrType);
+  }
+
   return true;
 }
 
@@ -80,8 +113,12 @@ unsigned OperationBase::getNumFullArguments() const {
 void OperationBase::emitArgumentAccessorDeclarations(llvm::raw_ostream &out,
                                                      FmtContext &fmt) const {
   for (const auto &arg : m_arguments) {
-    out << tgfmt("$0 get$1();\n", &fmt, arg.type->getBuilderCppType(),
-                 convertToCamelFromSnakeCase(arg.name, true));
+    out << tgfmt(R"(
+      $0 get$1();
+      void set$1($0 $2);
+    )",
+                 &fmt, arg.type->getBuilderCppType(),
+                 convertToCamelFromSnakeCase(arg.name, true), arg.name);
   }
 }
 
@@ -92,19 +129,40 @@ void OperationBase::emitArgumentAccessorDefinitions(llvm::raw_ostream &out,
     numSuperclassArgs = m_superclass->getNumFullArguments();
   for (auto indexedArg : llvm::enumerate(m_arguments)) {
     const NamedValue &arg = indexedArg.value();
-    std::string value = llvm::formatv("getArgOperand({0})",
-                                      numSuperclassArgs + indexedArg.index());
+    FmtContextScope scope(fmt);
+    fmt.withContext("getContext()");
+    fmt.addSubst("index", Twine(numSuperclassArgs + indexedArg.index()));
+    fmt.addSubst("cppType", arg.type->getBuilderCppType());
+    fmt.addSubst("name", arg.name);
+    fmt.addSubst("Name", convertToCamelFromSnakeCase(arg.name, true));
+
+    std::string fromLlvm = tgfmt("getArgOperand($index)", &fmt);
     if (auto *attr = dyn_cast<Attr>(arg.type))
-      value = tgfmt(attr->getFromLlvmValue(), &fmt, value);
+      fromLlvm = tgfmt(attr->getFromLlvmValue(), &fmt, fromLlvm);
     else if (arg.type->isTypeArg())
-      value += "->getType()";
+      fromLlvm += "->getType()";
+
+    std::string toLlvm = arg.name;
+    if (auto *attr = dyn_cast<Attr>(arg.type)) {
+      toLlvm = tgfmt(attr->getToLlvmValue(), &fmt, toLlvm,
+                     m_attrTypes[indexedArg.index()]);
+    } else if (arg.type->isTypeArg()) {
+      toLlvm = llvm::formatv("llvm::PoisonValue::get({0})", toLlvm);
+    }
+
+    fmt.addSubst("fromLlvm", fromLlvm);
+    fmt.addSubst("toLlvm", toLlvm);
+
     out << tgfmt(R"(
-      $0 $_op::get$1() {
-        return $2;
+      $cppType $_op::get$Name() {
+        return $fromLlvm;
+      }
+
+      void $_op::set$Name($cppType $name) {
+        setArgOperand($index, $toLlvm);
       }
     )",
-                 &fmt, arg.type->getBuilderCppType(),
-                 convertToCamelFromSnakeCase(arg.name, true), value);
+                 &fmt);
   }
 }
 

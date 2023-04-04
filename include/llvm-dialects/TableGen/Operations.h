@@ -74,6 +74,9 @@ private:
   /// List of arguments specific to this class; does not contain superclass
   /// arguments, if any.
   std::vector<NamedValue> m_arguments;
+
+  /// Attribute types as determined for the setter methods.
+  std::vector<std::string> m_attrTypes;
 };
 
 class OpClass : public OperationBase {

@@ -87,12 +87,15 @@ void createFunctionExample(Module &module, const Twine &name) {
   b.SetInsertPoint(bb);
 
   Value *x1 = b.create<xd::ReadOp>(b.getInt32Ty());
-  Value *sizeOf = b.create<xd::SizeOfOp>(b.getDoubleTy());
+  Value *sizeOf = b.create<xd::SizeOfOp>(b.getHalfTy());
   Value *sizeOf32 = b.create<xd::ITruncOp>(b.getInt32Ty(), sizeOf);
-  Value *x2 = b.create<xd::Add32Op>(x1, sizeOf32, 7);
+  Value *x2 = b.create<xd::Add32Op>(x1, sizeOf32, 11);
   Value *x3 = b.create<xd::CombineOp>(x2, x1);
   Value *x4 = b.create<xd::IExtOp>(b.getInt64Ty(), x3);
   b.create<xd::WriteOp>(x4);
+
+  cast<xd::SizeOfOp>(sizeOf)->setSizeofType(b.getDoubleTy());
+  cast<xd::Add32Op>(x2)->setExtra(7);
 
   Value *q1 = b.create<xd::ReadOp>(FixedVectorType::get(b.getInt32Ty(), 2));
   Value *q2 = b.create<xd::FromFixedVectorOp>(
@@ -104,8 +107,10 @@ void createFunctionExample(Module &module, const Twine &name) {
   Value *y3 = b.create<xd::ExtractElementOp>(y1, b.getInt32(2));
   Value *y4 = b.CreateAdd(y2, y3);
   Value *y5 = b.create<xd::InsertElementOp>(q2, y4, x1);
-  Value *y6 = b.create<xd::InsertElementOp>(y5, y2, b.getInt32(1));
+  Value *y6 = b.create<xd::InsertElementOp>(y5, y2, b.getInt32(5));
   b.create<xd::WriteOp>(y6);
+
+  cast<xd::InsertElementOp>(y6)->setIndex(b.getInt32(1));
 
   Value *p1 = b.create<xd::ReadOp>(b.getPtrTy(0));
   Value *p2 = b.create<xd::StreamAddOp>(p1, b.getInt64(14), b.getInt8(0));

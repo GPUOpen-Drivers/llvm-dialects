@@ -257,13 +257,25 @@ return true;
       ::llvm::Value * StreamReduceOp::getPtr() {
         return getArgOperand(0);
       }
+
+      void StreamReduceOp::setPtr(::llvm::Value * ptr) {
+        setArgOperand(0, ptr);
+      }
     
       ::llvm::Value * StreamReduceOp::getCount() {
         return getArgOperand(1);
       }
+
+      void StreamReduceOp::setCount(::llvm::Value * count) {
+        setArgOperand(1, count);
+      }
     
       ::llvm::Value * StreamReduceOp::getInitial() {
         return getArgOperand(2);
+      }
+
+      void StreamReduceOp::setInitial(::llvm::Value * initial) {
+        setArgOperand(2, initial);
       }
     
 
@@ -364,13 +376,25 @@ uint32_t const extra = getExtra();
       ::llvm::Value * Add32Op::getLhs() {
         return getArgOperand(0);
       }
+
+      void Add32Op::setLhs(::llvm::Value * lhs) {
+        setArgOperand(0, lhs);
+      }
     
       ::llvm::Value * Add32Op::getRhs() {
         return getArgOperand(1);
       }
+
+      void Add32Op::setRhs(::llvm::Value * rhs) {
+        setArgOperand(1, rhs);
+      }
     
       uint32_t Add32Op::getExtra() {
         return  ::llvm::cast<::llvm::ConstantInt>(getArgOperand(2))->getZExtValue() ;
+      }
+
+      void Add32Op::setExtra(uint32_t extra) {
+        setArgOperand(2,  ::llvm::ConstantInt::get(::llvm::IntegerType::get(getContext(), 32), extra) );
       }
     
 ::llvm::Value *Add32Op::getResult() {return this;}
@@ -455,9 +479,17 @@ rhs,
       ::llvm::Value * CombineOp::getLhs() {
         return getArgOperand(0);
       }
+
+      void CombineOp::setLhs(::llvm::Value * lhs) {
+        setArgOperand(0, lhs);
+      }
     
       ::llvm::Value * CombineOp::getRhs() {
         return getArgOperand(1);
+      }
+
+      void CombineOp::setRhs(::llvm::Value * rhs) {
+        setArgOperand(1, rhs);
       }
     
 ::llvm::Value *CombineOp::getResult() {return this;}
@@ -550,9 +582,17 @@ index,
       ::llvm::Value * ExtractElementOp::getVector() {
         return getArgOperand(0);
       }
+
+      void ExtractElementOp::setVector(::llvm::Value * vector) {
+        setArgOperand(0, vector);
+      }
     
       ::llvm::Value * ExtractElementOp::getIndex() {
         return getArgOperand(1);
+      }
+
+      void ExtractElementOp::setIndex(::llvm::Value * index) {
+        setArgOperand(1, index);
       }
     
 ::llvm::Value *ExtractElementOp::getResult() {return this;}
@@ -702,6 +742,10 @@ source,
 
       ::llvm::Value * FromFixedVectorOp::getSource() {
         return getArgOperand(0);
+      }
+
+      void FromFixedVectorOp::setSource(::llvm::Value * source) {
+        setArgOperand(0, source);
       }
     
 ::llvm::Value *FromFixedVectorOp::getResult() {return this;}
@@ -855,6 +899,10 @@ source,
       ::llvm::Value * IExtOp::getSource() {
         return getArgOperand(0);
       }
+
+      void IExtOp::setSource(::llvm::Value * source) {
+        setArgOperand(0, source);
+      }
     
 ::llvm::Value *IExtOp::getResult() {return this;}
 
@@ -946,6 +994,10 @@ source,
 
       ::llvm::Value * ITruncOp::getSource() {
         return getArgOperand(0);
+      }
+
+      void ITruncOp::setSource(::llvm::Value * source) {
+        setArgOperand(0, source);
       }
     
 ::llvm::Value *ITruncOp::getResult() {return this;}
@@ -1048,13 +1100,25 @@ index,
       ::llvm::Value * InsertElementOp::getVector() {
         return getArgOperand(0);
       }
+
+      void InsertElementOp::setVector(::llvm::Value * vector) {
+        setArgOperand(0, vector);
+      }
     
       ::llvm::Value * InsertElementOp::getValue() {
         return getArgOperand(1);
       }
+
+      void InsertElementOp::setValue(::llvm::Value * value) {
+        setArgOperand(1, value);
+      }
     
       ::llvm::Value * InsertElementOp::getIndex() {
         return getArgOperand(2);
+      }
+
+      void InsertElementOp::setIndex(::llvm::Value * index) {
+        setArgOperand(2, index);
       }
     
 ::llvm::Value *InsertElementOp::getResult() {return this;}
@@ -1181,6 +1245,10 @@ index,
 
       ::llvm::Type * SizeOfOp::getSizeofType() {
         return getArgOperand(0)->getType();
+      }
+
+      void SizeOfOp::setSizeofType(::llvm::Type * sizeof_type) {
+        setArgOperand(0, llvm::PoisonValue::get(sizeof_type));
       }
     
 ::llvm::Value *SizeOfOp::getResult() {return this;}
@@ -1509,6 +1577,10 @@ data,
 
       ::llvm::Value * WriteOp::getData() {
         return getArgOperand(0);
+      }
+
+      void WriteOp::setData(::llvm::Value * data) {
+        setArgOperand(0, data);
       }
     
 
