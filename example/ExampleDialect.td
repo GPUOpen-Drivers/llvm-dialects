@@ -44,6 +44,8 @@ def XdVectorType : DialectType<ExampleDialect, "vector"> {
   let typeArguments = (args AttrVectorKind:$kind, type:$element_type,
                             AttrI32:$num_elements);
 
+  let customizeTypeClass = true;
+
   let summary = "a custom vector type";
   let description = [{
     Unlike LLVM's built-in vector type, this vector can have arbitrary element

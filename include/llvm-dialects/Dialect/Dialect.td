@@ -194,9 +194,18 @@ class DialectType<Dialect dialect_, string mnemonic_> : Type, Predicate {
   Dialect dialect = dialect_;
   string mnemonic = mnemonic_;
 
-  /// Whether the Type::get method has an explicit LLVMContext reference as the
+  /// Whether the $Type::get method has an explicit LLVMContext reference as the
   /// first argument.
   bit defaultGetterHasExplicitContextArgument = false;
+
+  /// If set to true, a method of signature
+  ///
+  ///   static void customizeTypeClass(llvm::TargetExtTypeClass *typeClass);
+  ///
+  /// is declared, to be defined manually by the user. The function is called
+  /// only once and may adjust the type class. The type class is pre-populated
+  /// with the type name and the default verifier.
+  bit customizeTypeClass = false;
 
   string summary = ?;
   string description = ?;

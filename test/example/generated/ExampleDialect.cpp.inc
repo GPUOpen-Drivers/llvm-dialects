@@ -12,6 +12,8 @@
 
 #include "llvm/Support/ModRef.h"
 
+#include "llvm/IR/TargetExtType.h"
+    
 #include "llvm/Support/raw_ostream.h"
 #endif // GET_INCLUDES
 
@@ -138,7 +140,29 @@ attrBuilder.addAttribute(::llvm::Attribute::NoUnwind);
 attrBuilder.addMemoryAttr(::llvm::MemoryEffects(::llvm::MemoryEffects::Location::InaccessibleMem, ::llvm::ModRefInfo::ModRef));
 m_attributeLists[3] = ::llvm::AttributeList::get(context, ::llvm::AttributeList::FunctionIndex, attrBuilder);
 }
-}
+
+    static const auto classXdHandleType = ([]() {
+          ::llvm::TargetExtTypeClass theClass("xd.handle");
+          theClass.setVerifier(
+              [](::llvm::TargetExtType *T, ::llvm::raw_ostream &errs) {
+                return ::llvm::cast<XdHandleType>(T)->verifier(errs);
+              });
+          
+          return theClass;
+        })();
+    context.registerTargetExtTypeClass(&classXdHandleType);
+  
+    static const auto classXdVectorType = ([]() {
+          ::llvm::TargetExtTypeClass theClass("xd.vector");
+          theClass.setVerifier(
+              [](::llvm::TargetExtType *T, ::llvm::raw_ostream &errs) {
+                return ::llvm::cast<XdVectorType>(T)->verifier(errs);
+              });
+          XdVectorType::customizeTypeClass(&theClass);
+          return theClass;
+        })();
+    context.registerTargetExtTypeClass(&classXdVectorType);
+  }
 
 XdHandleType* XdHandleType::get(::llvm::LLVMContext & ctx) {
 ::std::array<::llvm::Type *, 0> types = {

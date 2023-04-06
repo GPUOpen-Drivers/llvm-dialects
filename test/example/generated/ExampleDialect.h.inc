@@ -7,6 +7,11 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 
+
+namespace llvm {
+class TargetExtTypeClass;
+} // namespace llvm
+
 namespace llvm {
 class raw_ostream;
 } // namespace llvm
@@ -80,7 +85,9 @@ namespace xd {
 
   static XdVectorType *get(VectorKind kind, ::llvm::Type * elementType, uint32_t numElements);
 
-VectorKind getKind() const;
+
+      static void customizeTypeClass(::llvm::TargetExtTypeClass *typeClass);
+    VectorKind getKind() const;
 ::llvm::Type * getElementType() const;
 uint32_t getNumElements() const;
 };

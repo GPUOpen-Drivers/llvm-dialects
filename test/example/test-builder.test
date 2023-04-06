@@ -5,32 +5,35 @@
 
 ; CHECK-LABEL: @example(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @xd.read.i32()
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 (...) @xd.sizeof(double poison)
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 (...) @xd.itrunc.i32(i64 [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @xd.add32(i32 [[TMP0]], i32 [[TMP2]], i32 7)
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 (...) @xd.combine.i32(i32 [[TMP3]], i32 [[TMP0]])
-; CHECK-NEXT:    [[TMP5:%.*]] = call i64 (...) @xd.iext.i64(i32 [[TMP4]])
-; CHECK-NEXT:    call void (...) @xd.write(i64 [[TMP5]])
-; CHECK-NEXT:    [[TMP6:%.*]] = call <2 x i32> @xd.read.v2i32()
-; CHECK-NEXT:    [[TMP7:%.*]] = call target("xd.vector", i32, 1, 2) (...) @xd.fromfixedvector.txd.vector_i32_1_2t(<2 x i32> [[TMP6]])
-; CHECK-NEXT:    [[TMP8:%.*]] = call target("xd.vector", i32, 1, 4) @xd.read.txd.vector_i32_1_4t()
-; CHECK-NEXT:    [[TMP9:%.*]] = call i32 (...) @xd.extractelement.i32(target("xd.vector", i32, 1, 4) [[TMP8]], i32 [[TMP0]])
-; CHECK-NEXT:    [[TMP10:%.*]] = call i32 (...) @xd.extractelement.i32(target("xd.vector", i32, 1, 4) [[TMP8]], i32 2)
-; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = call target("xd.vector", i32, 1, 2) (...) @xd.insertelement.txd.vector_i32_1_2t(target("xd.vector", i32, 1, 2) [[TMP7]], i32 [[TMP11]], i32 [[TMP0]])
-; CHECK-NEXT:    [[TMP13:%.*]] = call target("xd.vector", i32, 1, 2) (...) @xd.insertelement.txd.vector_i32_1_2t(target("xd.vector", i32, 1, 2) [[TMP12]], i32 [[TMP9]], i32 1)
-; CHECK-NEXT:    call void (...) @xd.write(target("xd.vector", i32, 1, 2) [[TMP13]])
-; CHECK-NEXT:    [[TMP14:%.*]] = call ptr @xd.read.p0()
-; CHECK-NEXT:    [[TMP15:%.*]] = call i8 (...) @xd.stream.add.i8(ptr [[TMP14]], i64 14, i8 0)
-; CHECK-NEXT:    call void (...) @xd.write(i8 [[TMP15]])
-; CHECK-NEXT:    [[TMP16:%.*]] = call target("xd.handle") @xd.handle.get()
-; CHECK-NEXT:    [[TMP17:%.*]] = call [[TMP0]] @xd.read.s_s()
-; CHECK-NEXT:    [[TMP18:%.*]] = call [[TMP1]] @xd.read.s_s_0()
-; CHECK-NEXT:    [[TMP19:%.*]] = call [[TMP2]] @xd.read.s_s_1()
-; CHECK-NEXT:    call void (...) @xd.write([[TMP0]] [[TMP17]])
-; CHECK-NEXT:    call void (...) @xd.write([[TMP1]] [[TMP18]])
-; CHECK-NEXT:    call void (...) @xd.write([[TMP2]] [[TMP19]])
+; CHECK-NEXT:    [[TMP0:%.*]] = alloca target("xd.vector", i32, 1, 4), align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @xd.read.i32()
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 (...) @xd.sizeof(double poison)
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 (...) @xd.itrunc.i32(i64 [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @xd.add32(i32 [[TMP1]], i32 [[TMP3]], i32 7)
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 (...) @xd.combine.i32(i32 [[TMP4]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 (...) @xd.iext.i64(i32 [[TMP5]])
+; CHECK-NEXT:    call void (...) @xd.write(i64 [[TMP6]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x i32> @xd.read.v2i32()
+; CHECK-NEXT:    [[TMP8:%.*]] = call target("xd.vector", i32, 1, 2) (...) @xd.fromfixedvector.txd.vector_i32_1_2t(<2 x i32> [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = call target("xd.vector", i32, 1, 4) @xd.read.txd.vector_i32_1_4t()
+; CHECK-NEXT:    store target("xd.vector", i32, 1, 4) [[TMP9]], ptr [[TMP0]], align 16
+; CHECK-NEXT:    [[TMP10:%.*]] = load target("xd.vector", i32, 1, 4), ptr [[TMP0]], align 16
+; CHECK-NEXT:    [[TMP11:%.*]] = call i32 (...) @xd.extractelement.i32(target("xd.vector", i32, 1, 4) [[TMP10]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP12:%.*]] = call i32 (...) @xd.extractelement.i32(target("xd.vector", i32, 1, 4) [[TMP10]], i32 2)
+; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = call target("xd.vector", i32, 1, 2) (...) @xd.insertelement.txd.vector_i32_1_2t(target("xd.vector", i32, 1, 2) [[TMP8]], i32 [[TMP13]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP15:%.*]] = call target("xd.vector", i32, 1, 2) (...) @xd.insertelement.txd.vector_i32_1_2t(target("xd.vector", i32, 1, 2) [[TMP14]], i32 [[TMP11]], i32 1)
+; CHECK-NEXT:    call void (...) @xd.write(target("xd.vector", i32, 1, 2) [[TMP15]])
+; CHECK-NEXT:    [[TMP16:%.*]] = call ptr @xd.read.p0()
+; CHECK-NEXT:    [[TMP17:%.*]] = call i8 (...) @xd.stream.add.i8(ptr [[TMP16]], i64 14, i8 0)
+; CHECK-NEXT:    call void (...) @xd.write(i8 [[TMP17]])
+; CHECK-NEXT:    [[TMP18:%.*]] = call target("xd.handle") @xd.handle.get()
+; CHECK-NEXT:    [[TMP19:%.*]] = call [[TMP0]] @xd.read.s_s()
+; CHECK-NEXT:    [[TMP20:%.*]] = call [[TMP1]] @xd.read.s_s_0()
+; CHECK-NEXT:    [[TMP21:%.*]] = call [[TMP2]] @xd.read.s_s_1()
+; CHECK-NEXT:    call void (...) @xd.write([[TMP0]] [[TMP19]])
+; CHECK-NEXT:    call void (...) @xd.write([[TMP1]] [[TMP20]])
+; CHECK-NEXT:    call void (...) @xd.write([[TMP2]] [[TMP21]])
 ; CHECK-NEXT:    ret void
 ;
 ;

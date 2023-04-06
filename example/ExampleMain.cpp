@@ -86,6 +86,11 @@ void createFunctionExample(Module &module, const Twine &name) {
   BasicBlock *bb = BasicBlock::Create(module.getContext(), "entry", fn);
   b.SetInsertPoint(bb);
 
+  Type *vt1 =
+      xd::XdVectorType::get(xd::VectorKind::BigEndian, b.getInt32Ty(), 4);
+
+  Value *alloca1 = b.CreateAlloca(vt1);
+
   Value *x1 = b.create<xd::ReadOp>(b.getInt32Ty());
   Value *sizeOf = b.create<xd::SizeOfOp>(b.getHalfTy());
   Value *sizeOf32 = b.create<xd::ITruncOp>(b.getInt32Ty(), sizeOf);
@@ -103,8 +108,10 @@ void createFunctionExample(Module &module, const Twine &name) {
 
   Value *y1 = b.create<xd::ReadOp>(
       xd::XdVectorType::get(xd::VectorKind::BigEndian, b.getInt32Ty(), 4));
-  Value *y2 = b.create<xd::ExtractElementOp>(y1, x1);
-  Value *y3 = b.create<xd::ExtractElementOp>(y1, b.getInt32(2));
+  b.CreateStore(y1, alloca1);
+  Value *y1l = b.CreateLoad(vt1, alloca1);
+  Value *y2 = b.create<xd::ExtractElementOp>(y1l, x1);
+  Value *y3 = b.create<xd::ExtractElementOp>(y1l, b.getInt32(2));
   Value *y4 = b.CreateAdd(y2, y3);
   Value *y5 = b.create<xd::InsertElementOp>(q2, y4, x1);
   auto *y6 = b.create<xd::InsertElementOp>(y5, y2, b.getInt32(5));

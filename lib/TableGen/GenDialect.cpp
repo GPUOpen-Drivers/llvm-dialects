@@ -73,6 +73,17 @@ void llvm_dialects::genDialectDecls(raw_ostream& out, RecordKeeper& records) {
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 
+)";
+
+  if (!dialect->types.empty()) {
+    out << R"(
+namespace llvm {
+class TargetExtTypeClass;
+} // namespace llvm
+)";
+  }
+
+  out << R"(
 namespace llvm {
 class raw_ostream;
 } // namespace llvm
@@ -236,6 +247,12 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
 )";
   }
 
+  if (!dialect->types.empty()) {
+    out << R"(
+#include "llvm/IR/TargetExtType.h"
+    )";
+  }
+
   out << R"(
 #include "llvm/Support/raw_ostream.h"
 #endif // GET_INCLUDES
@@ -321,6 +338,12 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
                    &fmt, enumeratedTraits.index());
     }
   }
+
+  FmtContextScope scope{fmt};
+  fmt.withContext("context");
+
+  for (DialectType *type : dialect->types)
+    type->emitTypeClass(out, dialect, fmt);
 
   out << "}\n\n";
 

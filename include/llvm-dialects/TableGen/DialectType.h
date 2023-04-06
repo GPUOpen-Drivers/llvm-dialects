@@ -46,9 +46,12 @@ public:
   bool defaultGetterHasExplicitContextArgument() const {
     return m_defaultGetterHasExplicitContextArgument;
   }
+  bool customizeTypeClass() const { return m_customizeTypeClass; }
   llvm::StringRef getSummary() const { return m_summary; }
   llvm::StringRef getDescription() const { return m_description; }
 
+  void emitTypeClass(llvm::raw_ostream &out, GenDialect *dialect,
+                     FmtContext &fmt) const;
   void emitDeclaration(llvm::raw_ostream &out, GenDialect *dialect) const;
   void emitDefinition(llvm::raw_ostream &out, GenDialect *dialect) const;
 
@@ -62,6 +65,7 @@ private:
   std::string m_name;
   std::string m_mnemonic;
   bool m_defaultGetterHasExplicitContextArgument = false;
+  bool m_customizeTypeClass = false;
   std::string m_summary;
   std::string m_description;
 
