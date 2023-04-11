@@ -312,7 +312,7 @@ void DialectType::emitDefinition(raw_ostream &out, GenDialect *dialect) const {
     assignment.assign(variable, fmt.getSubstFor("name").value());
   }
 
-  eval.check();
+  eval.check(true);
 
   out << "return true;\n}\n\n";
 }
