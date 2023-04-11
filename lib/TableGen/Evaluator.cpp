@@ -305,7 +305,7 @@ std::string Evaluator::evaluateImpl(Variable *goal) {
   return tgfmt(cpp->getEvaluate(), &m_fmt).str();
 }
 
-bool Evaluator::check() {
+bool Evaluator::check(bool writeErrs) {
   if (m_comments) {
     m_out << "// Checking the constraint system:\n";
     m_system.print(m_out, "//   ");
@@ -340,7 +340,7 @@ bool Evaluator::check() {
         m_out << "// Try apply-evaluate of " << apply->toString() << '\n';
       }
 
-      if (checkApplyEvaluate(apply)) {
+      if (checkApplyEvaluate(writeErrs, apply)) {
         if (m_comments) {
           m_out << "// Done: " << apply->toString() << '\n';
         }
@@ -363,10 +363,10 @@ bool Evaluator::check() {
 
       bool ok = false;
       if (auto *apply = dyn_cast<Apply>(constraint)) {
-        ok = checkApplyCapture(apply);
+        ok = checkApplyCapture(writeErrs, apply);
       } else {
         auto *logicOr = dyn_cast<LogicOr>(constraint);
-        ok = checkLogicOr(logicOr);
+        ok = checkLogicOr(writeErrs, logicOr);
       }
 
       if (ok) {
@@ -391,7 +391,7 @@ bool Evaluator::check() {
 }
 
 /// Check apply constraints by evaluating them where possible.
-bool Evaluator::checkApplyEvaluate(const Apply *apply) {
+bool Evaluator::checkApplyEvaluate(bool writeErrs, const Apply *apply) {
   if (!apply->getPredicate()->canDerive(0))
     return false;
 
@@ -424,7 +424,7 @@ bool Evaluator::checkApplyEvaluate(const Apply *apply) {
       nestedAssignment.assign(tg->variables()[argIdx],
                               m_assignment.lookup(apply->arguments()[argIdx]));
     }
-    nestedEvaluator.check();
+    nestedEvaluator.check(writeErrs);
 
     value = nestedAssignment.lookup(tg->variables()[0]).str();
   } else {
@@ -439,13 +439,13 @@ bool Evaluator::checkApplyEvaluate(const Apply *apply) {
   }
 
   Variable *self = apply->arguments()[0];
-  checkAssignment(self, std::move(value), apply->getInit());
+  checkAssignment(writeErrs, self, std::move(value), apply->getInit());
   return true;
 }
 
 /// Check apply constraints by checking and capturing them from the self
 /// argument if possible.
-bool Evaluator::checkApplyCapture(const Apply *apply) {
+bool Evaluator::checkApplyCapture(bool writeErrs, const Apply *apply) {
   Variable *self = apply->arguments()[0];
   StringRef selfValue = m_assignment.lookup(self);
   if (selfValue.empty()) {
@@ -466,19 +466,21 @@ bool Evaluator::checkApplyCapture(const Apply *apply) {
   }
 
   std::string with;
-  raw_string_ostream withstream(with);
-  withstream << tgfmt(R"(
-    $_errs << "  with $0 = " << printable($1) << '\n';
-  )",
-                      &m_fmt, self->toString(), selfValue);
-  if (!apply->getPredicate()->canCheckFromSelf()) {
-    for (unsigned argIdx = 1; argIdx < apply->arguments().size(); ++argIdx) {
-      Variable *argument = apply->arguments()[argIdx];
-      withstream << tgfmt(R"(
-        $_errs << "  with $0 = " << printable($1) << '\n';
-      )",
-                          &m_fmt, argument->toString(),
-                          m_assignment.lookup(argument));
+  if (writeErrs) {
+    raw_string_ostream withstream(with);
+    withstream << tgfmt(R"(
+      $_errs << "  with $0 = " << printable($1) << '\n';
+    )",
+                        &m_fmt, self->toString(), selfValue);
+    if (!apply->getPredicate()->canCheckFromSelf()) {
+      for (unsigned argIdx = 1; argIdx < apply->arguments().size(); ++argIdx) {
+        Variable *argument = apply->arguments()[argIdx];
+        withstream << tgfmt(R"(
+          $_errs << "  with $0 = " << printable($1) << '\n';
+        )",
+                            &m_fmt, argument->toString(),
+                            m_assignment.lookup(argument));
+      }
     }
   }
 
@@ -499,7 +501,7 @@ bool Evaluator::checkApplyCapture(const Apply *apply) {
 
     m_out << "if (![&]() {\n";
 
-    nestedEvaluator.check();
+    nestedEvaluator.check(writeErrs);
 
     {
       FmtContextScope scope{m_fmt};
@@ -508,13 +510,21 @@ bool Evaluator::checkApplyCapture(const Apply *apply) {
 
       m_out << tgfmt(R"(
           return true;
-        }()) {
+        }()) {)",
+                     &m_fmt);
+
+      if (writeErrs) {
+        m_out << tgfmt(R"(
           $_errs << "  while checking $constraint\n";
           $with
+        )",
+                       &m_fmt);
+      }
+
+      m_out << R"(
           return false;
         }
-      )",
-                     &m_fmt);
+      )";
     }
 
     for (unsigned argIdx = 1; argIdx < apply->arguments().size(); ++argIdx) {
@@ -522,7 +532,7 @@ bool Evaluator::checkApplyCapture(const Apply *apply) {
         continue;
 
       StringRef value = nestedAssignment.lookup(tg->variables()[argIdx]);
-      checkAssignment(apply->arguments()[argIdx], value.str(),
+      checkAssignment(writeErrs, apply->arguments()[argIdx], value.str(),
                       apply->getInit());
     }
   } else {
@@ -548,13 +558,21 @@ bool Evaluator::checkApplyCapture(const Apply *apply) {
       m_fmt.addSubst("with", with);
 
       m_out << tgfmt(R"(
-        if (!($checkValue)) {
+        if (!($checkValue)) {)",
+                     &m_fmt);
+
+      if (writeErrs) {
+        m_out << tgfmt(R"(
           $_errs << "  failed check for $constraint\n";
           $with
+        )",
+                       &m_fmt);
+      }
+
+      m_out << R"(
           return false;
         }
-      )",
-                     &m_fmt);
+      )";
     }
 
     for (unsigned argIdx = 1; argIdx < apply->arguments().size(); ++argIdx) {
@@ -563,14 +581,14 @@ bool Evaluator::checkApplyCapture(const Apply *apply) {
         continue;
 
       std::string value = tgfmt(cpp->getCapture(argIdx), &m_fmt).str();
-      checkAssignment(variable, std::move(value), apply->getInit());
+      checkAssignment(writeErrs, variable, std::move(value), apply->getInit());
     }
   }
 
   return true;
 }
 
-bool Evaluator::checkLogicOr(const LogicOr *logicOr) {
+bool Evaluator::checkLogicOr(bool writeErrs, const LogicOr *logicOr) {
   for (Variable *variable : logicOr->variables()) {
     if (m_assignment.lookup(variable).empty()) {
       m_errs << "cannot check " << logicOr->toString() << '\n';
@@ -580,12 +598,9 @@ bool Evaluator::checkLogicOr(const LogicOr *logicOr) {
   }
 
   SymbolScope symbolScope(&m_symbols);
-  FmtContextScope scope{m_fmt};
-  m_fmt.addSubst("_orErrors", m_symbols->chooseName("orErrors"));
   {
     m_out << tgfmt(R"(
       {
-        std::array<std::string, $0> $_orErrors;
         if (true
     )",
                    &m_fmt, logicOr->branches().size());
@@ -597,14 +612,13 @@ bool Evaluator::checkLogicOr(const LogicOr *logicOr) {
 
     m_out << tgfmt(R"(
       && !([&]() {
-        ::llvm::raw_string_ostream $_errs($_orErrors[$0]);
     )",
                    &m_fmt, index);
 
     Assignment scopedAssignment{&m_assignment};
     Evaluator childEvaluator(*m_symbols, scopedAssignment, childSystem, m_out,
                              m_fmt);
-    if (!childEvaluator.check()) {
+    if (!childEvaluator.check(false)) {
       m_errs << "failed to check branch #" << index << " ("
              << logicOr->branchInits()[index]->getAsString() << "):\n";
       m_errs << childEvaluator.takeErrorMessages();
@@ -616,32 +630,45 @@ bool Evaluator::checkLogicOr(const LogicOr *logicOr) {
 
   m_out << ") {\n";
 
-  if (Variable *self = logicOr->getSelf()) {
-    FmtContextScope scope{m_fmt};
-    m_fmt.addSubst("name", self->toString());
-    m_fmt.addSubst("value", m_assignment.lookup(self));
+  if (writeErrs) {
+    if (Variable *self = logicOr->getSelf()) {
+      FmtContextScope scope{m_fmt};
+      m_fmt.addSubst("name", self->toString());
+      m_fmt.addSubst("value", m_assignment.lookup(self));
 
-    m_out << tgfmt(R"(
-      $_errs << "  $name (" << printable($value)
-             << ") does not match any available option\n";
-    )",
-                   &m_fmt);
-  }
+      m_out << tgfmt(R"(
+        $_errs << "  $name (" << printable($value)
+               << ") does not match any available option\n";
+      )",
+                     &m_fmt);
+    }
 
-  for (unsigned i = 0; i < logicOr->branches().size(); ++i) {
-    m_out << tgfmt(R"(
-      $_errs << "  failed option $0 ($1):\n"
-             << $_orErrors[$0];
-    )",
-                   &m_fmt, i, logicOr->branchInits()[i]->getAsString());
+    for (unsigned i = 0; i < logicOr->branches().size(); ++i) {
+      m_out << tgfmt(R"(
+        $_errs << "  failed option $0 ($1):\n";
+        ([&]() {
+      )",
+                     &m_fmt, i, logicOr->branchInits()[i]->getAsString());
+
+      const ConstraintSystem &childSystem = logicOr->branches()[i];
+      Assignment scopedAssignment{&m_assignment};
+      Evaluator childEvaluator(*m_symbols, scopedAssignment, childSystem, m_out,
+                               m_fmt);
+      childEvaluator.check(true);
+
+      m_out << R"(
+          return true;
+        })();
+      )";
+    }
   }
 
   m_out << "return false;\n}\n}\n";
   return true;
 }
 
-void Evaluator::checkAssignment(Variable *variable, std::string value,
-                                Init *constraint) {
+void Evaluator::checkAssignment(bool writeErrs, Variable *variable,
+                                std::string value, Init *constraint) {
   assert(variable);
   assert(!value.empty());
 
@@ -660,27 +687,43 @@ void Evaluator::checkAssignment(Variable *variable, std::string value,
 
     if (variable->isNamed()) {
       m_out << tgfmt(R"(
-        if ($new != $old) {
+        if ($new != $old) {)",
+                     &m_fmt);
+
+      if (writeErrs) {
+        m_out << tgfmt(R"(
           $_errs << "  unexpected value of $variable:\n";
           $_errs << "    expected:  " << printable($new) << '\n';
           $_errs << "    actual:    " << printable($old) << '\n';
+        )",
+                       &m_fmt);
+      }
+
+      m_out << R"(
           return false;
         }
-      )",
-                     &m_fmt);
+      )";
     } else {
       m_fmt.addSubst("constraint", constraint->getAsString());
 
       m_out << tgfmt(R"(
-        if ($new != $old) {
+        if ($new != $old) {)",
+                     &m_fmt);
+
+      if (writeErrs) {
+        m_out << tgfmt(R"(
           $_errs << "  inconsistent value of $variable found\n";
           $_errs << "  while checking $constraint:\n";
           $_errs << "    here:       " << printable($new) << '\n';
           $_errs << "    previously: " << printable($old) << '\n';
+        )",
+                       &m_fmt);
+      }
+
+      m_out << R"(
           return false;
         }
-      )",
-                     &m_fmt);
+      )";
     }
   }
 }

@@ -353,6 +353,7 @@ uint32_t const extra = getExtra();
           errs << "  unexpected value of $lhs:\n";
           errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 32)) << '\n';
           errs << "    actual:    " << printable(lhsType) << '\n';
+        
           return false;
         }
       
@@ -360,6 +361,7 @@ uint32_t const extra = getExtra();
           errs << "  unexpected value of $rhs:\n";
           errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 32)) << '\n';
           errs << "    actual:    " << printable(rhsType) << '\n';
+        
           return false;
         }
       
@@ -367,6 +369,7 @@ uint32_t const extra = getExtra();
           errs << "  unexpected value of $result:\n";
           errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 32)) << '\n';
           errs << "    actual:    " << printable(resultType) << '\n';
+        
           return false;
         }
         return true;
@@ -463,6 +466,7 @@ rhs,
           errs << "  unexpected value of $lhs:\n";
           errs << "    expected:  " << printable(resultType) << '\n';
           errs << "    actual:    " << printable(lhsType) << '\n';
+        
           return false;
         }
       
@@ -470,6 +474,7 @@ rhs,
           errs << "  unexpected value of $rhs:\n";
           errs << "    expected:  " << printable(resultType) << '\n';
           errs << "    actual:    " << printable(rhsType) << '\n';
+        
           return false;
         }
         return true;
@@ -558,14 +563,16 @@ index,
           errs << "  unexpected value of $index:\n";
           errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 32)) << '\n';
           errs << "    actual:    " << printable(indexType) << '\n';
+        
           return false;
         }
       
         if (!(::llvm::isa<XdVectorType>(vectorType))) {
           errs << "  failed check for (XdVectorType any, ?:$result, any):$vector\n";
           
-    errs << "  with $vector = " << printable(vectorType) << '\n';
-  
+      errs << "  with $vector = " << printable(vectorType) << '\n';
+    
+        
           return false;
         }
       
@@ -573,6 +580,7 @@ index,
           errs << "  unexpected value of $result:\n";
           errs << "    expected:  " << printable(::llvm::cast<XdVectorType>(vectorType)->getElementType()) << '\n';
           errs << "    actual:    " << printable(resultType) << '\n';
+        
           return false;
         }
         return true;
@@ -657,16 +665,18 @@ source,
         if (!(::llvm::isa<::llvm::FixedVectorType>(sourceType))) {
           errs << "  failed check for (FixedVectorType ?:$scalar_type, ?:$num_elements):$source\n";
           
-    errs << "  with $source = " << printable(sourceType) << '\n';
-  
+      errs << "  with $source = " << printable(sourceType) << '\n';
+    
+        
           return false;
         }
       
         if (!(::llvm::isa<XdVectorType>(resultType))) {
           errs << "  failed check for (XdVectorType ?:$kind, ?:$scalar_type, ?:$num_elements):$result\n";
           
-    errs << "  with $result = " << printable(resultType) << '\n';
-  
+      errs << "  with $result = " << printable(resultType) << '\n';
+    
+        
           return false;
         }
       
@@ -674,6 +684,7 @@ source,
           errs << "  unexpected value of $scalar_type:\n";
           errs << "    expected:  " << printable(::llvm::cast<XdVectorType>(resultType)->getElementType()) << '\n';
           errs << "    actual:    " << printable(::llvm::cast<::llvm::FixedVectorType>(sourceType)->getElementType()) << '\n';
+        
           return false;
         }
       
@@ -681,50 +692,64 @@ source,
           errs << "  unexpected value of $num_elements:\n";
           errs << "    expected:  " << printable(::llvm::cast<XdVectorType>(resultType)->getNumElements()) << '\n';
           errs << "    actual:    " << printable(::llvm::cast<::llvm::FixedVectorType>(sourceType)->getNumElements()) << '\n';
+        
           return false;
         }
       if (![&]() {
 
       {
-        std::array<std::string, 2> orErrors;
         if (true
     
       && !([&]() {
-        ::llvm::raw_string_ostream errs(orErrors[0]);
     
         if (xd::VectorKind::LittleEndian != ::llvm::cast<XdVectorType>(resultType)->getKind()) {
-          errs << "  inconsistent value of eq:$rhs found\n";
-          errs << "  while checking VectorKindLittleEndian:\n";
-          errs << "    here:       " << printable(xd::VectorKind::LittleEndian) << '\n';
-          errs << "    previously: " << printable(::llvm::cast<XdVectorType>(resultType)->getKind()) << '\n';
           return false;
         }
       return true;
 }())
 
       && !([&]() {
-        ::llvm::raw_string_ostream errs(orErrors[1]);
     
         if (xd::VectorKind::BigEndian != ::llvm::cast<XdVectorType>(resultType)->getKind()) {
-          errs << "  inconsistent value of eq:$rhs found\n";
-          errs << "  while checking VectorKindBigEndian:\n";
-          errs << "    here:       " << printable(xd::VectorKind::BigEndian) << '\n';
-          errs << "    previously: " << printable(::llvm::cast<XdVectorType>(resultType)->getKind()) << '\n';
           return false;
         }
       return true;
 }())
 ) {
 
-      errs << "  eq:$rhs (" << printable(::llvm::cast<XdVectorType>(resultType)->getKind())
-             << ") does not match any available option\n";
-    
-      errs << "  failed option 0 (VectorKindLittleEndian):\n"
-             << orErrors[0];
-    
-      errs << "  failed option 1 (VectorKindBigEndian):\n"
-             << orErrors[1];
-    return false;
+        errs << "  eq:$rhs (" << printable(::llvm::cast<XdVectorType>(resultType)->getKind())
+               << ") does not match any available option\n";
+      
+        errs << "  failed option 0 (VectorKindLittleEndian):\n";
+        ([&]() {
+      
+        if (xd::VectorKind::LittleEndian != ::llvm::cast<XdVectorType>(resultType)->getKind()) {
+          errs << "  inconsistent value of eq:$rhs found\n";
+          errs << "  while checking VectorKindLittleEndian:\n";
+          errs << "    here:       " << printable(xd::VectorKind::LittleEndian) << '\n';
+          errs << "    previously: " << printable(::llvm::cast<XdVectorType>(resultType)->getKind()) << '\n';
+        
+          return false;
+        }
+      
+          return true;
+        })();
+      
+        errs << "  failed option 1 (VectorKindBigEndian):\n";
+        ([&]() {
+      
+        if (xd::VectorKind::BigEndian != ::llvm::cast<XdVectorType>(resultType)->getKind()) {
+          errs << "  inconsistent value of eq:$rhs found\n";
+          errs << "  while checking VectorKindBigEndian:\n";
+          errs << "    here:       " << printable(xd::VectorKind::BigEndian) << '\n';
+          errs << "    previously: " << printable(::llvm::cast<XdVectorType>(resultType)->getKind()) << '\n';
+        
+          return false;
+        }
+      
+          return true;
+        })();
+      return false;
 }
 }
 
@@ -732,8 +757,9 @@ source,
         }()) {
           errs << "  while checking (isReasonableVectorKind ?:$kind)\n";
           
-    errs << "  with $kind = " << printable(::llvm::cast<XdVectorType>(resultType)->getKind()) << '\n';
-  
+      errs << "  with $kind = " << printable(::llvm::cast<XdVectorType>(resultType)->getKind()) << '\n';
+    
+        
           return false;
         }
         return true;
@@ -802,6 +828,7 @@ source,
           errs << "  unexpected value of $result:\n";
           errs << "    expected:  " << printable(XdHandleType::get(context)) << '\n';
           errs << "    actual:    " << printable(resultType) << '\n';
+        
           return false;
         }
         return true;
@@ -870,26 +897,29 @@ source,
         if (!(sourceType->isIntegerTy())) {
           errs << "  failed check for (IntegerType (le ?:$result_width)):$source\n";
           
-    errs << "  with $source = " << printable(sourceType) << '\n';
-  
+      errs << "  with $source = " << printable(sourceType) << '\n';
+    
+        
           return false;
         }
       
         if (!(resultType->isIntegerTy())) {
           errs << "  failed check for (IntegerType ?:$result_width):$result\n";
           
-    errs << "  with $result = " << printable(resultType) << '\n';
-  
+      errs << "  with $result = " << printable(resultType) << '\n';
+    
+        
           return false;
         }
       
         if (!(sourceType->getIntegerBitWidth() <= resultType->getIntegerBitWidth())) {
           errs << "  failed check for (le ?:$result_width):IntegerType:$num_bits\n";
           
-    errs << "  with IntegerType:$num_bits = " << printable(sourceType->getIntegerBitWidth()) << '\n';
-  
-        errs << "  with $result_width = " << printable(resultType->getIntegerBitWidth()) << '\n';
-      
+      errs << "  with IntegerType:$num_bits = " << printable(sourceType->getIntegerBitWidth()) << '\n';
+    
+          errs << "  with $result_width = " << printable(resultType->getIntegerBitWidth()) << '\n';
+        
+        
           return false;
         }
         return true;
@@ -966,26 +996,29 @@ source,
         if (!(sourceType->isIntegerTy())) {
           errs << "  failed check for (IntegerType ?:$source_width):$source\n";
           
-    errs << "  with $source = " << printable(sourceType) << '\n';
-  
+      errs << "  with $source = " << printable(sourceType) << '\n';
+    
+        
           return false;
         }
       
         if (!(resultType->isIntegerTy())) {
           errs << "  failed check for (IntegerType ?:$result_width):$result\n";
           
-    errs << "  with $result = " << printable(resultType) << '\n';
-  
+      errs << "  with $result = " << printable(resultType) << '\n';
+    
+        
           return false;
         }
       
         if (!(resultType->getIntegerBitWidth() <= sourceType->getIntegerBitWidth())) {
           errs << "  failed check for (le ?:$result_width, ?:$source_width)\n";
           
-    errs << "  with $result_width = " << printable(resultType->getIntegerBitWidth()) << '\n';
-  
-        errs << "  with $source_width = " << printable(sourceType->getIntegerBitWidth()) << '\n';
-      
+      errs << "  with $result_width = " << printable(resultType->getIntegerBitWidth()) << '\n';
+    
+          errs << "  with $source_width = " << printable(sourceType->getIntegerBitWidth()) << '\n';
+        
+        
           return false;
         }
         return true;
@@ -1069,6 +1102,7 @@ index,
           errs << "  unexpected value of $index:\n";
           errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 32)) << '\n';
           errs << "    actual:    " << printable(indexType) << '\n';
+        
           return false;
         }
       
@@ -1076,14 +1110,16 @@ index,
           errs << "  unexpected value of $result:\n";
           errs << "    expected:  " << printable(vectorType) << '\n';
           errs << "    actual:    " << printable(resultType) << '\n';
+        
           return false;
         }
       
         if (!(::llvm::isa<XdVectorType>(resultType))) {
           errs << "  failed check for (XdVectorType ?:$result, any, ?:$value, any)\n";
           
-    errs << "  with $result = " << printable(resultType) << '\n';
-  
+      errs << "  with $result = " << printable(resultType) << '\n';
+    
+        
           return false;
         }
       
@@ -1091,6 +1127,7 @@ index,
           errs << "  unexpected value of $value:\n";
           errs << "    expected:  " << printable(::llvm::cast<XdVectorType>(resultType)->getElementType()) << '\n';
           errs << "    actual:    " << printable(valueType) << '\n';
+        
           return false;
         }
         return true;
@@ -1237,6 +1274,7 @@ index,
           errs << "  unexpected value of $result:\n";
           errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 64)) << '\n';
           errs << "    actual:    " << printable(resultType) << '\n';
+        
           return false;
         }
         return true;
@@ -1320,6 +1358,7 @@ initial,
           errs << "  unexpected value of $ptr:\n";
           errs << "    expected:  " << printable(::llvm::PointerType::get(context, 0)) << '\n';
           errs << "    actual:    " << printable(ptrType) << '\n';
+        
           return false;
         }
       
@@ -1327,6 +1366,7 @@ initial,
           errs << "  unexpected value of $count:\n";
           errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 64)) << '\n';
           errs << "    actual:    " << printable(countType) << '\n';
+        
           return false;
         }
       
@@ -1334,6 +1374,7 @@ initial,
           errs << "  unexpected value of $result:\n";
           errs << "    expected:  " << printable(initialType) << '\n';
           errs << "    actual:    " << printable(resultType) << '\n';
+        
           return false;
         }
         return true;
@@ -1409,6 +1450,7 @@ initial,
           errs << "  unexpected value of $ptr:\n";
           errs << "    expected:  " << printable(::llvm::PointerType::get(context, 0)) << '\n';
           errs << "    actual:    " << printable(ptrType) << '\n';
+        
           return false;
         }
       
@@ -1416,6 +1458,7 @@ initial,
           errs << "  unexpected value of $count:\n";
           errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 64)) << '\n';
           errs << "    actual:    " << printable(countType) << '\n';
+        
           return false;
         }
       
@@ -1423,6 +1466,7 @@ initial,
           errs << "  unexpected value of $result:\n";
           errs << "    expected:  " << printable(initialType) << '\n';
           errs << "    actual:    " << printable(resultType) << '\n';
+        
           return false;
         }
         return true;
@@ -1498,6 +1542,7 @@ initial,
           errs << "  unexpected value of $ptr:\n";
           errs << "    expected:  " << printable(::llvm::PointerType::get(context, 0)) << '\n';
           errs << "    actual:    " << printable(ptrType) << '\n';
+        
           return false;
         }
       
@@ -1505,6 +1550,7 @@ initial,
           errs << "  unexpected value of $count:\n";
           errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 64)) << '\n';
           errs << "    actual:    " << printable(countType) << '\n';
+        
           return false;
         }
       
@@ -1512,6 +1558,7 @@ initial,
           errs << "  unexpected value of $result:\n";
           errs << "    expected:  " << printable(initialType) << '\n';
           errs << "    actual:    " << printable(resultType) << '\n';
+        
           return false;
         }
         return true;

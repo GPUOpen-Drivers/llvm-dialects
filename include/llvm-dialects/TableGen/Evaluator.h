@@ -127,17 +127,17 @@ public:
   std::string evaluate(Variable *variable);
 
   /// Emit C++ code that checks all known constraints. Errors are written to
-  /// $_errs, and false is returned by the generated code if an error is
-  /// detected.
-  bool check();
+  /// $_errs if writeErrs is true, and false is returned by the generated code
+  /// if an error is detected.
+  bool check(bool writeErrs);
 
 private:
   void checkErrors();
   std::string evaluateImpl(Variable *variable);
-  bool checkApplyEvaluate(const Apply *apply);
-  bool checkApplyCapture(const Apply *apply);
-  bool checkLogicOr(const LogicOr *logicOr);
-  void checkAssignment(Variable *variable, std::string value,
+  bool checkApplyEvaluate(bool writeErrs, const Apply *apply);
+  bool checkApplyCapture(bool writeErrs, const Apply *apply);
+  bool checkLogicOr(bool writeErrs, const LogicOr *logicOr);
+  void checkAssignment(bool writeErrs, Variable *variable, std::string value,
                        llvm::Init *constraint);
 };
 

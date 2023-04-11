@@ -438,7 +438,7 @@ void Operation::emitVerifierMethod(llvm::raw_ostream &out,
     assignment.assign(systemVariable, name);
   }
 
-  if (!eval.check()) {
+  if (!eval.check(true)) {
     llvm::errs() << "failed to generate verifier method for " << name << ":\n";
     llvm::errs() << eval.takeErrorMessages();
     report_fatal_error("failed to generate verifier");
