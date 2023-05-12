@@ -123,208 +123,98 @@ template <> const OpDescription &OpDescription::get<BinaryOperator>() {
   }
 #include "llvm/IR/Instruction.def"
 
+#define HANDLE_INTRINSIC_DESC(Class, opcode)                                   \
+  template <> const OpDescription &OpDescription::get<Class>() {               \
+    static const OpDescription desc{Kind::Intrinsic, Intrinsic::opcode};       \
+    return desc;                                                               \
+  }
+#define HANDLE_INTRINSIC_DESC_OPCODE_SET(Class, ...)                           \
+  template <> const OpDescription &OpDescription::get<Class>() {               \
+    static unsigned opcodes[] = {__VA_ARGS__};                                 \
+    static const OpDescription desc{Kind::Intrinsic, opcodes};                 \
+    return desc;                                                               \
+  }
+
 // ============================================================================
 // Descriptions of intrinsic facades implemented in LLVM
 
-template <> const OpDescription &OpDescription::get<LifetimeIntrinsic>() {
-  static unsigned opcodes[] = {
-      Intrinsic::lifetime_start,
-      Intrinsic::lifetime_end,
-  };
-  static const OpDescription desc{Kind::Intrinsic, opcodes};
-  return desc;
-}
+HANDLE_INTRINSIC_DESC_OPCODE_SET(LifetimeIntrinsic, Intrinsic::lifetime_start,
+                                 Intrinsic::lifetime_end)
 
-template <> const OpDescription &OpDescription::get<DbgInfoIntrinsic>() {
-  static unsigned opcodes[] = {
-      Intrinsic::dbg_declare, Intrinsic::dbg_value, Intrinsic::dbg_label,
-      Intrinsic::dbg_assign,
-      // Intrinsic::dbg_addr, <-- add this back for sufficiently recent LLVM
-  };
-  static const OpDescription desc{Kind::Intrinsic, opcodes};
-  return desc;
-}
+// Add Intrinsic::dbg_addr back for sufficiently recent LLVM
+HANDLE_INTRINSIC_DESC_OPCODE_SET(DbgInfoIntrinsic, Intrinsic::dbg_declare,
+                                 Intrinsic::dbg_value, Intrinsic::dbg_label,
+                                 Intrinsic::dbg_assign)
 
-template <> const OpDescription &OpDescription::get<DbgVariableIntrinsic>() {
-  static unsigned opcodes[] = {
-      Intrinsic::dbg_declare,
-      Intrinsic::dbg_value,
-      // Intrinsic::dbg_addr, <-- add this back for sufficiently recent LLVM
-      Intrinsic::dbg_assign,
-  };
-  static const OpDescription desc{Kind::Intrinsic, opcodes};
-  return desc;
-}
+// Add Intrinsic::dbg_addr back for sufficiently recent LLVM
+HANDLE_INTRINSIC_DESC_OPCODE_SET(DbgVariableIntrinsic, Intrinsic::dbg_declare,
+                                 Intrinsic::dbg_value, Intrinsic::dbg_assign)
 
-template <> const OpDescription &OpDescription::get<DbgDeclareInst>() {
-  static const OpDescription desc{Kind::Intrinsic, Intrinsic::dbg_declare};
-  return desc;
-}
-
-template <> const OpDescription &OpDescription::get<DbgValueInst>() {
-  static const OpDescription desc{Kind::Intrinsic, Intrinsic::dbg_value};
-  return desc;
-}
+HANDLE_INTRINSIC_DESC(DbgDeclareInst, dbg_declare)
+HANDLE_INTRINSIC_DESC(DbgValueInst, dbg_value)
 
 // Add this back for sufficiently recent LLVM
-// template <> const OpDescription &OpDescription::get<DbgAddrIntrinsic>() {
-//   static const OpDescription desc{Kind::Intrinsic, Intrinsic::dbg_addr};
-//   return desc;
-// }
+// HANDLE_INTRINSIC_DESC(DbgAddrIntrinsic, dbg_addr)
 
-template <> const OpDescription &OpDescription::get<DbgAssignIntrinsic>() {
-  static const OpDescription desc{Kind::Intrinsic, Intrinsic::dbg_assign};
-  return desc;
-}
+HANDLE_INTRINSIC_DESC(DbgAssignIntrinsic, dbg_assign)
+HANDLE_INTRINSIC_DESC(DbgLabelInst, dbg_label)
 
-template <> const OpDescription &OpDescription::get<DbgLabelInst>() {
-  static const OpDescription desc{Kind::Intrinsic, Intrinsic::dbg_label};
-  return desc;
-}
+HANDLE_INTRINSIC_DESC_OPCODE_SET(AtomicMemIntrinsic,
+                                 Intrinsic::memcpy_element_unordered_atomic,
+                                 Intrinsic::memmove_element_unordered_atomic,
+                                 Intrinsic::memset_element_unordered_atomic)
 
-template <> const OpDescription &OpDescription::get<AtomicMemIntrinsic>() {
-  static unsigned opcodes[] = {
-      Intrinsic::memcpy_element_unordered_atomic,
-      Intrinsic::memmove_element_unordered_atomic,
-      Intrinsic::memset_element_unordered_atomic,
-  };
-  static const OpDescription desc{Kind::Intrinsic, opcodes};
-  return desc;
-}
+HANDLE_INTRINSIC_DESC(AtomicMemSetInst, memset_element_unordered_atomic)
 
-template <> const OpDescription &OpDescription::get<AtomicMemSetInst>() {
-  static const OpDescription desc{Kind::Intrinsic,
-                                  Intrinsic::memset_element_unordered_atomic};
-  return desc;
-}
+HANDLE_INTRINSIC_DESC_OPCODE_SET(AtomicMemTransferInst,
+                                 Intrinsic::memcpy_element_unordered_atomic,
+                                 Intrinsic::memmove_element_unordered_atomic)
 
-template <> const OpDescription &OpDescription::get<AtomicMemTransferInst>() {
-  static unsigned opcodes[] = {
-      Intrinsic::memcpy_element_unordered_atomic,
-      Intrinsic::memmove_element_unordered_atomic,
-  };
-  static const OpDescription desc{Kind::Intrinsic, opcodes};
-  return desc;
-}
+HANDLE_INTRINSIC_DESC(AtomicMemCpyInst, memcpy_element_unordered_atomic)
+HANDLE_INTRINSIC_DESC(AtomicMemMoveInst, memmove_element_unordered_atomic)
+HANDLE_INTRINSIC_DESC_OPCODE_SET(MemIntrinsic, Intrinsic::memcpy,
+                                 Intrinsic::memmove, Intrinsic::memset,
+                                 Intrinsic::memset_inline,
+                                 Intrinsic::memcpy_inline)
 
-template <> const OpDescription &OpDescription::get<AtomicMemCpyInst>() {
-  static const OpDescription desc{Kind::Intrinsic,
-                                  Intrinsic::memcpy_element_unordered_atomic};
-  return desc;
-}
+HANDLE_INTRINSIC_DESC_OPCODE_SET(MemSetInst, Intrinsic::memset,
+                                 Intrinsic::memset_inline)
 
-template <> const OpDescription &OpDescription::get<AtomicMemMoveInst>() {
-  static const OpDescription desc{Kind::Intrinsic,
-                                  Intrinsic::memmove_element_unordered_atomic};
-  return desc;
-}
+HANDLE_INTRINSIC_DESC(MemSetInlineInst, memset_inline)
 
-template <> const OpDescription &OpDescription::get<MemIntrinsic>() {
-  static unsigned opcodes[] = {
-      Intrinsic::memcpy,        Intrinsic::memmove,       Intrinsic::memset,
-      Intrinsic::memset_inline, Intrinsic::memcpy_inline,
-  };
-  static const OpDescription desc{Kind::Intrinsic, opcodes};
-  return desc;
-}
+HANDLE_INTRINSIC_DESC_OPCODE_SET(MemTransferInst, Intrinsic::memcpy,
+                                 Intrinsic::memmove, Intrinsic::memcpy_inline)
 
-template <> const OpDescription &OpDescription::get<MemSetInst>() {
-  static unsigned opcodes[] = {
-      Intrinsic::memset,
-      Intrinsic::memset_inline,
-  };
-  static const OpDescription desc{Kind::Intrinsic, opcodes};
-  return desc;
-}
+HANDLE_INTRINSIC_DESC_OPCODE_SET(MemCpyInst, Intrinsic::memcpy,
+                                 Intrinsic::memcpy_inline)
 
-template <> const OpDescription &OpDescription::get<MemSetInlineInst>() {
-  static const OpDescription desc{Kind::Intrinsic, Intrinsic::memset_inline};
-  return desc;
-}
+HANDLE_INTRINSIC_DESC(MemMoveInst, memmove)
+HANDLE_INTRINSIC_DESC(MemCpyInlineInst, memcpy_inline)
 
-template <> const OpDescription &OpDescription::get<MemTransferInst>() {
-  static unsigned opcodes[] = {
-      Intrinsic::memcpy,
-      Intrinsic::memmove,
-      Intrinsic::memcpy_inline,
-  };
-  static const OpDescription desc{Kind::Intrinsic, opcodes};
-  return desc;
-}
+HANDLE_INTRINSIC_DESC_OPCODE_SET(AnyMemIntrinsic, Intrinsic::memcpy,
+                                 Intrinsic::memcpy_inline, Intrinsic::memmove,
+                                 Intrinsic::memset, Intrinsic::memset_inline,
+                                 Intrinsic::memcpy_element_unordered_atomic,
+                                 Intrinsic::memmove_element_unordered_atomic,
+                                 Intrinsic::memset_element_unordered_atomic)
 
-template <> const OpDescription &OpDescription::get<MemCpyInst>() {
-  static unsigned opcodes[] = {
-      Intrinsic::memcpy,
-      Intrinsic::memcpy_inline,
-  };
-  static const OpDescription desc{Kind::Intrinsic, opcodes};
-  return desc;
-}
+HANDLE_INTRINSIC_DESC_OPCODE_SET(AnyMemSetInst, Intrinsic::memset,
+                                 Intrinsic::memset_inline,
+                                 Intrinsic::memset_element_unordered_atomic)
 
-template <> const OpDescription &OpDescription::get<MemMoveInst>() {
-  static const OpDescription desc{Kind::Intrinsic, Intrinsic::memmove};
-  return desc;
-}
+HANDLE_INTRINSIC_DESC_OPCODE_SET(AnyMemTransferInst, Intrinsic::memcpy,
+                                 Intrinsic::memcpy_inline, Intrinsic::memmove,
+                                 Intrinsic::memcpy_element_unordered_atomic,
+                                 Intrinsic::memmove_element_unordered_atomic)
 
-template <> const OpDescription &OpDescription::get<MemCpyInlineInst>() {
-  static const OpDescription desc{Kind::Intrinsic, Intrinsic::memcpy_inline};
-  return desc;
-}
+HANDLE_INTRINSIC_DESC_OPCODE_SET(AnyMemCpyInst, Intrinsic::memcpy,
+                                 Intrinsic::memcpy_inline,
+                                 Intrinsic::memcpy_element_unordered_atomic)
 
-template <> const OpDescription &OpDescription::get<AnyMemIntrinsic>() {
-  static unsigned opcodes[] = {
-      Intrinsic::memcpy,
-      Intrinsic::memcpy_inline,
-      Intrinsic::memmove,
-      Intrinsic::memset,
-      Intrinsic::memset_inline,
-      Intrinsic::memcpy_element_unordered_atomic,
-      Intrinsic::memmove_element_unordered_atomic,
-      Intrinsic::memset_element_unordered_atomic,
-  };
-  static const OpDescription desc{Kind::Intrinsic, opcodes};
-  return desc;
-}
-
-template <> const OpDescription &OpDescription::get<AnyMemSetInst>() {
-  static unsigned opcodes[] = {
-      Intrinsic::memset,
-      Intrinsic::memset_inline,
-      Intrinsic::memset_element_unordered_atomic,
-  };
-  static const OpDescription desc{Kind::Intrinsic, opcodes};
-  return desc;
-}
-
-template <> const OpDescription &OpDescription::get<AnyMemTransferInst>() {
-  static unsigned opcodes[] = {
-      Intrinsic::memcpy,
-      Intrinsic::memcpy_inline,
-      Intrinsic::memmove,
-      Intrinsic::memcpy_element_unordered_atomic,
-      Intrinsic::memmove_element_unordered_atomic,
-  };
-  static const OpDescription desc{Kind::Intrinsic, opcodes};
-  return desc;
-}
-
-template <> const OpDescription &OpDescription::get<AnyMemCpyInst>() {
-  static unsigned opcodes[] = {
-      Intrinsic::memcpy,
-      Intrinsic::memcpy_inline,
-      Intrinsic::memcpy_element_unordered_atomic,
-  };
-  static const OpDescription desc{Kind::Intrinsic, opcodes};
-  return desc;
-}
-
-template <> const OpDescription &OpDescription::get<AnyMemMoveInst>() {
-  static unsigned opcodes[] = {
-      Intrinsic::memmove,
-      Intrinsic::memmove_element_unordered_atomic,
-  };
-  static const OpDescription desc{Kind::Intrinsic, opcodes};
-  return desc;
-}
+HANDLE_INTRINSIC_DESC_OPCODE_SET(AnyMemMoveInst, Intrinsic::memmove,
+                                 Intrinsic::memmove_element_unordered_atomic)
 
 // TODO: Is completing this list worth it?
+
+#undef HANDLE_INTRINSIC_DESC_OPCODE_SET
+#undef HANDLE_INTRINSIC_DESC
