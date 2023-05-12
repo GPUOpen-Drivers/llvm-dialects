@@ -84,19 +84,28 @@ bool ConstraintSystem::addConstraintImpl(raw_ostream &errs, Init *init,
                                          Variable *self) {
   if (auto *dag = dyn_cast<DagInit>(init)) {
     Record *op = dag->getOperatorAsDef({});
+
+    auto isValidOperand = [&dag, &op, &errs](size_t index,
+                                             StringRef opName) -> bool {
+      if (!dag->getArgNameStr(index).empty()) {
+        errs << "'" << opName << "' operands cannot be captured\n";
+        return false;
+      }
+
+      if (!dag->getArg(index)) {
+        errs << "'" << opName << "' operand is missing\n";
+        return false;
+      }
+
+      return true;
+    };
+
     if (op->getName() == "and") {
       for (size_t i = 0; i < dag->getNumArgs(); ++i) {
-        if (!dag->getArgNameStr(i).empty()) {
-          errs << "'and' operands cannot be captured\n";
+        if (!isValidOperand(i, op->getName()))
           return false;
-        }
 
         Init *operand = dag->getArg(i);
-        if (!operand) {
-          errs << "'and' operand is missing\n";
-          return false;
-        }
-
         if (!addConstraint(errs, operand, self))
           return false;
       }
@@ -113,17 +122,10 @@ bool ConstraintSystem::addConstraintImpl(raw_ostream &errs, Init *init,
         result->addVariable(self);
 
       for (size_t i = 0; i < dag->getNumArgs(); ++i) {
-        if (!dag->getArgNameStr(i).empty()) {
-          errs << "'or' operands cannot be captured\n";
+        if (!isValidOperand(i, op->getName()))
           return false;
-        }
 
         Init *operand = dag->getArg(i);
-        if (!operand) {
-          errs << "'or' operand is missing\n";
-          return false;
-        }
-
         ConstraintSystem branchSystem(m_context, m_scope);
         if (!branchSystem.addConstraint(errs, operand, self))
           return false;
