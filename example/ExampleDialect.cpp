@@ -52,3 +52,15 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &out, VectorKind x) {
 
 #define GET_DIALECT_DEFS
 #include "ExampleDialect.cpp.inc"
+
+using namespace llvm;
+using namespace xd;
+
+void XdVectorType::customizeTypeClass(TargetExtTypeClass *typeClass) {
+  typeClass->setGetLayoutType([](TargetExtType *type) -> Type * {
+    auto *vt = cast<XdVectorType>(type);
+    if (vt->getKind() == VectorKind::MiddleEndian)
+      return Type::getVoidTy(vt->getContext());
+    return FixedVectorType::get(vt->getElementType(), vt->getNumElements());
+  });
+}

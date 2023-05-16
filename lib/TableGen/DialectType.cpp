@@ -49,6 +49,8 @@ bool DialectType::init(raw_ostream &errs, GenDialectsContext &context,
   m_defaultGetterHasExplicitContextArgument =
       record->getValueAsBit("defaultGetterHasExplicitContextArgument");
 
+  m_customizeTypeClass = record->getValueAsBit("customizeTypeClass");
+
   FmtContext fmt;
   fmt.addSubst("_type", m_name);
   {
@@ -141,6 +143,35 @@ bool DialectType::init(raw_ostream &errs, GenDialectsContext &context,
   return true;
 }
 
+void DialectType::emitTypeClass(llvm::raw_ostream &out, GenDialect *dialect,
+                                FmtContext &fmt) const {
+  FmtContextScope scope(fmt);
+  fmt.addSubst("dialect", dialect->name);
+  fmt.addSubst("_type", getName());
+  fmt.addSubst("mnemonic", getMnemonic());
+
+  if (m_customizeTypeClass) {
+    fmt.addSubst("customize",
+                 tgfmt("$_type::customizeTypeClass(&theClass);", &fmt).str());
+  } else {
+    fmt.addSubst("customize", "");
+  }
+
+  out << tgfmt(R"(
+    static const auto class$_type = ([]() {
+          ::llvm::TargetExtTypeClass theClass("$dialect.$mnemonic");
+          theClass.setVerifier(
+              [](::llvm::TargetExtType *T, ::llvm::raw_ostream &errs) {
+                return ::llvm::cast<$_type>(T)->verifier(errs);
+              });
+          $customize
+          return theClass;
+        })();
+    $_context.registerTargetExtTypeClass(&class$_type);
+  )",
+               &fmt);
+}
+
 void DialectType::emitDeclaration(raw_ostream &out, GenDialect *dialect) const {
   FmtContext fmt;
   fmt.withContext(m_context);
@@ -173,6 +204,12 @@ void DialectType::emitDeclaration(raw_ostream &out, GenDialect *dialect) const {
     out << argument.value().cppType << ' ' << argument.value().name;
   }
   out << ");\n\n";
+
+  if (m_customizeTypeClass) {
+    out << R"(
+      static void customizeTypeClass(::llvm::TargetExtTypeClass *typeClass);
+    )";
+  }
 
   for (const auto &argument : typeArguments()) {
     out << tgfmt("$0 get$1() const;\n", &fmt, argument.type->getCppType(),

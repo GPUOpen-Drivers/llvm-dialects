@@ -23,7 +23,7 @@
  #
  #######################################################################################################################
 
-set(LLVM_DIALECTS_TEST_DEPENDS FileCheck count not llvm-dialects-example)
+set(LLVM_DIALECTS_TEST_DEPENDS FileCheck count not split-file llvm-dialects-example)
 add_custom_target(llvm-dialects-test-depends DEPENDS ${LLVM_DIALECTS_TEST_DEPENDS})
 set_target_properties(llvm-dialects-test-depends PROPERTIES FOLDER "Tests")
 
