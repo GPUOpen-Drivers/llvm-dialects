@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 #pragma once
@@ -123,7 +123,12 @@ private:
   unsigned m_intrinsicId = 0;
 };
 
-struct VisitorCallbackData {
+// Try to max the function pointer size in different cases.
+// VisitorCallbackData of multiple inheritance has the larger function pointer
+// size for microsoft cl compiler.
+class Foo0 {};
+class Foo1 {};
+struct VisitorCallbackData : public Foo0, Foo1 {
 private:
   static constexpr size_t SizeofMemberFunctionPointer =
       sizeof(void(VisitorCallbackData::*)());
