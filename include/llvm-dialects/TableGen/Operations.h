@@ -55,6 +55,8 @@ public:
   GenDialect *dialect() const { return m_dialect; }
   OpClass *superclass() const { return m_superclass; }
 
+  bool hasVariadicArgument() const { return m_hasVariadicArgument; }
+
   llvm::SmallVector<NamedValue> getFullArguments() const;
   unsigned getNumFullArguments() const;
 
@@ -66,6 +68,9 @@ public:
 protected:
   bool init(llvm::raw_ostream &errs, GenDialectsContext &context,
             llvm::Record *record);
+
+  /// Records if this Operation has a variadic argument
+  bool m_hasVariadicArgument = false;
 
 private:
   GenDialect *m_dialect = nullptr;

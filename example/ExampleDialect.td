@@ -90,6 +90,17 @@ def WriteOp : ExampleOp<"write",
   }];
 }
 
+def WriteVarArgOp : ExampleOp<"write.vararg",
+                        [Memory<[(write InaccessibleMem)]>, NoUnwind,
+                         WillReturn]> {
+  let results = (outs);
+  let arguments = (ins value:$data, varargs:$args);
+
+  let summary = "write one or more data elements";
+  let description = [{
+    Longer description of how this operation writes pieces of data.
+  }];
+}
 def CombineOp : ExampleOp<"combine",
                           [Memory<[]>, NoUnwind, WillReturn]> {
   let results = (outs value:$result);

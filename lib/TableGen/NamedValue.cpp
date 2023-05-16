@@ -31,7 +31,14 @@ NamedValue::parseList(raw_ostream &errs, GenDialectsContext &context,
   bool isOperation =
       mode == Parser::OperationArguments || mode == Parser::OperationResults;
 
+  bool didSeeVarArgs = false;
+
   for (unsigned i = begin; i < init->getNumArgs(); ++i) {
+    if (didSeeVarArgs) {
+      errs << "No other argument can follow a definition of 'varargs'\n";
+      return {};
+    }
+
     NamedValue value;
     value.name = init->getArgNameStr(i);
     if (value.name.empty() && mode != Parser::ApplyArguments) {
@@ -51,6 +58,7 @@ NamedValue::parseList(raw_ostream &errs, GenDialectsContext &context,
 
     if (auto *defInit = dyn_cast<DefInit>(valueInit)) {
       Record *def = defInit->getDef();
+
       if (def->getName() == "type") {
         if (mode == Parser::OperationResults ||
             mode == Parser::ApplyArguments) {
@@ -86,6 +94,14 @@ NamedValue::parseList(raw_ostream &errs, GenDialectsContext &context,
             errs << "... in: " << init->getAsString() << '\n';
             return {};
           }
+          accepted = true;
+        }
+      } else if (def->getName() == "varargs") {
+        recognized = true;
+
+        if (mode == Parser::OperationArguments) {
+          value.type = MetaType::varargs();
+          didSeeVarArgs = true;
           accepted = true;
         }
       }

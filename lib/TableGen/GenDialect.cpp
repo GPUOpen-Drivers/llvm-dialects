@@ -75,6 +75,8 @@ void llvm_dialects::genDialectDecls(raw_ostream& out, RecordKeeper& records) {
 
 namespace llvm {
 class raw_ostream;
+template <typename T> class ArrayRef;
+template <typename T> class iterator_range;
 } // namespace llvm
 
 namespace llvm_dialects {
@@ -227,6 +229,8 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
 #include "llvm-dialects/Dialect/Utils.h"
 #include "llvm-dialects/Dialect/Verifier.h"
 #include "llvm-dialects/Dialect/Visitor.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/InstrTypes.h"
 )";
 

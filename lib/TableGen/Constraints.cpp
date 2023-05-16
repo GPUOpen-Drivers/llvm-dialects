@@ -302,9 +302,26 @@ MetaType *MetaType::value() {
   return &valueMetaType;
 }
 
+MetaType *MetaType::varargs() {
+  static MetaType varargsMetaType(Kind::VarArgList);
+  return &varargsMetaType;
+}
+
+StringRef MetaType::getGetterCppType() const {
+  if (isValueArg())
+    return "::llvm::Value *";
+
+  if (isVarArgList())
+    return "::llvm::iterator_range<::llvm::Value *>";
+
+  return getCppType();
+}
+
 StringRef MetaType::getCppType() const {
   if (auto *attr = dyn_cast<Attr>(this))
     return attr->getCppType();
+
+  assert(!isVarArgList() && "Not defined for varargs.");
 
   return "::llvm::Type *";
 }
@@ -312,6 +329,10 @@ StringRef MetaType::getCppType() const {
 StringRef MetaType::getBuilderCppType() const {
   if (isValueArg())
     return "::llvm::Value *";
+
+  if (isVarArgList())
+    return "::llvm::ArrayRef<::llvm::Value *>";
+
   return getCppType();
 }
 

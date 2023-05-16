@@ -181,22 +181,21 @@ private:
 
 class MetaType {
 public:
-  enum class Kind {
-    Type,
-    Value,
-    Attr,
-  };
+  enum class Kind { Type, Value, Attr, VarArgList };
 
   static MetaType *type();
   static MetaType *value();
+  static MetaType *varargs();
 
   Kind getKind() const { return m_kind; }
   llvm::StringRef getName() const;
+  llvm::StringRef getGetterCppType() const;
   llvm::StringRef getCppType() const;
   llvm::StringRef getBuilderCppType() const;
   static std::string printable(const MetaType *type, llvm::StringRef value);
   bool isTypeArg() const { return m_kind == Kind::Type; }
   bool isValueArg() const { return m_kind == Kind::Value; }
+  bool isVarArgList() const { return m_kind == Kind::VarArgList; }
 
 protected:
   MetaType(Kind kind) : m_kind(kind) {}
