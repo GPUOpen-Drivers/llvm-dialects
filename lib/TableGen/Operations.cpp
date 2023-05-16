@@ -56,6 +56,26 @@ parseArguments(raw_ostream &errs, GenDialectsContext &context, Record *rec) {
                                NamedValue::Parser::OperationArguments);
 }
 
+namespace {
+class AccessorBuilder final {
+public:
+  AccessorBuilder(FmtContext &fmt, llvm::raw_ostream &out,
+                  const NamedValue &arg, std::string_view argTypeString)
+      : m_fmt{fmt}, m_os{out}, m_arg{arg}, m_argTypeString{argTypeString} {}
+
+  void emitAccessorDefinitions() const;
+
+private:
+  FmtContext &m_fmt;
+  llvm::raw_ostream &m_os;
+  const NamedValue &m_arg;
+  std::string_view m_argTypeString;
+
+  void emitGetterDefinition() const;
+  void emitSetterDefinition() const;
+};
+} // namespace
+
 bool OperationBase::init(raw_ostream &errs, GenDialectsContext &context,
                          Record *record) {
   m_dialect = context.getDialect(record->getValueAsDef("dialect"));
@@ -64,10 +84,29 @@ bool OperationBase::init(raw_ostream &errs, GenDialectsContext &context,
   auto arguments = parseArguments(errs, context, record);
   if (!arguments.has_value())
     return false;
+
   m_arguments = std::move(*arguments);
+
+  // Don't allow any other arguments if the superclass already uses
+  // variadic arguments, as the arguments will be appended to the arguments of
+  // the superclass.
+  if (m_superclass && m_superclass->hasVariadicArgument()) {
+    if (!m_arguments.empty()) {
+      errs << "Superclass " << m_superclass->name
+           << " already has variadic arguments, cannot have any other "
+              "arguments.\n";
+      return false;
+    }
+
+    m_hasVariadicArgument = true;
+  }
 
   for (const auto &arg : m_arguments) {
     std::string attrType;
+
+    if (!m_hasVariadicArgument && arg.type->isVarArgList()) {
+      m_hasVariadicArgument = true;
+    }
 
     if (auto *attr = dyn_cast<Attr>(arg.type)) {
       SymbolTable symbols;
@@ -105,21 +144,80 @@ SmallVector<NamedValue> OperationBase::getFullArguments() const {
 }
 
 unsigned OperationBase::getNumFullArguments() const {
+  size_t argSize = m_arguments.size();
+
+  // Variadic argument lists can be of size zero,
+  // so do not add them to the total number of arguments.
+  if (m_hasVariadicArgument)
+    --argSize;
+
   if (m_superclass)
-    return m_superclass->getNumFullArguments() + m_arguments.size();
-  return m_arguments.size();
+    return m_superclass->getNumFullArguments() + argSize;
+  return argSize;
 }
 
 void OperationBase::emitArgumentAccessorDeclarations(llvm::raw_ostream &out,
                                                      FmtContext &fmt) const {
   for (const auto &arg : m_arguments) {
-    out << tgfmt(R"(
-      $0 get$1();
-      void set$1($0 $2);
-    )",
-                 &fmt, arg.type->getBuilderCppType(),
+    std::string defaultDeclaration = "$0 get$1();";
+    if (!arg.type->isVarArgList()) {
+      defaultDeclaration += R"(
+        void set$1($0 $2);
+      )";
+    }
+
+    out << tgfmt(defaultDeclaration, &fmt, arg.type->getGetterCppType(),
                  convertToCamelFromSnakeCase(arg.name, true), arg.name);
   }
+}
+
+void AccessorBuilder::emitAccessorDefinitions() const {
+  // We do not generate a setter for variadic arguments for now.
+  emitGetterDefinition();
+  if (!m_arg.type->isVarArgList())
+    emitSetterDefinition();
+}
+
+void AccessorBuilder::emitGetterDefinition() const {
+  std::string fromLlvm;
+
+  if (!m_arg.type->isVarArgList()) {
+    fromLlvm = tgfmt("getArgOperand($index)", &m_fmt);
+    if (auto *attr = dyn_cast<Attr>(m_arg.type))
+      fromLlvm = tgfmt(attr->getFromLlvmValue(), &m_fmt, fromLlvm);
+    else if (m_arg.type->isTypeArg())
+      fromLlvm += "->getType()";
+  } else {
+    fromLlvm = tgfmt("::llvm::make_range((arg_begin() + $index)->get(), "
+                     "(arg_begin() + arg_size() - $index)->get())",
+                     &m_fmt);
+  }
+
+  m_fmt.addSubst("fromLlvm", fromLlvm);
+
+  m_os << tgfmt(R"(
+      $cppType $_op::get$Name() {
+        return $fromLlvm;
+      })",
+                &m_fmt);
+}
+
+void AccessorBuilder::emitSetterDefinition() const {
+  std::string toLlvm = m_arg.name;
+
+  if (auto *attr = dyn_cast<Attr>(m_arg.type)) {
+    toLlvm = tgfmt(attr->getToLlvmValue(), &m_fmt, toLlvm, m_argTypeString);
+  } else if (m_arg.type->isTypeArg()) {
+    toLlvm = llvm::formatv("llvm::PoisonValue::get({0})", toLlvm);
+  }
+  m_fmt.addSubst("toLlvm", toLlvm);
+
+  m_os << tgfmt(R"(
+
+      void $_op::set$Name($cppType $name) {
+        setArgOperand($index, $toLlvm);
+      })",
+                &m_fmt);
 }
 
 void OperationBase::emitArgumentAccessorDefinitions(llvm::raw_ostream &out,
@@ -127,42 +225,20 @@ void OperationBase::emitArgumentAccessorDefinitions(llvm::raw_ostream &out,
   unsigned numSuperclassArgs = 0;
   if (m_superclass)
     numSuperclassArgs = m_superclass->getNumFullArguments();
-  for (auto indexedArg : llvm::enumerate(m_arguments)) {
-    const NamedValue &arg = indexedArg.value();
+
+  for (const auto &indexedArg : llvm::enumerate(m_arguments)) {
     FmtContextScope scope(fmt);
+
+    const NamedValue &arg = indexedArg.value();
+    AccessorBuilder builder{fmt, out, arg, m_attrTypes[indexedArg.index()]};
+
     fmt.withContext("getContext()");
     fmt.addSubst("index", Twine(numSuperclassArgs + indexedArg.index()));
-    fmt.addSubst("cppType", arg.type->getBuilderCppType());
+    fmt.addSubst("cppType", arg.type->getGetterCppType());
     fmt.addSubst("name", arg.name);
     fmt.addSubst("Name", convertToCamelFromSnakeCase(arg.name, true));
 
-    std::string fromLlvm = tgfmt("getArgOperand($index)", &fmt);
-    if (auto *attr = dyn_cast<Attr>(arg.type))
-      fromLlvm = tgfmt(attr->getFromLlvmValue(), &fmt, fromLlvm);
-    else if (arg.type->isTypeArg())
-      fromLlvm += "->getType()";
-
-    std::string toLlvm = arg.name;
-    if (auto *attr = dyn_cast<Attr>(arg.type)) {
-      toLlvm = tgfmt(attr->getToLlvmValue(), &fmt, toLlvm,
-                     m_attrTypes[indexedArg.index()]);
-    } else if (arg.type->isTypeArg()) {
-      toLlvm = llvm::formatv("llvm::PoisonValue::get({0})", toLlvm);
-    }
-
-    fmt.addSubst("fromLlvm", fromLlvm);
-    fmt.addSubst("toLlvm", toLlvm);
-
-    out << tgfmt(R"(
-      $cppType $_op::get$Name() {
-        return $fromLlvm;
-      }
-
-      void $_op::set$Name($cppType $name) {
-        setArgOperand($index, $toLlvm);
-      }
-    )",
-                 &fmt);
+    builder.emitAccessorDefinitions();
   }
 }
 
@@ -340,11 +416,12 @@ bool Operation::parse(raw_ostream &errs, GenDialectsContext *context,
   }
 
   builder.m_beginOpArguments = builder.m_arguments.size();
-  for (const auto &[opArg, builderName]
-      : llvm::zip(fullArguments, opArgumentBuilderNames)) {
+  for (const auto &[opArg, builderName] :
+       llvm::zip(fullArguments, opArgumentBuilderNames)) {
     BuilderMethod::Arg builderArg;
     builderArg.name = builderName;
     builderArg.cppType = opArg.type->getBuilderCppType();
+
     builder.m_arguments.push_back(std::move(builderArg));
 
     std::string attrType;
@@ -371,6 +448,14 @@ void Operation::emitVerifierMethod(llvm::raw_ostream &out,
   fmt.withContext(symbols.chooseName("context"));
   fmt.addSubst("_errs", symbols.chooseName("errs"));
 
+  if (m_hasVariadicArgument) {
+    fmt.addSubst("_comparator", "<");
+    fmt.addSubst("_at_least", "at least ");
+  } else {
+    fmt.addSubst("_comparator", "!=");
+    fmt.addSubst("_at_least", "");
+  }
+
   out << tgfmt(R"(
     bool $_op::verifier(::llvm::raw_ostream &$_errs) {
       ::llvm::LLVMContext &$_context = getModule()->getContext();
@@ -378,9 +463,9 @@ void Operation::emitVerifierMethod(llvm::raw_ostream &out,
 
       using ::llvm_dialects::printable;
 
-      if (arg_size() != $0) {
+      if (arg_size() $_comparator $0) {
         $_errs << "  wrong number of arguments: " << arg_size()
-               << ", expected $0\n";
+               << ", expected $_at_least$0\n";
         return false;
       }
   )",
@@ -417,22 +502,25 @@ void Operation::emitVerifierMethod(llvm::raw_ostream &out,
   variables.append(results.begin(), results.end());
   for (const auto &variable : variables) {
     FmtContextScope scope{fmt};
-    fmt.addSubst("type", variable.type->getCppType());
-    fmt.addSubst("getter", convertToCamelFromSnakeCase(variable.name, true));
 
     std::string name = convertToCamelFromSnakeCase(variable.name, false);
     if (variable.type->isValueArg())
       name += "Type";
     name = symbols.chooseName(name);
-    fmt.addSubst("name", name);
 
-    if (variable.type->isValueArg()) {
-      fmt.addSubst("value", tgfmt("get$getter()->getType()", &fmt).str());
-    } else {
-      fmt.addSubst("value", tgfmt("get$getter()", &fmt).str());
+    if (!variable.type->isVarArgList()) {
+      fmt.addSubst("type", variable.type->getCppType());
+      fmt.addSubst("name", name);
+      fmt.addSubst("getter", convertToCamelFromSnakeCase(variable.name, true));
+
+      if (variable.type->isValueArg()) {
+        fmt.addSubst("value", tgfmt("get$getter()->getType()", &fmt).str());
+      } else {
+        fmt.addSubst("value", tgfmt("get$getter()", &fmt).str());
+      }
+
+      out << tgfmt("$type const $name = $value;\n(void)$name;\n", &fmt);
     }
-
-    out << tgfmt("$type const $name = $value;\n(void)$name;\n", &fmt);
 
     auto systemVariable = m_scope.findVariable(variable.name);
     assignment.assign(systemVariable, name);
@@ -452,8 +540,9 @@ void BuilderMethod::emitDeclaration(raw_ostream &out, FmtContext &fmt) const {
   fmt.withBuilder(m_builder);
 
   out << tgfmt("static $_op* create(::llvm_dialects::Builder& $_builder", &fmt);
-  for (const auto& builderArg : m_arguments)
-    out << tgfmt(", $0 $1", &fmt, builderArg.cppType, builderArg.name);
+  for (const auto &builderArg : m_arguments) {
+    out << ", " << builderArg.cppType << " " << builderArg.name;
+  }
   out << ");\n";
 }
 
@@ -470,14 +559,15 @@ void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
   fmt.addSubst("_module", symbols.chooseName("module"));
 
   out << tgfmt("$_op* $_op::create(llvm_dialects::Builder& $_builder", &fmt);
-  for (const auto& builderArg : m_arguments)
+  for (const auto &builderArg : m_arguments)
     out << tgfmt(", $0 $1", &fmt, builderArg.cppType, builderArg.name);
 
   out << tgfmt(R"() {
     ::llvm::LLVMContext& $_context = $_builder.getContext();
     ::llvm::Module& $_module = *$_builder.GetInsertBlock()->getModule();
   
-  )", &fmt);
+  )",
+               &fmt);
 
   out << m_prelude;
 
@@ -489,7 +579,7 @@ void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
       const ::llvm::AttributeList $attrs
           = $Dialect::get($_context).getAttributeList($0);
     )",
-                  &fmt, m_operation.getAttributeListIdx());
+                 &fmt, m_operation.getAttributeListIdx());
   }
 
   if (!m_resultType.empty()) {
@@ -516,7 +606,8 @@ void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
     out << tgfmt(R"(
       std::string $fnName =
           ::llvm_dialects::getMangledName(s_name, {$resultType});
-    )", &fmt);
+    )",
+                 &fmt);
   } else {
     fmt.addSubst("fnName", "s_name");
   }
@@ -559,7 +650,8 @@ void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
     assert($fn.getFunctionType() == $fnType);
     assert(::llvm::cast<::llvm::Function>($fn.getCallee())->getFunctionType() == $fn.getFunctionType());
 
-  )", &fmt);
+  )",
+               &fmt);
 
   if (!fullArguments.empty()) {
     for (const auto &[opArg, builderArg, attrType] :
@@ -570,24 +662,47 @@ void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
     }
 
     fmt.addSubst("args", symbols.chooseName({"args", "arguments"}));
-    out << tgfmt("::llvm::Value* const $args[] = {\n", &fmt);
-    for (const auto& [opArg, builderArg, attrType]
-              : llvm::zip_first(fullArguments, opArgBuilderArgs, m_attrTypes)) {
-      if (auto* attr = dyn_cast<Attr>(opArg.type)) {
+    out << tgfmt("::llvm::SmallVector<::llvm::Value*, $0> $args = {\n", &fmt,
+                 m_operation.getNumFullArguments());
+    const NamedValue *varArg = nullptr;
+
+    size_t ArgIdx = 0;
+    for (const auto &[opArg, builderArg, attrType] :
+         llvm::zip_first(fullArguments, opArgBuilderArgs, m_attrTypes)) {
+      if (ArgIdx > 0 && !opArg.type->isVarArgList())
+        out << ",\n";
+
+      if (auto *attr = dyn_cast<Attr>(opArg.type)) {
         out << tgfmt(attr->getToLlvmValue(), &fmt, builderArg.name, attrType);
       } else if (opArg.type->isTypeArg()) {
         out << tgfmt("::llvm::PoisonValue::get($0)", &fmt, builderArg.name);
+      } else if (opArg.type->isVarArgList()) {
+        varArg = &opArg;
+        // Assume no other arguments follow the variadic argument.
+        --ArgIdx;
+        break;
       } else {
         out << builderArg.name;
       }
-      out << ",\n";
+
+      ++ArgIdx;
     }
 
+    std::string varArgInitializer = "";
+    if (varArg) {
+      varArgInitializer = tgfmt(R"(
+        $args.append($0.begin(), $0.end());
+      )",
+                                &fmt, varArg->name);
+    }
+
+    fmt.addSubst("varArgInitializer", varArgInitializer);
     out << tgfmt(R"(
       };
-
+      $varArgInitializer
       return ::llvm::cast<$_op>($_builder.CreateCall($fn, $args));
-    )", &fmt);
+    )",
+                 &fmt);
   } else {
     out << tgfmt("return ::llvm::cast<$_op>($_builder.CreateCall($fn));\n",
                  &fmt);

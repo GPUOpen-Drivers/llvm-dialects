@@ -9,6 +9,8 @@
 
 namespace llvm {
 class raw_ostream;
+template <typename T> class ArrayRef;
+template <typename T> class iterator_range;
 } // namespace llvm
 
 namespace llvm_dialects {
@@ -93,16 +95,13 @@ uint32_t getNumElements() const;
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    
-      ::llvm::Value * getPtr();
-      void setPtr(::llvm::Value * ptr);
-    
+    ::llvm::Value * getPtr();
+        void setPtr(::llvm::Value * ptr);
       ::llvm::Value * getCount();
-      void setCount(::llvm::Value * count);
-    
+        void setCount(::llvm::Value * count);
       ::llvm::Value * getInitial();
-      void setInitial(::llvm::Value * initial);
-    
+        void setInitial(::llvm::Value * initial);
+      
       };
     
       class Add32Op : public ::llvm::CallInst {
@@ -120,16 +119,13 @@ uint32_t getNumElements() const;
 
 bool verifier(::llvm::raw_ostream &errs);
 
-
-      ::llvm::Value * getLhs();
-      void setLhs(::llvm::Value * lhs);
-    
+::llvm::Value * getLhs();
+        void setLhs(::llvm::Value * lhs);
       ::llvm::Value * getRhs();
-      void setRhs(::llvm::Value * rhs);
-    
+        void setRhs(::llvm::Value * rhs);
       uint32_t getExtra();
-      void setExtra(uint32_t extra);
-    
+        void setExtra(uint32_t extra);
+      
 ::llvm::Value * getResult();
 
 
@@ -150,13 +146,11 @@ bool verifier(::llvm::raw_ostream &errs);
 
 bool verifier(::llvm::raw_ostream &errs);
 
-
-      ::llvm::Value * getLhs();
-      void setLhs(::llvm::Value * lhs);
-    
+::llvm::Value * getLhs();
+        void setLhs(::llvm::Value * lhs);
       ::llvm::Value * getRhs();
-      void setRhs(::llvm::Value * rhs);
-    
+        void setRhs(::llvm::Value * rhs);
+      
 ::llvm::Value * getResult();
 
 
@@ -177,13 +171,11 @@ bool verifier(::llvm::raw_ostream &errs);
 
 bool verifier(::llvm::raw_ostream &errs);
 
-
-      ::llvm::Value * getVector();
-      void setVector(::llvm::Value * vector);
-    
+::llvm::Value * getVector();
+        void setVector(::llvm::Value * vector);
       ::llvm::Value * getIndex();
-      void setIndex(::llvm::Value * index);
-    
+        void setIndex(::llvm::Value * index);
+      
 ::llvm::Value * getResult();
 
 
@@ -204,10 +196,9 @@ bool verifier(::llvm::raw_ostream &errs);
 
 bool verifier(::llvm::raw_ostream &errs);
 
-
-      ::llvm::Value * getSource();
-      void setSource(::llvm::Value * source);
-    
+::llvm::Value * getSource();
+        void setSource(::llvm::Value * source);
+      
 ::llvm::Value * getResult();
 
 
@@ -249,10 +240,9 @@ bool verifier(::llvm::raw_ostream &errs);
 
 bool verifier(::llvm::raw_ostream &errs);
 
-
-      ::llvm::Value * getSource();
-      void setSource(::llvm::Value * source);
-    
+::llvm::Value * getSource();
+        void setSource(::llvm::Value * source);
+      
 ::llvm::Value * getResult();
 
 
@@ -273,10 +263,9 @@ bool verifier(::llvm::raw_ostream &errs);
 
 bool verifier(::llvm::raw_ostream &errs);
 
-
-      ::llvm::Value * getSource();
-      void setSource(::llvm::Value * source);
-    
+::llvm::Value * getSource();
+        void setSource(::llvm::Value * source);
+      
 ::llvm::Value * getResult();
 
 
@@ -297,16 +286,13 @@ bool verifier(::llvm::raw_ostream &errs);
 
 bool verifier(::llvm::raw_ostream &errs);
 
-
-      ::llvm::Value * getVector();
-      void setVector(::llvm::Value * vector);
-    
+::llvm::Value * getVector();
+        void setVector(::llvm::Value * vector);
       ::llvm::Value * getValue();
-      void setValue(::llvm::Value * value);
-    
+        void setValue(::llvm::Value * value);
       ::llvm::Value * getIndex();
-      void setIndex(::llvm::Value * index);
-    
+        void setIndex(::llvm::Value * index);
+      
 ::llvm::Value * getResult();
 
 
@@ -348,10 +334,9 @@ bool verifier(::llvm::raw_ostream &errs);
 
 bool verifier(::llvm::raw_ostream &errs);
 
-
-      ::llvm::Type * getSizeofType();
-      void setSizeofType(::llvm::Type * sizeof_type);
-    
+::llvm::Type * getSizeofType();
+        void setSizeofType(::llvm::Type * sizeof_type);
+      
 ::llvm::Value * getResult();
 
 
@@ -435,10 +420,31 @@ bool verifier(::llvm::raw_ostream &errs);
 
 bool verifier(::llvm::raw_ostream &errs);
 
+::llvm::Value * getData();
+        void setData(::llvm::Value * data);
+      
 
-      ::llvm::Value * getData();
-      void setData(::llvm::Value * data);
+
+      };
     
+      class WriteVarArgOp : public ::llvm::CallInst {
+        static const ::llvm::StringLiteral s_name; //{"xd.write.vararg"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isSimpleOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static WriteVarArgOp* create(::llvm_dialects::Builder& b, ::llvm::Value * data, ::llvm::ArrayRef<::llvm::Value *> args);
+
+bool verifier(::llvm::raw_ostream &errs);
+
+::llvm::Value * getData();
+        void setData(::llvm::Value * data);
+      ::llvm::iterator_range<::llvm::Value *> getArgs();
 
 
       };

@@ -6,6 +6,7 @@
 ; DEFAULT-NEXT: visiting BinaryOperator: %v1 = add i32 %v, %w
 ; DEFAULT-NEXT: visiting umax intrinsic: %v2 = call i32 @llvm.umax.i32(i32 %v1, i32 %q)
 ; DEFAULT-NEXT: visiting WriteOp: call void (...) @xd.write(i8 %t)
+; DEFAULT-NEXT: visiting WriteVarArgOp: call void (...) @xd.write.vararg(i8 %t, i32 %v2)
 ; DEFAULT-NEXT: visiting ReturnInst: ret void
 ; DEFAULT-NEXT: inner.counter = 1
 
@@ -19,11 +20,13 @@ entry:
   %v2 = call i32 @llvm.umax.i32(i32 %v1, i32 %q)
   %t = call i8 (...) @xd.itrunc.i8(i32 %v2)
   call void (...) @xd.write(i8 %t)
+  call void (...) @xd.write.vararg(i8 %t, i32 %v2)
   ret void
 }
 
 declare i32 @xd.read.i32()
 declare void @xd.write(...)
+declare void @xd.write.vararg(...)
 declare i8 @xd.itrunc.i8(...)
 
 declare i32 @llvm.umax.i32(i32, i32)

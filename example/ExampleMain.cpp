@@ -113,9 +113,27 @@ void createFunctionExample(Module &module, const Twine &name) {
   y6->setIndex(b.getInt32(1));
 
   Value *p1 = b.create<xd::ReadOp>(b.getPtrTy(0));
+  p1->setName("p1");
   Value *p2 = b.create<xd::StreamAddOp>(p1, b.getInt64(14), b.getInt8(0));
+  p2->setName("p2");
   b.create<xd::WriteOp>(p2);
 
+  SmallVector<Value *> varArgs;
+  varArgs.push_back(p1);
+  varArgs.push_back(p2);
+  xd::WriteVarArgOp *w = b.create<xd::WriteVarArgOp>(p2, varArgs);
+  assert(w->getData() == p2);
+  assert(w->getData()->getName() == "p2");
+
+  const auto &itRange = w->getArgs();
+  assert(!itRange.empty());
+  xd::WriteOp *w2 = b.create<xd::WriteOp>(itRange.begin());
+  xd::WriteOp *w3 = b.create<xd::WriteOp>(itRange.end());
+
+  assert(w2->getData() == p1);
+  assert(w2->getData()->getName() == "p1");
+  assert(w3->getData() == p2);
+  assert(w3->getData()->getName() == "p2");
   b.create<xd::HandleGetOp>();
 
   useUnnamedStructTypes(b);
@@ -195,6 +213,10 @@ template <bool rpot> const Visitor<VisitorContainer> &getExampleVisitor() {
               b.add<xd::WriteOp>([](raw_ostream &out, xd::WriteOp &op) {
                 out << "visiting WriteOp: " << op << '\n';
               });
+              b.add<xd::WriteVarArgOp>(
+                  [](raw_ostream &out, xd::WriteVarArgOp &op) {
+                    out << "visiting WriteVarArgOp: " << op << '\n';
+                  });
               b.add<ReturnInst>([](raw_ostream &out, ReturnInst &ret) {
                 out << "visiting ReturnInst: " << ret << '\n';
               });

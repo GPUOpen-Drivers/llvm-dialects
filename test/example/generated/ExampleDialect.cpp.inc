@@ -8,6 +8,8 @@
 #include "llvm-dialects/Dialect/Utils.h"
 #include "llvm-dialects/Dialect/Verifier.h"
 #include "llvm-dialects/Dialect/Visitor.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/InstrTypes.h"
 
 #include "llvm/Support/ModRef.h"
@@ -96,6 +98,11 @@ namespace xd {
         });
       
         builder.add<WriteOp>([](::llvm_dialects::VerifierState &state, WriteOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
+        builder.add<WriteVarArgOp>([](::llvm_dialects::VerifierState &state, WriteVarArgOp &op) {
           if (!op.verifier(state.out()))
             state.setError();
         });
@@ -261,7 +268,6 @@ return true;
       void StreamReduceOp::setPtr(::llvm::Value * ptr) {
         setArgOperand(0, ptr);
       }
-    
       ::llvm::Value * StreamReduceOp::getCount() {
         return getArgOperand(1);
       }
@@ -269,7 +275,6 @@ return true;
       void StreamReduceOp::setCount(::llvm::Value * count) {
         setArgOperand(1, count);
       }
-    
       ::llvm::Value * StreamReduceOp::getInitial() {
         return getArgOperand(2);
       }
@@ -277,7 +282,6 @@ return true;
       void StreamReduceOp::setInitial(::llvm::Value * initial) {
         setArgOperand(2, initial);
       }
-    
 
       const ::llvm::StringLiteral Add32Op::s_name{"xd.add32"};
 
@@ -311,13 +315,12 @@ rhs->getType(),
     assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
   
-::llvm::Value* const args[] = {
+::llvm::SmallVector<::llvm::Value*, 3> args = {
 lhs,
 rhs,
- ::llvm::ConstantInt::get(::llvm::IntegerType::get(context, 32), extra) ,
-
+ ::llvm::ConstantInt::get(::llvm::IntegerType::get(context, 32), extra) 
       };
-
+      
       return ::llvm::cast<Add32Op>(b.CreateCall(fn, args));
     }
 
@@ -383,7 +386,6 @@ uint32_t const extra = getExtra();
       void Add32Op::setLhs(::llvm::Value * lhs) {
         setArgOperand(0, lhs);
       }
-    
       ::llvm::Value * Add32Op::getRhs() {
         return getArgOperand(1);
       }
@@ -391,7 +393,6 @@ uint32_t const extra = getExtra();
       void Add32Op::setRhs(::llvm::Value * rhs) {
         setArgOperand(1, rhs);
       }
-    
       uint32_t Add32Op::getExtra() {
         return  ::llvm::cast<::llvm::ConstantInt>(getArgOperand(2))->getZExtValue() ;
       }
@@ -399,7 +400,6 @@ uint32_t const extra = getExtra();
       void Add32Op::setExtra(uint32_t extra) {
         setArgOperand(2,  ::llvm::ConstantInt::get(::llvm::IntegerType::get(getContext(), 32), extra) );
       }
-    
 ::llvm::Value *Add32Op::getResult() {return this;}
 
 
@@ -434,12 +434,11 @@ uint32_t const extra = getExtra();
     assert(fn.getFunctionType() == fnType);
     assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
-  ::llvm::Value* const args[] = {
+  ::llvm::SmallVector<::llvm::Value*, 2> args = {
 lhs,
-rhs,
-
+rhs
       };
-
+      
       return ::llvm::cast<CombineOp>(b.CreateCall(fn, args));
     }
 
@@ -488,7 +487,6 @@ rhs,
       void CombineOp::setLhs(::llvm::Value * lhs) {
         setArgOperand(0, lhs);
       }
-    
       ::llvm::Value * CombineOp::getRhs() {
         return getArgOperand(1);
       }
@@ -496,7 +494,6 @@ rhs,
       void CombineOp::setRhs(::llvm::Value * rhs) {
         setArgOperand(1, rhs);
       }
-    
 ::llvm::Value *CombineOp::getResult() {return this;}
 
 
@@ -531,12 +528,11 @@ rhs,
     assert(fn.getFunctionType() == fnType);
     assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
-  ::llvm::Value* const args[] = {
+  ::llvm::SmallVector<::llvm::Value*, 2> args = {
 vector,
-index,
-
+index
       };
-
+      
       return ::llvm::cast<ExtractElementOp>(b.CreateCall(fn, args));
     }
 
@@ -594,7 +590,6 @@ index,
       void ExtractElementOp::setVector(::llvm::Value * vector) {
         setArgOperand(0, vector);
       }
-    
       ::llvm::Value * ExtractElementOp::getIndex() {
         return getArgOperand(1);
       }
@@ -602,7 +597,6 @@ index,
       void ExtractElementOp::setIndex(::llvm::Value * index) {
         setArgOperand(1, index);
       }
-    
 ::llvm::Value *ExtractElementOp::getResult() {return this;}
 
 
@@ -637,11 +631,10 @@ index,
     assert(fn.getFunctionType() == fnType);
     assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
-  ::llvm::Value* const args[] = {
-source,
-
+  ::llvm::SmallVector<::llvm::Value*, 1> args = {
+source
       };
-
+      
       return ::llvm::cast<FromFixedVectorOp>(b.CreateCall(fn, args));
     }
 
@@ -773,7 +766,6 @@ source,
       void FromFixedVectorOp::setSource(::llvm::Value * source) {
         setArgOperand(0, source);
       }
-    
 ::llvm::Value *FromFixedVectorOp::getResult() {return this;}
 
 
@@ -869,11 +861,10 @@ source,
     assert(fn.getFunctionType() == fnType);
     assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
-  ::llvm::Value* const args[] = {
-source,
-
+  ::llvm::SmallVector<::llvm::Value*, 1> args = {
+source
       };
-
+      
       return ::llvm::cast<IExtOp>(b.CreateCall(fn, args));
     }
 
@@ -933,7 +924,6 @@ source,
       void IExtOp::setSource(::llvm::Value * source) {
         setArgOperand(0, source);
       }
-    
 ::llvm::Value *IExtOp::getResult() {return this;}
 
 
@@ -968,11 +958,10 @@ source,
     assert(fn.getFunctionType() == fnType);
     assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
-  ::llvm::Value* const args[] = {
-source,
-
+  ::llvm::SmallVector<::llvm::Value*, 1> args = {
+source
       };
-
+      
       return ::llvm::cast<ITruncOp>(b.CreateCall(fn, args));
     }
 
@@ -1032,7 +1021,6 @@ source,
       void ITruncOp::setSource(::llvm::Value * source) {
         setArgOperand(0, source);
       }
-    
 ::llvm::Value *ITruncOp::getResult() {return this;}
 
 
@@ -1067,13 +1055,12 @@ source,
     assert(fn.getFunctionType() == fnType);
     assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
-  ::llvm::Value* const args[] = {
+  ::llvm::SmallVector<::llvm::Value*, 3> args = {
 vector,
 value,
-index,
-
+index
       };
-
+      
       return ::llvm::cast<InsertElementOp>(b.CreateCall(fn, args));
     }
 
@@ -1141,7 +1128,6 @@ index,
       void InsertElementOp::setVector(::llvm::Value * vector) {
         setArgOperand(0, vector);
       }
-    
       ::llvm::Value * InsertElementOp::getValue() {
         return getArgOperand(1);
       }
@@ -1149,7 +1135,6 @@ index,
       void InsertElementOp::setValue(::llvm::Value * value) {
         setArgOperand(1, value);
       }
-    
       ::llvm::Value * InsertElementOp::getIndex() {
         return getArgOperand(2);
       }
@@ -1157,7 +1142,6 @@ index,
       void InsertElementOp::setIndex(::llvm::Value * index) {
         setArgOperand(2, index);
       }
-    
 ::llvm::Value *InsertElementOp::getResult() {return this;}
 
 
@@ -1245,11 +1229,10 @@ index,
     assert(fn.getFunctionType() == fnType);
     assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
-  ::llvm::Value* const args[] = {
-::llvm::PoisonValue::get(sizeofType),
-
+  ::llvm::SmallVector<::llvm::Value*, 1> args = {
+::llvm::PoisonValue::get(sizeofType)
       };
-
+      
       return ::llvm::cast<SizeOfOp>(b.CreateCall(fn, args));
     }
 
@@ -1288,7 +1271,6 @@ index,
       void SizeOfOp::setSizeofType(::llvm::Type * sizeof_type) {
         setArgOperand(0, llvm::PoisonValue::get(sizeof_type));
       }
-    
 ::llvm::Value *SizeOfOp::getResult() {return this;}
 
 
@@ -1323,13 +1305,12 @@ index,
     assert(fn.getFunctionType() == fnType);
     assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
-  ::llvm::Value* const args[] = {
+  ::llvm::SmallVector<::llvm::Value*, 3> args = {
 ptr,
 count,
-initial,
-
+initial
       };
-
+      
       return ::llvm::cast<StreamAddOp>(b.CreateCall(fn, args));
     }
 
@@ -1415,13 +1396,12 @@ initial,
     assert(fn.getFunctionType() == fnType);
     assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
-  ::llvm::Value* const args[] = {
+  ::llvm::SmallVector<::llvm::Value*, 3> args = {
 ptr,
 count,
-initial,
-
+initial
       };
-
+      
       return ::llvm::cast<StreamMaxOp>(b.CreateCall(fn, args));
     }
 
@@ -1507,13 +1487,12 @@ initial,
     assert(fn.getFunctionType() == fnType);
     assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
-  ::llvm::Value* const args[] = {
+  ::llvm::SmallVector<::llvm::Value*, 3> args = {
 ptr,
 count,
-initial,
-
+initial
       };
-
+      
       return ::llvm::cast<StreamMinOp>(b.CreateCall(fn, args));
     }
 
@@ -1596,11 +1575,10 @@ initial,
     assert(fn.getFunctionType() == fnType);
     assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
-  ::llvm::Value* const args[] = {
-data,
-
+  ::llvm::SmallVector<::llvm::Value*, 1> args = {
+data
       };
-
+      
       return ::llvm::cast<WriteOp>(b.CreateCall(fn, args));
     }
 
@@ -1629,7 +1607,73 @@ data,
       void WriteOp::setData(::llvm::Value * data) {
         setArgOperand(0, data);
       }
-    
+
+
+
+      const ::llvm::StringLiteral WriteVarArgOp::s_name{"xd.write.vararg"};
+
+    WriteVarArgOp* WriteVarArgOp::create(llvm_dialects::Builder& b, ::llvm::Value * data, ::llvm::ArrayRef<::llvm::Value *> args) {
+    ::llvm::LLVMContext& context = b.getContext();
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(0);
+    auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), true);
+
+    auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << s_name << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
+
+  ::llvm::SmallVector<::llvm::Value*, 1> arguments = {
+data
+      };
+      
+        arguments.append(args.begin(), args.end());
+      
+      return ::llvm::cast<WriteVarArgOp>(b.CreateCall(fn, arguments));
+    }
+
+
+    bool WriteVarArgOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      using ::llvm_dialects::printable;
+
+      if (arg_size() < 1) {
+        errs << "  wrong number of arguments: " << arg_size()
+               << ", expected at least 1\n";
+        return false;
+      }
+  ::llvm::Type * const dataType = getData()->getType();
+(void)dataType;
+  return true;
+}
+
+
+      ::llvm::Value * WriteVarArgOp::getData() {
+        return getArgOperand(0);
+      }
+
+      void WriteVarArgOp::setData(::llvm::Value * data) {
+        setArgOperand(0, data);
+      }
+      ::llvm::iterator_range<::llvm::Value *> WriteVarArgOp::getArgs() {
+        return ::llvm::make_range((arg_begin() + 1)->get(), (arg_begin() + arg_size() - 1)->get());
+      }
 
 
 } // namespace xd
@@ -1742,6 +1786,14 @@ data,
       const ::llvm_dialects::OpDescription &
       ::llvm_dialects::OpDescription::get<xd::WriteOp>() {
         static const ::llvm_dialects::OpDescription desc{false, "xd.write"};
+        return desc;
+      }
+
+    
+      template <>
+      const ::llvm_dialects::OpDescription &
+      ::llvm_dialects::OpDescription::get<xd::WriteVarArgOp>() {
+        static const ::llvm_dialects::OpDescription desc{false, "xd.write.vararg"};
         return desc;
       }
 

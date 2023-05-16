@@ -167,7 +167,7 @@ void DialectType::emitDeclaration(raw_ostream &out, GenDialect *dialect) const {
                &fmt);
 
   out << tgfmt("static $_type *get(", &fmt);
-  for (auto argument : llvm::enumerate(m_getterArguments)) {
+  for (const auto &argument : llvm::enumerate(m_getterArguments)) {
     if (argument.index() != 0)
       out << ", ";
     out << argument.value().cppType << ' ' << argument.value().name;

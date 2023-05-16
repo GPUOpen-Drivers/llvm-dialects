@@ -22,6 +22,7 @@ class MetaType;
 
 def type : MetaType;
 def value;
+def varargs;
 
 // ============================================================================
 /// Dialect
