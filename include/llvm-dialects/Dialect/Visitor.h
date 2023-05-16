@@ -123,6 +123,9 @@ private:
   unsigned m_intrinsicId = 0;
 };
 
+// Try to max the function pointer size in different cases.
+// VisitorCallbackData of multiple inheritance has the larger function pointer
+// size for microsoft cl compiler.
 class Foo0 {};
 class Foo1 {};
 struct VisitorCallbackData : public Foo0, Foo1 {
