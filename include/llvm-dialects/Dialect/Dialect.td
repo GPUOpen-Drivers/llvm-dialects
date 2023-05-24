@@ -292,6 +292,20 @@ class LlvmEnumAttributeTrait<string llvmEnum_> : Trait {
 
 def NoUnwind : LlvmEnumAttributeTrait<"NoUnwind">;
 def WillReturn : LlvmEnumAttributeTrait<"WillReturn">;
+def NoReturn : LlvmEnumAttributeTrait<"NoReturn">;
+def NoRecurse : LlvmEnumAttributeTrait<"NoRecurse">;
+def NoSync : LlvmEnumAttributeTrait<"NoSync">;
+def NoFree : LlvmEnumAttributeTrait<"NoFree">;
+def MustProgress : LlvmEnumAttributeTrait<"MustProgress">;
+def NoCallback : LlvmEnumAttributeTrait<"NoCallback">;
+def NoDuplicate : LlvmEnumAttributeTrait<"NoDuplicate">;
+def NoBuiltin : LlvmEnumAttributeTrait<"NoBuiltin">;
+def Builtin : LlvmEnumAttributeTrait<"Builtin">;
+def InlineHint : LlvmEnumAttributeTrait<"InlineHint">;
+def AlwaysInline : LlvmEnumAttributeTrait<"AlwaysInline">;
+def Cold : LlvmEnumAttributeTrait<"Cold">;
+def Hot : LlvmEnumAttributeTrait<"Hot">;
+def Convergent : LlvmEnumAttributeTrait<"Convergent">;
 
 /// Represent the LLVM `memory(...)` attribute as the OR (or union) of memory
 /// effects. An empty effects list means the operation does not access memory
