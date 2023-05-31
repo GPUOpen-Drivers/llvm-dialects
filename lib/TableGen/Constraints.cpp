@@ -85,8 +85,8 @@ bool ConstraintSystem::addConstraintImpl(raw_ostream &errs, Init *init,
   if (auto *dag = dyn_cast<DagInit>(init)) {
     Record *op = dag->getOperatorAsDef({});
 
-    auto isValidOperand = [&dag, &op, &errs](size_t index,
-                                             StringRef opName) -> bool {
+    auto isValidOperand = [&dag, &errs](size_t index,
+                                        StringRef opName) -> bool {
       if (!dag->getArgNameStr(index).empty()) {
         errs << "'" << opName << "' operands cannot be captured\n";
         return false;
