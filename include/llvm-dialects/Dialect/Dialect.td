@@ -187,6 +187,28 @@ def FixedVectorType : BuiltinType {
   ];
 }
 
+// LLVM IR array type
+def ArrayType : BuiltinType {
+  let arguments = (args type:$self, type:$element_type, AttrI32:$num_elements);
+  let evaluate = "::llvm::ArrayType::get($element_type, $num_elements)";
+  let check = "::llvm::isa<::llvm::ArrayType>($self)";
+  let capture = [
+    "::llvm::cast<::llvm::ArrayType>($self)->getElementType()",
+    "::llvm::cast<::llvm::ArrayType>($self)->getNumElements()",
+  ];
+}
+
+class SpecialBuiltinType<string name> : BuiltinType {
+  let arguments = (args type:$self);
+  let evaluate = "::llvm::Type::get" # name # "Ty($_context)";
+  let check = "$self->is" # name # "Ty()";
+  let capture = [];
+}
+
+def F64 : SpecialBuiltinType<"Double">;
+def F32 : SpecialBuiltinType<"Float">;
+def F16 : SpecialBuiltinType<"Half">;
+
 /// All types that are defined by a dialect are derived from this class.
 class DialectType<Dialect dialect_, string mnemonic_> : Type, Predicate {
   dag typeArguments = ?;
