@@ -312,6 +312,11 @@ bool Operation::parse(raw_ostream &errs, GenDialectsContext *context,
     if (!singletonSystem.addConstraint(errs, arg.constraint, variable))
       return false;
 
+    if (!arg.type) {
+      errs << "No type provided for " << arg.name << '\n';
+      return false;
+    }
+
     if (!isa<Attr>(arg.type)) {
       EvaluationPlanner planner{singletonSystem};
       if (!planner.getPlan(variable))
