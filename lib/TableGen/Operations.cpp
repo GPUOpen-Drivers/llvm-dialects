@@ -649,7 +649,7 @@ void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
       newName = "";
       ::llvm::raw_svector_ostream newNameStream(newName);
       newNameStream << $fnName << "_" << i;
-      fn = $_module.getOrInsertFunction(newNameStream.str(), $fnType, $attrs);
+      $fn = $_module.getOrInsertFunction(newNameStream.str(), $fnType, $attrs);
     }
     assert(::llvm::isa<::llvm::Function>($fn.getCallee()));
     assert($fn.getFunctionType() == $fnType);
