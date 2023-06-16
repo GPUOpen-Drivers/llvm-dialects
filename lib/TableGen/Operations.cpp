@@ -188,9 +188,11 @@ void AccessorBuilder::emitGetterDefinition() const {
     else if (m_arg.type->isTypeArg())
       fromLlvm += "->getType()";
   } else {
-    fromLlvm = tgfmt("::llvm::make_range((arg_begin() + $index)->get(), "
-                     "(arg_begin() + arg_size() - $index)->get())",
-                     &m_fmt);
+    fromLlvm = tgfmt(
+        R"(::llvm::make_range(
+            value_op_iterator(arg_begin() + $index),
+            value_op_iterator(arg_end())))",
+        &m_fmt);
   }
 
   m_fmt.addSubst("fromLlvm", fromLlvm);

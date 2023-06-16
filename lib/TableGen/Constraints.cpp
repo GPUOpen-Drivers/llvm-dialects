@@ -312,7 +312,7 @@ StringRef MetaType::getGetterCppType() const {
     return "::llvm::Value *";
 
   if (isVarArgList())
-    return "::llvm::iterator_range<::llvm::Value *>";
+    return "::llvm::iterator_range<::llvm::User::value_op_iterator>";
 
   return getCppType();
 }
