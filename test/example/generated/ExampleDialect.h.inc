@@ -444,7 +444,7 @@ bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getData();
         void setData(::llvm::Value * data);
-      ::llvm::iterator_range<::llvm::Value *> getArgs();
+      ::llvm::iterator_range<::llvm::User::value_op_iterator> getArgs();
 
 
       };

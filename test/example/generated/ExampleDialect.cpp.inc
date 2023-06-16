@@ -1671,8 +1671,10 @@ data
       void WriteVarArgOp::setData(::llvm::Value * data) {
         setArgOperand(0, data);
       }
-      ::llvm::iterator_range<::llvm::Value *> WriteVarArgOp::getArgs() {
-        return ::llvm::make_range((arg_begin() + 1)->get(), (arg_begin() + arg_size() - 1)->get());
+      ::llvm::iterator_range<::llvm::User::value_op_iterator> WriteVarArgOp::getArgs() {
+        return ::llvm::make_range(
+            value_op_iterator(arg_begin() + 1),
+            value_op_iterator(arg_end()));
       }
 
 
