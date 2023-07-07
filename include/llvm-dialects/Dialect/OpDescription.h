@@ -52,8 +52,8 @@ public:
   Kind getKind() const { return m_kind; }
   llvm::ArrayRef<unsigned> getOpcodes() const;
 
-  bool matchInstruction(llvm::Instruction &inst) const;
-  bool matchDeclaration(llvm::Function &decl) const;
+  bool matchInstruction(const llvm::Instruction &inst) const;
+  bool matchDeclaration(const llvm::Function &decl) const;
 
   bool canMatchDeclaration() const {
     return m_kind == Kind::Dialect || m_kind == Kind::DialectWithOverloads ||
