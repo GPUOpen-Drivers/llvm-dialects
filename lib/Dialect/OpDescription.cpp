@@ -39,7 +39,7 @@ ArrayRef<unsigned> OpDescription::getOpcodes() const {
   return std::get<ArrayRef<unsigned>>(m_op);
 }
 
-bool OpDescription::matchInstruction(Instruction &inst) const {
+bool OpDescription::matchInstruction(const Instruction &inst) const {
   if (m_kind == Kind::Intrinsic) {
     if (auto *intr = dyn_cast<IntrinsicInst>(&inst))
       return matchIntrinsic(intr->getIntrinsicID());
@@ -62,7 +62,7 @@ bool OpDescription::matchInstruction(Instruction &inst) const {
   return false;
 }
 
-bool OpDescription::matchDeclaration(Function &decl) const {
+bool OpDescription::matchDeclaration(const Function &decl) const {
   if (auto *mnemonic = std::get_if<StringRef>(&m_op)) {
     if (m_kind == Kind::DialectWithOverloads)
       return llvm_dialects::detail::isOverloadedOperationDecl(&decl, *mnemonic);
