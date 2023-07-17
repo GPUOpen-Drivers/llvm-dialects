@@ -157,13 +157,13 @@ void ContextMap::remove(LLVMContext *llvmContext,
 
 void Dialect::anchor() {}
 
-SmallVectorImpl<Dialect::Key*>& Dialect::Key::getRegisteredKeys() {
-  static SmallVector<Dialect::Key*> keys;
+SmallVectorImpl<Dialect::Key *> &Dialect::Key::getRegisteredKeys() {
+  static SmallVector<Dialect::Key *> keys;
   return keys;
 }
 
 Dialect::Key::Key() {
-  auto& keys = getRegisteredKeys();
+  auto &keys = getRegisteredKeys();
 
   for (auto enumeratedKey : llvm::enumerate(keys)) {
     if (!enumeratedKey.value()) {
@@ -197,17 +197,18 @@ DialectContext::~DialectContext() {
   for (unsigned i = 0; i < m_extensionArraySize; ++i)
     std::destroy_n(extensionArray, m_extensionArraySize);
 
-  Dialect** dialectArray = getTrailingObjects<Dialect*>();
+  Dialect **dialectArray = getTrailingObjects<Dialect *>();
   for (unsigned i = 0; i < m_dialectArraySize; ++i)
     delete dialectArray[i]; // may be nullptr
 }
 
 void DialectContext::operator delete(void *ctx) { free(ctx); }
 
-std::unique_ptr<DialectContext> DialectContext::make(LLVMContext& context,
-                                                     ArrayRef<DialectDescriptor> dialects) {
+std::unique_ptr<DialectContext>
+DialectContext::make(LLVMContext &context,
+                     ArrayRef<DialectDescriptor> dialects) {
   unsigned dialectArraySize = 0;
-  for (const auto& desc : dialects)
+  for (const auto &desc : dialects)
     dialectArraySize = std::max(dialectArraySize, desc.index + 1);
 
   unsigned extensionArraySize = detail::ContextExtensionKey::getKeys().size();
@@ -215,14 +216,14 @@ std::unique_ptr<DialectContext> DialectContext::make(LLVMContext& context,
   size_t totalSize =
       totalSizeToAlloc<Dialect *, std::unique_ptr<ContextExtensionBase>>(
           dialectArraySize, extensionArraySize);
-  void* ptr = malloc(totalSize);
+  void *ptr = malloc(totalSize);
 
   std::unique_ptr<DialectContext> result{
       new (ptr) DialectContext(context, dialectArraySize, extensionArraySize)};
-  Dialect** dialectArray = result->getTrailingObjects<Dialect*>();
+  Dialect **dialectArray = result->getTrailingObjects<Dialect *>();
   std::uninitialized_fill_n(dialectArray, dialectArraySize, nullptr);
 
-  for (const auto& desc : dialects)
+  for (const auto &desc : dialects)
     dialectArray[desc.index] = desc.make(context);
 
   auto *extensionArray =
@@ -232,7 +233,7 @@ std::unique_ptr<DialectContext> DialectContext::make(LLVMContext& context,
   return result;
 }
 
-DialectContext& DialectContext::get(LLVMContext& context) {
+DialectContext &DialectContext::get(LLVMContext &context) {
   return *CurrentContextCache::get(&context);
 }
 
@@ -249,28 +250,40 @@ void DialectExtensionPointBase::clear(unsigned index) {
 }
 
 bool llvm_dialects::detail::isSimpleOperationDecl(const Function *fn,
-                                                  StringRef name) {
-  return fn->getName() == name;
+                                                  StringRef mnemonic) {
+  return isOperationDecl(fn->getName(), false, mnemonic);
 }
 
 bool llvm_dialects::detail::isOverloadedOperationDecl(const Function *fn,
-                                                      StringRef name) {
-  StringRef fnName = fn->getName();
-  if (name.size() >= fnName.size())
-    return false;
-  if (!fnName.startswith(name))
-    return false;
-  return fnName[name.size()] == '.';
+                                                      StringRef mnemonic) {
+  return isOperationDecl(fn->getName(), true, mnemonic);
 }
 
-bool llvm_dialects::detail::isSimpleOperation(const CallInst *i, StringRef name) {
-  if (auto* fn = i->getCalledFunction())
-    return isSimpleOperationDecl(fn, name);
-  return false;
-}
-
-bool llvm_dialects::detail::isOverloadedOperation(const CallInst *i, StringRef name) {
+bool llvm_dialects::detail::isSimpleOperation(const CallInst *i,
+                                              StringRef mnemonic) {
   if (auto *fn = i->getCalledFunction())
-    return isOverloadedOperationDecl(fn, name);
+    return isSimpleOperationDecl(fn, mnemonic);
   return false;
+}
+
+bool llvm_dialects::detail::isOverloadedOperation(const CallInst *i,
+                                                  StringRef mnemonic) {
+  if (auto *fn = i->getCalledFunction())
+    return isOverloadedOperationDecl(fn, mnemonic);
+  return false;
+}
+
+bool llvm_dialects::detail::isOperationDecl(llvm::StringRef fn,
+                                            bool isOverloaded,
+                                            llvm::StringRef mnemonic) {
+  if (isOverloaded) {
+    if (mnemonic.size() >= fn.size())
+      return false;
+    if (!fn.startswith(mnemonic))
+      return false;
+
+    return fn[mnemonic.size()] == '.';
+  }
+
+  return fn == mnemonic;
 }

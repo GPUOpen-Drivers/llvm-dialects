@@ -26,6 +26,8 @@
 #include "ExampleDialect.h"
 
 #include "llvm-dialects/Dialect/Builder.h"
+#include "llvm-dialects/Dialect/OpDescription.h"
+#include "llvm-dialects/Dialect/OpSet.h"
 #include "llvm-dialects/Dialect/Verifier.h"
 
 #include "llvm/AsmParser/Parser.h"
@@ -121,6 +123,9 @@ void createFunctionExample(Module &module, const Twine &name) {
   b.create<xd::WriteVarArgOp>(p2, varArgs);
   b.create<xd::HandleGetOp>();
 
+  b.create<xd::SetReadOp>(FixedVectorType::get(b.getInt32Ty(), 2));
+  b.create<xd::SetWriteOp>(y6);
+
   useUnnamedStructTypes(b);
 
   b.CreateRetVoid();
@@ -166,11 +171,38 @@ LLVM_DIALECTS_VISITOR_PAYLOAD_PROJECT_FIELD(VisitorNest, inner)
 // i.e. if C++ had a strong enough compile-time evaluation (constexpr), it
 // should be possible to evaluate the initialization entirely at compile-time.
 template <bool rpot> const Visitor<VisitorContainer> &getExampleVisitor() {
+  static const auto complexSet = OpSet::fromOpDescriptions(
+      {OpDescription::fromCoreOp(Instruction::Ret),
+       OpDescription::fromIntrinsic(Intrinsic::umin)});
+
   static const auto visitor =
       VisitorBuilder<VisitorContainer>()
           .nest<VisitorNest>([](VisitorBuilder<VisitorNest> &b) {
             b.add<xd::ReadOp>([](VisitorNest &self, xd::ReadOp &op) {
               *self.out << "visiting ReadOp: " << op << '\n';
+            });
+            b.addSet<xd::SetReadOp, xd::SetWriteOp>(
+                [](VisitorNest &self, llvm::Instruction &op) {
+                  if (isa<xd::SetReadOp>(op)) {
+                    *self.out << "visiting SetReadOp (set): " << op << '\n';
+                  } else if (isa<xd::SetWriteOp>(op)) {
+                    *self.out << "visiting SetWriteOp (set): " << op << '\n';
+                  }
+                });
+            b.addSet(complexSet, [](VisitorNest &self, llvm::Instruction &op) {
+              assert((op.getOpcode() == Instruction::Ret ||
+                      (isa<IntrinsicInst>)(&op) &&
+                          cast<IntrinsicInst>(&op)->getIntrinsicID() ==
+                              Intrinsic::umin) &&
+                     "Unexpected operation detected while visiting OpSet!");
+
+              if (op.getOpcode() == Instruction::Ret) {
+                *self.out << "visiting Ret (set): " << op << '\n';
+              } else if (auto *II = dyn_cast<IntrinsicInst>(&op)) {
+                if (II->getIntrinsicID() == Intrinsic::umin) {
+                  *self.out << "visiting umin (set): " << op << '\n';
+                }
+              }
             });
             b.add<UnaryInstruction>(
                 [](VisitorNest &self, UnaryInstruction &inst) {

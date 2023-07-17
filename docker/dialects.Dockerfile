@@ -41,3 +41,7 @@ RUN source /vulkandriver/env.sh \
 # Run the lit test suite.
 RUN source /vulkandriver/env.sh \
     && cmake --build . --target check-llvm-dialects -- -v
+
+# Run the unit tests suite.
+RUN source /vulkandriver/env.sh \
+    && cmake --build . --target check-llvm-dialects-units -v

@@ -319,6 +319,49 @@ bool verifier(::llvm::raw_ostream &errs);
 
       };
     
+      class SetReadOp : public ::llvm::CallInst {
+        static const ::llvm::StringLiteral s_name; //{"xd.set.read"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isOverloadedOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static SetReadOp* create(::llvm_dialects::Builder& b, ::llvm::Type* dataType);
+
+bool verifier(::llvm::raw_ostream &errs);
+
+
+::llvm::Value * getData();
+
+
+      };
+    
+      class SetWriteOp : public ::llvm::CallInst {
+        static const ::llvm::StringLiteral s_name; //{"xd.set.write"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isSimpleOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static SetWriteOp* create(::llvm_dialects::Builder& b, ::llvm::Value * data);
+
+bool verifier(::llvm::raw_ostream &errs);
+
+::llvm::Value * getData();
+        void setData(::llvm::Value * data);
+      
+
+
+      };
+    
       class SizeOfOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.sizeof"};
 

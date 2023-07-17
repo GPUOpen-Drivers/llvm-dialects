@@ -20,7 +20,6 @@
 #include "llvm/ADT/StringRef.h"
 
 #include <variant>
-#include <vector>
 
 namespace llvm {
 class Function;
@@ -40,19 +39,45 @@ public:
   };
 
 public:
+  OpDescription() = default;
   OpDescription(bool hasOverloads, llvm::StringRef mnemonic)
       : m_kind(hasOverloads ? Kind::DialectWithOverloads : Kind::Dialect),
         m_op(mnemonic) {}
   OpDescription(Kind kind, unsigned opcode) : m_kind(kind), m_op(opcode) {}
   OpDescription(Kind kind, llvm::MutableArrayRef<unsigned> opcodes);
 
-  template <typename OpT>
-  static const OpDescription& get();
+  static OpDescription fromCoreOp(unsigned op) { return {Kind::Core, op}; }
+
+  static OpDescription fromIntrinsic(unsigned op) {
+    return {Kind::Intrinsic, op};
+  }
+
+  static OpDescription fromDialectOp(bool hasOverloads,
+                                     llvm::StringRef mnemonic) {
+    return {hasOverloads, mnemonic};
+  }
+
+  bool isCoreOp() const { return m_kind == Kind::Core; }
+  bool isIntrinsic() const { return m_kind == Kind::Intrinsic; }
+  bool isDialectOp() const {
+    return m_kind == Kind::Dialect || m_kind == Kind::DialectWithOverloads;
+  }
+
+  template <typename OpT> static const OpDescription &get();
 
   Kind getKind() const { return m_kind; }
+
+  unsigned getOpcode() const;
+
   llvm::ArrayRef<unsigned> getOpcodes() const;
 
+  llvm::StringRef getMnemonic() const {
+    assert(m_kind == Kind::Dialect || m_kind == Kind::DialectWithOverloads);
+    return std::get<llvm::StringRef>(m_op);
+  }
+
   bool matchInstruction(const llvm::Instruction &inst) const;
+
   bool matchDeclaration(const llvm::Function &decl) const;
 
   bool canMatchDeclaration() const {

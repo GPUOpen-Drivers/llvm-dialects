@@ -245,11 +245,14 @@ private:
 
 namespace detail {
 
-bool isSimpleOperationDecl(const llvm::Function *fn, llvm::StringRef name);
-bool isOverloadedOperationDecl(const llvm::Function *fn, llvm::StringRef name);
+bool isSimpleOperationDecl(const llvm::Function *fn, llvm::StringRef mnemonic);
+bool isOverloadedOperationDecl(const llvm::Function *fn,
+                               llvm::StringRef mnemonic);
 
-bool isSimpleOperation(const llvm::CallInst *i, llvm::StringRef name);
-bool isOverloadedOperation(const llvm::CallInst *i, llvm::StringRef name);
+bool isSimpleOperation(const llvm::CallInst *i, llvm::StringRef mnemonic);
+bool isOverloadedOperation(const llvm::CallInst *i, llvm::StringRef mnemonic);
+bool isOperationDecl(llvm::StringRef fn, bool isOverloaded,
+                     llvm::StringRef mnemonic);
 
 } // namespace detail
 

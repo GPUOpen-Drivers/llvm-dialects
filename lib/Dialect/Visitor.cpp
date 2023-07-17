@@ -51,36 +51,39 @@ void VisitorTemplate::add(VisitorKey key, VisitorCallback *fn,
   handler.callback = fn;
   handler.data = data;
   handler.projection = projection;
+
   m_handlers.emplace_back(handler);
 
-  unsigned handlerIdx = m_handlers.size() - 1;
+  const unsigned handlerIdx = m_handlers.size() - 1;
 
   if (key.m_kind == VisitorKey::Kind::Intrinsic) {
-    m_intrinsicIdMap[key.m_intrinsicId].push_back(handlerIdx);
-  } else {
-    const OpDescription *description = key.m_description;
-    switch (description->getKind()) {
-    case OpDescription::Kind::Core:
-      for (unsigned opcode : description->getOpcodes())
-        m_coreOpcodeMap[opcode].push_back(handlerIdx);
-      break;
-    case OpDescription::Kind::Intrinsic:
-      for (unsigned id : description->getOpcodes())
-        m_intrinsicIdMap[id].push_back(handlerIdx);
-      break;
-    default: {
-      auto it = find_if(m_dialectCases, [=](const auto &theCase) {
-        return theCase.first == description;
-      });
-      if (it != m_dialectCases.end()) {
-        it->second.push_back(handlerIdx);
-      } else {
-        SmallVector<unsigned> handlers;
-        handlers.push_back(handlerIdx);
-        m_dialectCases.emplace_back(description, std::move(handlers));
-      }
-      break;
+    m_opMap[OpDescription::fromIntrinsic(key.m_intrinsicId)].push_back(
+        handlerIdx);
+  } else if (key.m_kind == VisitorKey::Kind::OpDescription) {
+    const OpDescription *opDesc = key.m_description;
+
+    if (opDesc->isCoreOp()) {
+      for (const unsigned op : opDesc->getOpcodes())
+        m_opMap[OpDescription::fromCoreOp(op)].push_back(handlerIdx);
+    } else if (opDesc->isIntrinsic()) {
+      for (const unsigned op : opDesc->getOpcodes())
+        m_opMap[OpDescription::fromIntrinsic(op)].push_back(handlerIdx);
+    } else {
+      m_opMap[*opDesc].push_back(handlerIdx);
     }
+  } else if (key.m_kind == VisitorKey::Kind::OpSet) {
+    const OpSet *opSet = key.m_set;
+
+    for (unsigned opcode : opSet->getCoreOpcodes())
+      m_opMap[OpDescription::fromCoreOp(opcode)].push_back(handlerIdx);
+
+    for (unsigned intrinsicID : opSet->getIntrinsicIDs())
+      m_opMap[OpDescription::fromIntrinsic(intrinsicID)].push_back(handlerIdx);
+
+    for (const auto &dialectOpPair : opSet->getDialectOps()) {
+      m_opMap[OpDescription::fromDialectOp(dialectOpPair.isOverload,
+                                           dialectOpPair.mnemonic)]
+          .push_back(handlerIdx);
     }
   }
 }
@@ -182,26 +185,16 @@ VisitorBase::VisitorBase(VisitorTemplate &&templ)
     : m_strategy(templ.m_strategy),
       m_projections(std::move(templ.m_projections)) {
   if (m_strategy == VisitorStrategy::Default) {
-    m_strategy = templ.m_coreOpcodeMap.empty()
-                     ? VisitorStrategy::ByFunctionDeclaration
-                     : VisitorStrategy::ByInstruction;
+    m_strategy = templ.m_opMap.empty() ? VisitorStrategy::ByFunctionDeclaration
+                                       : VisitorStrategy::ByInstruction;
   }
 
   BuildHelper helper(*this, templ.m_handlers);
 
-  m_coreOpcodeMap.reserve(templ.m_coreOpcodeMap.size());
-  m_intrinsicIdMap.reserve(templ.m_intrinsicIdMap.size());
-  m_dialectCases.reserve(templ.m_dialectCases.size());
+  m_opMap.reserve(templ.m_opMap);
 
-  for (const auto &entry : templ.m_coreOpcodeMap) {
-    m_coreOpcodeMap.try_emplace(entry.first, helper.mapHandlers(entry.second));
-  }
-  for (const auto &entry : templ.m_intrinsicIdMap) {
-    m_intrinsicIdMap.try_emplace(entry.first, helper.mapHandlers(entry.second));
-  }
-  for (const auto &entry : templ.m_dialectCases) {
-    m_dialectCases.emplace_back(entry.first, helper.mapHandlers(entry.second));
-  }
+  for (auto it : templ.m_opMap)
+    m_opMap[it.first] = helper.mapHandlers(it.second);
 }
 
 void VisitorBase::call(HandlerRange handlers, void *payload,
@@ -222,30 +215,16 @@ void VisitorBase::call(const VisitorHandler &handler, void *payload,
       payload = m_projections[idx].projection(payload);
     }
   }
+
   handler.callback(handler.data, payload, &inst);
 }
 
 void VisitorBase::visit(void *payload, Instruction &inst) const {
-  if (auto *callInst = dyn_cast<CallInst>(&inst)) {
-    // Note: Always fall through to case handlers installed for generic
-    // CallInst instructions, if there are any.
-    if (auto *intrinsicInst = dyn_cast<IntrinsicInst>(callInst)) {
-      auto it = m_intrinsicIdMap.find(intrinsicInst->getIntrinsicID());
-      if (it != m_intrinsicIdMap.end())
-        call(it->second, payload, inst);
-    } else {
-      for (const auto &theCase : m_dialectCases) {
-        if (theCase.first->matchInstruction(inst)) {
-          call(theCase.second, payload, inst);
-          break;
-        }
-      }
-    }
-  }
+  auto handlers = m_opMap.find(inst);
+  if (!handlers)
+    return;
 
-  auto it = m_coreOpcodeMap.find(inst.getOpcode());
-  if (it != m_coreOpcodeMap.end())
-    call(it->second, payload, inst);
+  call(*handlers.val(), payload, inst);
 }
 
 template <typename FilterT>
@@ -259,26 +238,8 @@ void VisitorBase::visitByDeclarations(void *payload, llvm::Module &module,
 
     LLVM_DEBUG(dbgs() << "visit " << decl.getName() << '\n');
 
-    HandlerRange handlers{0, 0};
-    if (unsigned intrinsicId = decl.getIntrinsicID()) {
-      auto it = m_intrinsicIdMap.find(intrinsicId);
-      if (it == m_intrinsicIdMap.end()) {
-        // Can't be a dialect op, so skip this declaration entirely.
-        continue;
-      }
-      handlers = it->second;
-    }
-
-    if (handlers.second == 0) {
-      for (const auto &theCase : m_dialectCases) {
-        if (theCase.first->matchDeclaration(decl)) {
-          handlers = theCase.second;
-          break;
-        }
-      }
-    }
-
-    if (handlers.second == 0) {
+    auto handlers = m_opMap.find(decl);
+    if (!handlers) {
       // Neither a matched intrinsic nor a matched dialect op; skip.
       continue;
     }
@@ -289,7 +250,7 @@ void VisitorBase::visitByDeclarations(void *payload, llvm::Module &module,
           continue;
         if (auto *callInst = dyn_cast<CallInst>(inst)) {
           if (&use == &callInst->getCalledOperandUse())
-            call(handlers, payload, *callInst);
+            call(*handlers.val(), payload, *callInst);
         }
       }
     }
