@@ -101,6 +101,32 @@ def WriteVarArgOp : ExampleOp<"write.vararg",
     Longer description of how this operation writes pieces of data.
   }];
 }
+
+def SetReadOp : ExampleOp<"set.read",
+                       [Memory<[(readwrite InaccessibleMem)]>, NoUnwind]> {
+  let results = (outs value:$data);
+  let arguments = (ins);
+
+  let defaultBuilderHasExplicitResultType = true;
+
+  let summary = "read a piece of data";
+  let description = [{
+    Longer description of how this operation reads a piece of data.
+  }];
+}
+
+def SetWriteOp : ExampleOp<"set.write",
+                        [Memory<[(write InaccessibleMem)]>, NoUnwind,
+                         WillReturn]> {
+  let results = (outs);
+  let arguments = (ins value:$data);
+
+  let summary = "write a data element";
+  let description = [{
+    Longer description of how this operation writes pieces of data.
+  }];
+}
+
 def CombineOp : ExampleOp<"combine",
                           [Memory<[]>, NoUnwind, WillReturn]> {
   let results = (outs value:$result);

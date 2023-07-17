@@ -79,6 +79,16 @@ namespace xd {
             state.setError();
         });
       
+        builder.add<SetReadOp>([](::llvm_dialects::VerifierState &state, SetReadOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
+        builder.add<SetWriteOp>([](::llvm_dialects::VerifierState &state, SetWriteOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
         builder.add<SizeOfOp>([](::llvm_dialects::VerifierState &state, SizeOfOp &op) {
           if (!op.verifier(state.out()))
             state.setError();
@@ -1213,6 +1223,126 @@ index
 
 
 
+      const ::llvm::StringLiteral SetReadOp::s_name{"xd.set.read"};
+
+    SetReadOp* SetReadOp::create(llvm_dialects::Builder& b, ::llvm::Type* dataType) {
+    ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(3);
+    
+      std::string mangledName =
+          ::llvm_dialects::getMangledName(s_name, {dataType});
+    auto fnType = ::llvm::FunctionType::get(dataType, {
+}, false);
+
+    auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << mangledName << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
+
+  return ::llvm::cast<SetReadOp>(b.CreateCall(fn));
+}
+
+
+    bool SetReadOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      using ::llvm_dialects::printable;
+
+      if (arg_size() != 0) {
+        errs << "  wrong number of arguments: " << arg_size()
+               << ", expected 0\n";
+        return false;
+      }
+  ::llvm::Type * const dataType = getData()->getType();
+(void)dataType;
+  return true;
+}
+
+
+::llvm::Value *SetReadOp::getData() {return this;}
+
+
+
+      const ::llvm::StringLiteral SetWriteOp::s_name{"xd.set.write"};
+
+    SetWriteOp* SetWriteOp::create(llvm_dialects::Builder& b, ::llvm::Value * data) {
+    ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(0);
+    auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), true);
+
+    auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << s_name << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
+
+  ::llvm::SmallVector<::llvm::Value*, 1> args = {
+data
+      };
+      
+      return ::llvm::cast<SetWriteOp>(b.CreateCall(fn, args));
+    }
+
+
+    bool SetWriteOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      using ::llvm_dialects::printable;
+
+      if (arg_size() != 1) {
+        errs << "  wrong number of arguments: " << arg_size()
+               << ", expected 1\n";
+        return false;
+      }
+  ::llvm::Type * const dataType = getData()->getType();
+(void)dataType;
+  return true;
+}
+
+
+      ::llvm::Value * SetWriteOp::getData() {
+        return getArgOperand(0);
+      }
+
+      void SetWriteOp::setData(::llvm::Value * data) {
+        setArgOperand(0, data);
+      }
+
+
+
       const ::llvm::StringLiteral SizeOfOp::s_name{"xd.sizeof"};
 
     SizeOfOp* SizeOfOp::create(llvm_dialects::Builder& b, ::llvm::Type * sizeofType) {
@@ -1765,6 +1895,22 @@ data
       const ::llvm_dialects::OpDescription &
       ::llvm_dialects::OpDescription::get<xd::ReadOp>() {
         static const ::llvm_dialects::OpDescription desc{true, "xd.read"};
+        return desc;
+      }
+
+    
+      template <>
+      const ::llvm_dialects::OpDescription &
+      ::llvm_dialects::OpDescription::get<xd::SetReadOp>() {
+        static const ::llvm_dialects::OpDescription desc{true, "xd.set.read"};
+        return desc;
+      }
+
+    
+      template <>
+      const ::llvm_dialects::OpDescription &
+      ::llvm_dialects::OpDescription::get<xd::SetWriteOp>() {
+        static const ::llvm_dialects::OpDescription desc{false, "xd.set.write"};
         return desc;
       }
 

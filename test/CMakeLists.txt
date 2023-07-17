@@ -51,3 +51,5 @@ add_lit_testsuites(LLVM_DIALECTS ${CMAKE_CURRENT_SOURCE_DIR}
   ${exclude_from_check_all}
   DEPENDS ${LLVM_DIALECTS_TEST_DEPENDS}
 )
+
+add_subdirectory(unit)

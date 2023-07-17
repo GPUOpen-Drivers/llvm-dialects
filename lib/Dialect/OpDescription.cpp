@@ -30,6 +30,13 @@ OpDescription::OpDescription(Kind kind, MutableArrayRef<unsigned> opcodes)
   llvm::sort(opcodes);
 }
 
+unsigned OpDescription::getOpcode() const {
+  const ArrayRef<unsigned> opcodes{getOpcodes()};
+  assert(!opcodes.empty() && "OpDescription does not contain any opcode!");
+
+  return opcodes.front();
+}
+
 ArrayRef<unsigned> OpDescription::getOpcodes() const {
   assert(m_kind == Kind::Core || m_kind == Kind::Intrinsic);
 

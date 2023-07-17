@@ -21,6 +21,8 @@
 #include "llvm/Support/Casting.h"
 
 #include "llvm-dialects/Dialect/OpDescription.h"
+#include "llvm-dialects/Dialect/OpMap.h"
+#include "llvm-dialects/Dialect/OpSet.h"
 
 namespace llvm {
 class Function;
@@ -31,8 +33,7 @@ class Module;
 
 namespace llvm_dialects {
 
-template <typename PayloadT>
-class Visitor;
+template <typename PayloadT> class Visitor;
 
 /// The iteration strategy of Visitor.
 enum class VisitorStrategy {
@@ -104,6 +105,19 @@ public:
     return key;
   }
 
+  template <typename... OpTs> static VisitorKey opSet() {
+    VisitorKey key{Kind::OpSet};
+    static const OpSet set = OpSet::get<OpTs...>();
+    key.m_set = &set;
+    return key;
+  }
+
+  static VisitorKey opSet(const OpSet &set) {
+    VisitorKey key{Kind::OpSet};
+    key.m_set = &set;
+    return key;
+  }
+
   static VisitorKey intrinsic(unsigned id) {
     VisitorKey key{Kind::Intrinsic};
     key.m_intrinsicId = id;
@@ -114,12 +128,14 @@ private:
   enum class Kind {
     OpDescription,
     Intrinsic,
+    OpSet,
   };
 
   VisitorKey(Kind kind) : m_kind(kind) {}
 
   Kind m_kind;
   const OpDescription *m_description = nullptr;
+  const OpSet *m_set = nullptr;
   unsigned m_intrinsicId = 0;
 };
 
@@ -211,10 +227,7 @@ private:
   VisitorStrategy m_strategy = VisitorStrategy::Default;
   std::vector<PayloadProjection> m_projections;
   std::vector<VisitorHandler> m_handlers;
-  llvm::DenseMap<unsigned, llvm::SmallVector<unsigned>> m_coreOpcodeMap;
-  llvm::DenseMap<unsigned, llvm::SmallVector<unsigned>> m_intrinsicIdMap;
-  std::vector<std::pair<const OpDescription *, llvm::SmallVector<unsigned>>>
-      m_dialectCases;
+  OpMap<llvm::SmallVector<unsigned>> m_opMap;
 };
 
 /// @brief Base class for VisitorBuilders
@@ -287,9 +300,7 @@ private:
   VisitorStrategy m_strategy;
   std::vector<PayloadProjection> m_projections;
   std::vector<VisitorHandler> m_handlers;
-  llvm::DenseMap<unsigned, HandlerRange> m_coreOpcodeMap;
-  llvm::DenseMap<unsigned, HandlerRange> m_intrinsicIdMap;
-  std::vector<std::pair<const OpDescription *, HandlerRange>> m_dialectCases;
+  OpMap<HandlerRange> m_opMap;
 };
 
 } // namespace detail
@@ -363,6 +374,18 @@ public:
     return *this;
   }
 
+  template <typename... OpTs>
+  VisitorBuilder &addSet(void (*fn)(PayloadT &, llvm::Instruction &I)) {
+    addSetCase(detail::VisitorKey::opSet<OpTs...>(), fn);
+    return *this;
+  }
+
+  VisitorBuilder &addSet(const OpSet &opSet,
+                         void (*fn)(PayloadT &, llvm::Instruction &I)) {
+    addSetCase(detail::VisitorKey::opSet(opSet), fn);
+    return *this;
+  }
+
   template <typename OpT> VisitorBuilder &add(void (PayloadT::*fn)(OpT &)) {
     addMemberFnCase<OpT>(detail::VisitorKey::op<OpT>(), fn);
     return *this;
@@ -418,6 +441,14 @@ private:
     VisitorBuilderBase::add(key, &VisitorBuilder::forwarder<OpT>, data);
   }
 
+  void addSetCase(detail::VisitorKey key,
+                  void (*fn)(PayloadT &, llvm::Instruction &)) {
+    detail::VisitorCallbackData data{};
+    static_assert(sizeof(fn) <= sizeof(data.data));
+    memcpy(&data.data, &fn, sizeof(fn));
+    VisitorBuilderBase::add(key, &VisitorBuilder::setForwarder, data);
+  }
+
   template <typename OpT>
   void addMemberFnCase(detail::VisitorKey key, void (PayloadT::*fn)(OpT &)) {
     detail::VisitorCallbackData data{};
@@ -432,6 +463,13 @@ private:
     void (*fn)(PayloadT &, OpT &);
     memcpy(&fn, &data.data, sizeof(fn));
     fn(*static_cast<PayloadT *>(payload), *llvm::cast<OpT>(op));
+  }
+
+  static void setForwarder(const detail::VisitorCallbackData &data,
+                           void *payload, llvm::Instruction *op) {
+    void (*fn)(PayloadT &, llvm::Instruction &);
+    memcpy(&fn, &data.data, sizeof(fn));
+    fn(*static_cast<PayloadT *>(payload), *op);
   }
 
   template <typename OpT>
