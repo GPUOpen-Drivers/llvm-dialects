@@ -106,7 +106,7 @@ public:
 
   std::vector<NamedValue> results;
 
-  Operation(GenDialectsContext &context) : m_system(context, m_scope) {}
+  Operation(GenDialectsContext &context);
   ~Operation();
 
   static bool parse(llvm::raw_ostream &errs, GenDialectsContext *context,
