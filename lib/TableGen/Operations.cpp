@@ -285,6 +285,9 @@ static std::string evaluateAttrLlvmType(raw_ostream &errs, raw_ostream &out,
   return attrType;
 }
 
+// Implement constructor here, where BuilderMethod is fully defined.
+Operation::Operation(GenDialectsContext &context) : m_system(context, m_scope) {}
+
 // Default destructor instantiated explicitly to avoid having to add more
 // includes in the header.
 Operation::~Operation() = default;
