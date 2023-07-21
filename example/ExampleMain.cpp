@@ -57,9 +57,6 @@ cl::opt<Action> g_action(
 cl::list<std::string> g_inputs(cl::Positional, cl::ZeroOrMore,
                                cl::desc("Input file(s) (\"-\" for stdin)"));
 
-cl::opt<bool> g_typedPointers("typed-pointers", cl::init(false),
-                               cl::desc("Disable opaque pointers"));
-
 cl::opt<bool> g_rpot("rpot", cl::init(false),
                      cl::desc("Visit functions in reverse post-order"));
 
@@ -132,23 +129,6 @@ void createFunctionExample(Module &module, const Twine &name) {
 std::unique_ptr<Module> createModuleExample(LLVMContext &context) {
   auto module = std::make_unique<Module>("example", context);
   createFunctionExample(*module, "example");
-  return module;
-}
-
-/// A smaller example that does not need pointers and works with typed pointers.
-std::unique_ptr<Module> createModuleExampleTypedPtrs(LLVMContext &context) {
-  auto module = std::make_unique<Module>("example", context);
-  Builder b{context};
-
-  Function *fn = Function::Create(FunctionType::get(b.getVoidTy(), false),
-                                  GlobalValue::ExternalLinkage, "example-typed", *module);
-
-  BasicBlock *bb = BasicBlock::Create(context, "entry", fn);
-  b.SetInsertPoint(bb);
-
-  useUnnamedStructTypes(b);
-
-  b.CreateRetVoid();
   return module;
 }
 
@@ -241,12 +221,10 @@ int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
   LLVMContext context;
-  if (g_typedPointers)
-    context.setOpaquePointers(false);
   auto dialectContext = DialectContext::make<xd::ExampleDialect>(context);
 
   if (g_action == Action::Build) {
-    auto module = g_typedPointers ? createModuleExampleTypedPtrs(context) : createModuleExample(context);
+    auto module = createModuleExample(context);
     module->print(llvm::outs(), nullptr, false);
   } else {
     if (g_inputs.size() != 1) {
