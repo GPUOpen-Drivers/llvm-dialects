@@ -230,6 +230,7 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
 #include "llvm-dialects/Dialect/Verifier.h"
 #include "llvm-dialects/Dialect/Visitor.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/InstrTypes.h"
 )";
