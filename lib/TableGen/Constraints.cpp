@@ -64,6 +64,16 @@ Variable *Scope::createVariable(StringRef name, Predicate *predicate) {
 void ConstraintSystem::print(raw_ostream &out, StringRef prefix) const {
   for (const auto &constraintPtr : m_constraints)
     constraintPtr->print(out, prefix);
+
+  out << prefix << "free variables:";
+  for (Variable *variable : m_variables)
+    out << ' ' << variable->toString();
+  out << '\n';
+
+  out << prefix << "free global variables:";
+  for (Variable *variable : m_globalVariables)
+    out << ' ' << variable->toString();
+  out << '\n';
 }
 
 void ConstraintSystem::dump() const {
@@ -118,8 +128,11 @@ bool ConstraintSystem::addConstraintImpl(raw_ostream &errs, Init *init,
       result->m_init = init;
       result->m_self = self;
 
-      if (self)
+      if (self && !dag->arg_empty()) {
         result->addVariable(self);
+        addVariable(self);
+        addGlobalVariable(self);
+      }
 
       for (size_t i = 0; i < dag->getNumArgs(); ++i) {
         if (!isValidOperand(i, op->getName()))
@@ -131,8 +144,11 @@ bool ConstraintSystem::addConstraintImpl(raw_ostream &errs, Init *init,
           return false;
 
         for (Variable *variable : branchSystem.m_variables) {
-          result->addVariable(variable);
           addVariable(variable);
+        }
+        for (Variable *variable : branchSystem.m_globalVariables) {
+          result->addVariable(variable);
+          addGlobalVariable(variable);
         }
 
         result->m_branches.push_back(std::move(branchSystem));
@@ -184,9 +200,11 @@ bool ConstraintSystem::addConstraintImpl(raw_ostream &errs, Init *init,
       bool nonTrivialConstraint =
           argument.constraint && argument.constraint != m_context.getAny();
       Variable *variable = nullptr;
+      bool isGlobal = false;
 
       if (!argument.name.empty()) {
         variable = m_scope.getVariable(argument.name);
+        isGlobal = true;
       } else if (nonTrivialConstraint) {
         unsigned predArgIdx = i + (self ? 1 : 0);
         variable = m_scope.createVariable(
@@ -204,6 +222,8 @@ bool ConstraintSystem::addConstraintImpl(raw_ostream &errs, Init *init,
 
       if (variable) {
         addVariable(variable);
+        if (isGlobal)
+          addGlobalVariable(variable);
         result->addVariable(variable);
       }
       result->m_arguments.push_back(variable);
@@ -242,6 +262,11 @@ void ConstraintSystem::merge(ConstraintSystem &&rhs) {
 void ConstraintSystem::addVariable(Variable *variable) {
   if (!llvm::is_contained(m_variables, variable))
     m_variables.push_back(variable);
+}
+
+void ConstraintSystem::addGlobalVariable(Variable *variable) {
+  if (!llvm::is_contained(m_globalVariables, variable))
+    m_globalVariables.push_back(variable);
 }
 
 std::string Constraint::toString() const {

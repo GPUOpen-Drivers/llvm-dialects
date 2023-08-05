@@ -85,11 +85,18 @@ private:
   bool addConstraintImpl(llvm::raw_ostream &errs, llvm::Init *init,
                          Variable *self);
   void addVariable(Variable *variable);
+  void addGlobalVariable(Variable *variable);
 
   GenDialectsContext &m_context;
   Scope &m_scope;
   std::vector<std::unique_ptr<Constraint>> m_constraints;
+
+  // List of all free variables that appear in the constraint system.
   std::vector<Variable *> m_variables;
+
+  // List of all free variables that appear in the constraint system and that
+  // may be referenced from the outside.
+  std::vector<Variable *> m_globalVariables;
 };
 
 class Constraint {
