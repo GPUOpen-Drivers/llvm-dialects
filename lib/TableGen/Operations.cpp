@@ -574,6 +574,7 @@ void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
 
   out << tgfmt(R"() {
     ::llvm::LLVMContext& $_context = $_builder.getContext();
+    (void)$_context;
     ::llvm::Module& $_module = *$_builder.GetInsertBlock()->getModule();
   
   )",

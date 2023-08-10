@@ -289,6 +289,7 @@ return true;
 
     Add32Op* Add32Op::create(llvm_dialects::Builder& b, ::llvm::Value * lhs, ::llvm::Value * rhs, uint32_t extra) {
     ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
   
   
@@ -410,6 +411,7 @@ uint32_t const extra = getExtra();
 
     CombineOp* CombineOp::create(llvm_dialects::Builder& b, ::llvm::Value * lhs, ::llvm::Value * rhs) {
     ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
   
   
@@ -504,6 +506,7 @@ rhs
 
     ExtractElementOp* ExtractElementOp::create(llvm_dialects::Builder& b, ::llvm::Value * vector, ::llvm::Value * index) {
     ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
   
   
@@ -607,6 +610,7 @@ index
 
     FromFixedVectorOp* FromFixedVectorOp::create(llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * source) {
     ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
   
   
@@ -776,6 +780,7 @@ source
 
     HandleGetOp* HandleGetOp::create(llvm_dialects::Builder& b) {
     ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
   
   
@@ -837,6 +842,7 @@ source
 
     IExtOp* IExtOp::create(llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * source) {
     ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
   
   
@@ -934,6 +940,7 @@ source
 
     ITruncOp* ITruncOp::create(llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * source) {
     ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
   
   
@@ -1031,6 +1038,7 @@ source
 
     InsertElementOp* InsertElementOp::create(llvm_dialects::Builder& b, ::llvm::Value * vector, ::llvm::Value * value, ::llvm::Value * index) {
     ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
   
   
@@ -1152,6 +1160,7 @@ index
 
     ReadOp* ReadOp::create(llvm_dialects::Builder& b, ::llvm::Type* dataType) {
     ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
   
   
@@ -1208,6 +1217,7 @@ index
 
     SizeOfOp* SizeOfOp::create(llvm_dialects::Builder& b, ::llvm::Type * sizeofType) {
     ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
   
   
@@ -1281,6 +1291,7 @@ index
 
     StreamAddOp* StreamAddOp::create(llvm_dialects::Builder& b, ::llvm::Value * ptr, ::llvm::Value * count, ::llvm::Value * initial) {
     ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
   
   
@@ -1372,6 +1383,7 @@ initial
 
     StreamMaxOp* StreamMaxOp::create(llvm_dialects::Builder& b, ::llvm::Value * ptr, ::llvm::Value * count, ::llvm::Value * initial) {
     ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
   
   
@@ -1463,6 +1475,7 @@ initial
 
     StreamMinOp* StreamMinOp::create(llvm_dialects::Builder& b, ::llvm::Value * ptr, ::llvm::Value * count, ::llvm::Value * initial) {
     ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
   
   
@@ -1554,6 +1567,7 @@ initial
 
     WriteOp* WriteOp::create(llvm_dialects::Builder& b, ::llvm::Value * data) {
     ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
   
   
@@ -1616,6 +1630,7 @@ data
 
     WriteVarArgOp* WriteVarArgOp::create(llvm_dialects::Builder& b, ::llvm::Value * data, ::llvm::ArrayRef<::llvm::Value *> args) {
     ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
   
   
