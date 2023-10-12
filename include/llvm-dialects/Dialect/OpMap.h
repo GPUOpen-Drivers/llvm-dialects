@@ -500,6 +500,13 @@ template <typename ValueT, bool isConst> class OpMapIteratorBase final {
       }
 
       if (nextState == IteratorState::DialectOp) {
+        // If we are about to transition to a new state, we cannot assume that
+        // the call to std::get will succeed.
+        if (currentState != nextState)
+          return !m_iterator.m_map->m_dialectOps.empty()
+                     ? IteratorState::DialectOp
+                     : IteratorState::Invalid;
+
         auto peek = std::get<DialectOpIteratorT>(m_iterator.m_iterator);
         std::advance(peek, 1);
         if (peek != m_iterator.m_map->m_dialectOps.end())
