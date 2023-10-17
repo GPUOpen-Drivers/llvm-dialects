@@ -37,35 +37,6 @@
 using namespace llvm;
 using namespace llvm_dialects;
 
-namespace {
-
-using DialectOpKey = std::pair<StringRef, bool>;
-
-class DialectOpKVUtils {
-public:
-  static DialectOpKey getDialectMapKey(const OpDescription &desc) {
-    return {desc.getMnemonic(),
-            desc.getKind() == OpDescription::Kind::DialectWithOverloads};
-  }
-};
-
-template <typename ValueT> struct DialectOpKV final {
-  DialectOpKey Key;
-  ValueT Value;
-
-  bool operator==(const DialectOpKV &other) const {
-    return Key.first == other.Key.first && Key.second == other.Key.second &&
-           Value == other.Value;
-  }
-
-  bool operator==(const OpDescription &desc) const {
-    const bool isOverload =
-        desc.getKind() == OpDescription::Kind::DialectWithOverloads;
-    return Key.first == desc.getMnemonic() && Key.second == isOverload;
-  }
-};
-} // namespace
-
 namespace llvm_dialects {
 
 // Forward declarations.
@@ -87,7 +58,23 @@ template <typename ValueT> class OpMap final {
   friend class OpMapIteratorBase<ValueT, true>;
   friend class OpMapIteratorBase<ValueT, false>;
 
-  using DialectOpKVT = DialectOpKV<ValueT>;
+  using DialectOpKey = std::pair<StringRef, bool>;
+
+  struct DialectOpKV final {
+    DialectOpKey Key;
+    ValueT Value;
+
+    bool operator==(const DialectOpKV &other) const {
+      return Key.first == other.Key.first && Key.second == other.Key.second &&
+             Value == other.Value;
+    }
+
+    bool operator==(const OpDescription &desc) const {
+      const bool isOverload =
+          desc.getKind() == OpDescription::Kind::DialectWithOverloads;
+      return Key.first == desc.getMnemonic() && Key.second == isOverload;
+    }
+  };
 
 public:
   using iterator = OpMapIteratorBase<ValueT, false>;
@@ -159,7 +146,7 @@ public:
              (desc.isIntrinsic() && containsIntrinsic(op));
     }
 
-    for (const DialectOpKVT &dialectOpKV : m_dialectOps) {
+    for (const DialectOpKV &dialectOpKV : m_dialectOps) {
       if (dialectOpKV == desc)
         return true;
     }
@@ -247,7 +234,7 @@ public:
   // --------------------------------------------------------------------------
   template <typename... Ts>
   std::pair<iterator, bool> try_emplace(const OpDescription &desc,
-                                        Ts &&... vals) {
+                                        Ts &&...vals) {
     auto found = find(const_cast<OpDescription &>(desc));
     if (found)
       return {found, false};
@@ -271,7 +258,7 @@ public:
 
     // Find the iterator into the dialect ops.
     size_t Idx = 0;
-    for (DialectOpKVT &dialectOpKV : m_dialectOps) {
+    for (DialectOpKV &dialectOpKV : m_dialectOps) {
       if (dialectOpKV == desc) {
         auto it = m_dialectOps.begin();
         std::advance(it, Idx);
@@ -284,9 +271,9 @@ public:
 
     // If the entry doesn't exist, construct it and return an iterator to the
     // end of dialect ops.
-    auto it = m_dialectOps.insert(
-        m_dialectOps.end(),
-        {DialectOpKVUtils::getDialectMapKey(desc), std::forward<Ts>(vals)...});
+    auto it =
+        m_dialectOps.insert(m_dialectOps.end(), {getDialectMapKey(desc),
+                                                 std::forward<Ts>(vals)...});
     return {makeIterator(it, OpDescription::Kind::Dialect, false), true};
   }
 
@@ -392,15 +379,20 @@ public:
 private:
   DenseMap<unsigned, ValueT> m_coreOpcodes;
   DenseMap<unsigned, ValueT> m_intrinsics;
-  SmallVector<DialectOpKVT, 1> m_dialectOps;
+  SmallVector<DialectOpKV, 1> m_dialectOps;
 
-  template <typename... Args> iterator makeIterator(Args &&... args) {
+  template <typename... Args> iterator makeIterator(Args &&...args) {
     return iterator(this, std::forward<Args>(args)...);
   }
 
   template <typename... Args>
-  const_iterator makeConstIterator(Args &&... args) const {
+  const_iterator makeConstIterator(Args &&...args) const {
     return const_iterator(this, std::forward<Args>(args)...);
+  }
+
+  static DialectOpKey getDialectMapKey(const OpDescription &desc) {
+    return {desc.getMnemonic(),
+            desc.getKind() == OpDescription::Kind::DialectWithOverloads};
   }
 };
 
@@ -412,18 +404,17 @@ private:
 /// Note that iterating over an OpMap instance never guarantees the order of
 /// insertion.
 template <typename ValueT, bool isConst> class OpMapIteratorBase final {
+  using OpMapT =
+      std::conditional_t<isConst, const OpMap<ValueT>, OpMap<ValueT>>;
   using BaseIteratorT =
       std::conditional_t<isConst,
                          typename DenseMap<unsigned, ValueT>::const_iterator,
                          typename DenseMap<unsigned, ValueT>::iterator>;
   using DialectOpIteratorT = std::conditional_t<
-      isConst, typename SmallVectorImpl<DialectOpKV<ValueT>>::const_iterator,
-      typename SmallVectorImpl<DialectOpKV<ValueT>>::iterator>;
+      isConst, typename SmallVectorImpl<typename OpMapT::DialectOpKV>::const_iterator,
+      typename SmallVectorImpl<typename OpMapT::DialectOpKV>::iterator>;
 
   using InternalValueT = std::conditional_t<isConst, const ValueT, ValueT>;
-
-  using OpMapT =
-      std::conditional_t<isConst, const OpMap<ValueT>, OpMap<ValueT>>;
 
   friend class OpMap<ValueT>;
   friend class OpMapIteratorBase<ValueT, true>;
@@ -723,7 +714,7 @@ private:
     size_t idx = 0;
     bool found = false;
     for (auto &dialectOpKV : m_map->m_dialectOps) {
-      const DialectOpKey &key = dialectOpKV.Key;
+      const auto &key = dialectOpKV.Key;
       if (detail::isOperationDecl(funcName, key.second, key.first)) {
         m_desc = {key.second, key.first};
         auto it = m_map->m_dialectOps.begin();
