@@ -191,9 +191,9 @@ template <bool rpot> const Visitor<VisitorContainer> &getExampleVisitor() {
                 });
             b.addSet(complexSet, [](VisitorNest &self, llvm::Instruction &op) {
               assert((op.getOpcode() == Instruction::Ret ||
-                      (isa<IntrinsicInst>)(&op) &&
+                      (isa<IntrinsicInst>(&op) &&
                           cast<IntrinsicInst>(&op)->getIntrinsicID() ==
-                              Intrinsic::umin) &&
+                              Intrinsic::umin)) &&
                      "Unexpected operation detected while visiting OpSet!");
 
               if (op.getOpcode() == Instruction::Ret) {
