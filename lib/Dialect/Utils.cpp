@@ -26,7 +26,11 @@ using namespace llvm;
 using namespace llvm_dialects;
 
 bool llvm_dialects::areTypesEqual(ArrayRef<Type *> types) {
+#if HAVE_LLVM_VERSION_MAJOR >= 16
   return llvm::all_equal(types);
+#else
+  return llvm::is_splat(types);
+#endif
 }
 
 // The following function is copied verbatim from
