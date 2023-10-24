@@ -3,7 +3,7 @@ project(llvm-dialects)
 
 # Options intended for configuration by the user:
 #  - CMAKE_BUILD_TYPE
-#  - LLVM_DIR
+#  - LLVM_ROOT
 #
 # The build system is intended to be usable both as an external subproject of
 # the llvm-project build tree, and as a separate subdirectory / subproject.
