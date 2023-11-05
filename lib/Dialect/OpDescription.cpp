@@ -152,20 +152,23 @@ HANDLE_INTRINSIC_DESC_OPCODE_SET(LifetimeIntrinsic, Intrinsic::lifetime_start,
 #endif
 
 // Add Intrinsic::dbg_addr back for sufficiently recent LLVM
-HANDLE_INTRINSIC_DESC_OPCODE_SET(DbgInfoIntrinsic, Intrinsic::dbg_declare,
-                                 Intrinsic::dbg_value, Intrinsic::dbg_label
 #if HAVE_LLVM_VERSION_MAJOR >= 16
-                                 ,Intrinsic::dbg_assign
+HANDLE_INTRINSIC_DESC_OPCODE_SET(DbgInfoIntrinsic, Intrinsic::dbg_declare,
+                                 Intrinsic::dbg_value, Intrinsic::dbg_label,
+                                 Intrinsic::dbg_assign)
+#else
+HANDLE_INTRINSIC_DESC_OPCODE_SET(DbgInfoIntrinsic, Intrinsic::dbg_declare,
+                                 Intrinsic::dbg_value, Intrinsic::dbg_label)
 #endif
-                                 )
 
 // Add Intrinsic::dbg_addr back for sufficiently recent LLVM
-HANDLE_INTRINSIC_DESC_OPCODE_SET(DbgVariableIntrinsic, Intrinsic::dbg_declare,
-                                 Intrinsic::dbg_value
 #if HAVE_LLVM_VERSION_MAJOR >= 16
-                                 ,Intrinsic::dbg_assign
+HANDLE_INTRINSIC_DESC_OPCODE_SET(DbgVariableIntrinsic, Intrinsic::dbg_declare,
+                                 Intrinsic::dbg_value, Intrinsic::dbg_assign)
+#else
+HANDLE_INTRINSIC_DESC_OPCODE_SET(DbgVariableIntrinsic, Intrinsic::dbg_declare,
+                                 Intrinsic::dbg_value)
 #endif
-                                )
 
 HANDLE_INTRINSIC_DESC(DbgDeclareInst, dbg_declare)
 HANDLE_INTRINSIC_DESC(DbgValueInst, dbg_value)
