@@ -15,6 +15,7 @@
  */
 
 #include "llvm-dialects/Dialect/OpDescription.h"
+#include "llvm-dialects/Dialect/OpSet.h"
 
 #include "llvm-dialects/Dialect/Dialect.h"
 
@@ -25,25 +26,11 @@
 using namespace llvm_dialects;
 using namespace llvm;
 
-OpDescription::OpDescription(Kind kind, MutableArrayRef<unsigned> opcodes)
-    : m_kind(kind), m_op(opcodes) {
-  llvm::sort(opcodes);
-}
-
 unsigned OpDescription::getOpcode() const {
-  const ArrayRef<unsigned> opcodes{getOpcodes()};
-  assert(!opcodes.empty() && "OpDescription does not contain any opcode!");
-
-  return opcodes.front();
-}
-
-ArrayRef<unsigned> OpDescription::getOpcodes() const {
-  assert(m_kind == Kind::Core || m_kind == Kind::Intrinsic);
-
   if (auto *op = std::get_if<unsigned>(&m_op))
     return *op;
 
-  return std::get<ArrayRef<unsigned>>(m_op);
+  llvm_unreachable("OpDescription does not contain any opcode!");
 }
 
 bool OpDescription::matchInstruction(const Instruction &inst) const {
@@ -57,9 +44,7 @@ bool OpDescription::matchInstruction(const Instruction &inst) const {
     if (auto *op = std::get_if<unsigned>(&m_op))
       return inst.getOpcode() == *op;
 
-    auto opcodes = std::get<ArrayRef<unsigned>>(m_op);
-    auto it = llvm::lower_bound(opcodes, inst.getOpcode());
-    return it != opcodes.end() && *it == inst.getOpcode();
+    return false;
   }
 
   if (auto *call = dyn_cast<CallInst>(&inst)) {
@@ -87,15 +72,13 @@ bool OpDescription::matchIntrinsic(unsigned intrinsicId) const {
   if (auto *op = std::get_if<unsigned>(&m_op))
     return *op == intrinsicId;
 
-  auto opcodes = std::get<ArrayRef<unsigned>>(m_op);
-  auto it = llvm::lower_bound(opcodes, intrinsicId);
-  return it != opcodes.end() && *it == intrinsicId;
+  return false;
 }
 
 // ============================================================================
 // Descriptions of core instructions.
 
-template <> const OpDescription &OpDescription::get<UnaryInstruction>() {
+template <> const OpSet &OpSet::getClass<UnaryInstruction>() {
   static unsigned opcodes[] = {
       Instruction::Alloca,
       Instruction::Load,
@@ -106,17 +89,17 @@ template <> const OpDescription &OpDescription::get<UnaryInstruction>() {
 #define HANDLE_CAST_INST(num, opcode, Class) Instruction::opcode,
 #include "llvm/IR/Instruction.def"
   };
-  static const OpDescription desc{Kind::Core, opcodes};
-  return desc;
+  static const OpSet set = OpSet::fromCoreOpcodes(opcodes);
+  return set;
 }
 
-template <> const OpDescription &OpDescription::get<BinaryOperator>() {
+template <> const OpSet &OpSet::getClass<BinaryOperator>() {
   static unsigned opcodes[] = {
 #define HANDLE_BINARY_INST(num, opcode, Class) Instruction::opcode,
 #include "llvm/IR/Instruction.def"
   };
-  static const OpDescription desc{Kind::Core, opcodes};
-  return desc;
+  static const OpSet set = OpSet::fromCoreOpcodes({opcodes});
+  return set;
 }
 
 // Generate OpDescription for all dedicate instruction classes.
@@ -136,10 +119,9 @@ template <> const OpDescription &OpDescription::get<BinaryOperator>() {
     return desc;                                                               \
   }
 #define HANDLE_INTRINSIC_DESC_OPCODE_SET(Class, ...)                           \
-  template <> const OpDescription &OpDescription::get<Class>() {               \
-    static unsigned opcodes[] = {__VA_ARGS__};                                 \
-    static const OpDescription desc{Kind::Intrinsic, opcodes};                 \
-    return desc;                                                               \
+  template <> const OpSet &OpSet::getClass<Class>() {                          \
+    static const OpSet set = OpSet::fromIntrinsicIDs({__VA_ARGS__});           \
+    return set;                                                                \
   }
 
 // ============================================================================

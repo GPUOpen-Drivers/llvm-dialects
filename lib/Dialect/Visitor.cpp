@@ -63,11 +63,11 @@ void VisitorTemplate::add(VisitorKey key, VisitorCallback *fn,
     const OpDescription *opDesc = key.m_description;
 
     if (opDesc->isCoreOp()) {
-      for (const unsigned op : opDesc->getOpcodes())
-        m_opMap[OpDescription::fromCoreOp(op)].push_back(handlerIdx);
+      m_opMap[OpDescription::fromCoreOp(opDesc->getOpcode())].push_back(
+          handlerIdx);
     } else if (opDesc->isIntrinsic()) {
-      for (const unsigned op : opDesc->getOpcodes())
-        m_opMap[OpDescription::fromIntrinsic(op)].push_back(handlerIdx);
+      m_opMap[OpDescription::fromIntrinsic(opDesc->getOpcode())].push_back(
+          handlerIdx);
     } else {
       m_opMap[*opDesc].push_back(handlerIdx);
     }

@@ -32,6 +32,7 @@
 
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
@@ -145,7 +146,7 @@ struct VisitorNest {
   raw_ostream *out = nullptr;
   VisitorInnermost inner;
 
-  void visitBinaryOperator(BinaryOperator &inst) {
+  void visitBinaryOperator(Instruction &inst) {
     *out << "visiting BinaryOperator: " << inst << '\n';
   }
 };
@@ -204,11 +205,13 @@ template <bool rpot> const Visitor<VisitorContainer> &getExampleVisitor() {
                 }
               }
             });
-            b.add<UnaryInstruction>(
-                [](VisitorNest &self, UnaryInstruction &inst) {
-                  *self.out << "visiting UnaryInstruction: " << inst << '\n';
-                });
-            b.add(&VisitorNest::visitBinaryOperator);
+            b.addSet(OpSet::getClass<UnaryInstruction>(),
+                     [](VisitorNest &self, llvm::Instruction &inst) {
+                       *self.out << "visiting UnaryInstruction: " << inst
+                                 << '\n';
+                     });
+            b.addSet(OpSet::getClass<BinaryOperator>(),
+                     &VisitorNest::visitBinaryOperator);
             b.nest<raw_ostream>([](VisitorBuilder<raw_ostream> &b) {
               b.add<xd::WriteOp>([](raw_ostream &out, xd::WriteOp &op) {
                 out << "visiting WriteOp: " << op << '\n';
