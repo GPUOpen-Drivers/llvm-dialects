@@ -1478,9 +1478,9 @@ initial
 ::llvm::Type * const resultType = getResult()->getType();
 (void)resultType;
 
-        if (::llvm::PointerType::get(context, 0) != ptrType) {
+        if (::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0) != ptrType) {
           errs << "  unexpected value of $ptr:\n";
-          errs << "    expected:  " << printable(::llvm::PointerType::get(context, 0)) << '\n';
+          errs << "    expected:  " << printable(::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0)) << '\n';
           errs << "    actual:    " << printable(ptrType) << '\n';
         
           return false;
@@ -1570,9 +1570,9 @@ initial
 ::llvm::Type * const resultType = getResult()->getType();
 (void)resultType;
 
-        if (::llvm::PointerType::get(context, 0) != ptrType) {
+        if (::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0) != ptrType) {
           errs << "  unexpected value of $ptr:\n";
-          errs << "    expected:  " << printable(::llvm::PointerType::get(context, 0)) << '\n';
+          errs << "    expected:  " << printable(::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0)) << '\n';
           errs << "    actual:    " << printable(ptrType) << '\n';
         
           return false;
@@ -1662,9 +1662,9 @@ initial
 ::llvm::Type * const resultType = getResult()->getType();
 (void)resultType;
 
-        if (::llvm::PointerType::get(context, 0) != ptrType) {
+        if (::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0) != ptrType) {
           errs << "  unexpected value of $ptr:\n";
-          errs << "    expected:  " << printable(::llvm::PointerType::get(context, 0)) << '\n';
+          errs << "    expected:  " << printable(::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0)) << '\n';
           errs << "    actual:    " << printable(ptrType) << '\n';
         
           return false;
