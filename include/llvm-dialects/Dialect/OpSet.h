@@ -32,12 +32,10 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 
-using namespace llvm;
-
 namespace llvm_dialects {
 
 struct DialectOpPair final {
-  StringRef mnemonic;
+  llvm::StringRef mnemonic;
   bool isOverload;
 
   // Checks whether the current pair is comparable to an OpDescription
@@ -63,7 +61,7 @@ public:
   // -------------------------------------------------------------
 
   // Construct an OpSet from a set of core opcodes.
-  static OpSet fromCoreOpcodes(ArrayRef<unsigned> ops) {
+  static OpSet fromCoreOpcodes(llvm::ArrayRef<unsigned> ops) {
     OpSet set;
     for (const unsigned op : ops)
       set.m_coreOpcodes.insert(op);
@@ -72,7 +70,7 @@ public:
   }
 
   // Construct an OpSet from a set of intrinsics.
-  static OpSet fromIntrinsicIDs(ArrayRef<unsigned> intrinsicIDs) {
+  static OpSet fromIntrinsicIDs(llvm::ArrayRef<unsigned> intrinsicIDs) {
     OpSet set;
     for (const unsigned intrinsicID : intrinsicIDs)
       set.m_intrinsicIDs.insert(intrinsicID);
@@ -81,7 +79,7 @@ public:
   }
 
   // Construct an OpSet from a set of OpDescriptions.
-  static OpSet fromOpDescriptions(ArrayRef<OpDescription> descs) {
+  static OpSet fromOpDescriptions(llvm::ArrayRef<OpDescription> descs) {
     OpSet set;
     for (const OpDescription &desc : descs)
       set.tryInsertOp(desc);
@@ -132,12 +130,12 @@ public:
   }
 
   // Checks if `inst` belongs to the OpSet.
-  bool contains(const Instruction &inst) const {
+  bool contains(const llvm::Instruction &inst) const {
     if (containsCoreOp(inst.getOpcode()))
       return true;
 
-    if (auto *CI = dyn_cast<CallInst>(&inst)) {
-      const Function *Callee = CI->getCalledFunction();
+    if (auto *CI = llvm::dyn_cast<llvm::CallInst>(&inst)) {
+      const llvm::Function *Callee = CI->getCalledFunction();
       if (!Callee)
         return false;
 
@@ -148,7 +146,7 @@ public:
   }
 
   // Checks if `func` belongs to the OpSet.
-  bool contains(const Function &func) const {
+  bool contains(const llvm::Function &func) const {
     if (func.isIntrinsic() && containsIntrinsicID(func.getIntrinsicID()))
       return true;
 
@@ -158,11 +156,17 @@ public:
   // -------------------------------------------------------------
   // Convenience getters to access the internal data structures.
   // -------------------------------------------------------------
-  const DenseSet<unsigned> &getCoreOpcodes() const { return m_coreOpcodes; }
+  const llvm::DenseSet<unsigned> &getCoreOpcodes() const {
+    return m_coreOpcodes;
+  }
 
-  const DenseSet<unsigned> &getIntrinsicIDs() const { return m_intrinsicIDs; }
+  const llvm::DenseSet<unsigned> &getIntrinsicIDs() const {
+    return m_intrinsicIDs;
+  }
 
-  const ArrayRef<DialectOpPair> getDialectOps() const { return m_dialectOps; }
+  const llvm::ArrayRef<DialectOpPair> getDialectOps() const {
+    return m_dialectOps;
+  }
 
 private:
   // Generates an `OpDescription` for a given `OpT`, extracts the
@@ -176,7 +180,7 @@ private:
 
   // Checks if `mnemonic` can be described by any of the stored dialect
   // operations.
-  bool isMatchingDialectOp(StringRef mnemonic) const {
+  bool isMatchingDialectOp(llvm::StringRef mnemonic) const {
     for (const auto &dialectOp : m_dialectOps) {
       if (detail::isOperationDecl(mnemonic, dialectOp.isOverload,
                                   dialectOp.mnemonic))
@@ -211,8 +215,8 @@ private:
     return desc.getKind() == OpDescription::Kind::DialectWithOverloads;
   }
 
-  DenseSet<unsigned> m_coreOpcodes;
-  DenseSet<unsigned> m_intrinsicIDs;
-  SmallVector<DialectOpPair, 1> m_dialectOps;
+  llvm::DenseSet<unsigned> m_coreOpcodes;
+  llvm::DenseSet<unsigned> m_intrinsicIDs;
+  llvm::SmallVector<DialectOpPair, 1> m_dialectOps;
 };
 } // namespace llvm_dialects
