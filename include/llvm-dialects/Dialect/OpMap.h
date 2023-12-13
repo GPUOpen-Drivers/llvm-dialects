@@ -34,9 +34,6 @@
 #include <tuple>
 #include <type_traits>
 
-using namespace llvm;
-using namespace llvm_dialects;
-
 namespace llvm_dialects {
 
 // Forward declarations.
@@ -58,7 +55,7 @@ template <typename ValueT> class OpMap final {
   friend class OpMapIteratorBase<ValueT, true>;
   friend class OpMapIteratorBase<ValueT, false>;
 
-  using DialectOpKey = std::pair<StringRef, bool>;
+  using DialectOpKey = std::pair<llvm::StringRef, bool>;
 
   struct DialectOpKV final {
     DialectOpKey Key;
@@ -179,10 +176,10 @@ public:
 
   FIND_OVERLOAD(OpDescription)
   FIND_CONST_OVERLOAD(OpDescription)
-  FIND_OVERLOAD(Function)
-  FIND_CONST_OVERLOAD(Function)
-  FIND_OVERLOAD(Instruction)
-  FIND_CONST_OVERLOAD(Instruction)
+  FIND_OVERLOAD(llvm::Function)
+  FIND_CONST_OVERLOAD(llvm::Function)
+  FIND_OVERLOAD(llvm::Instruction)
+  FIND_CONST_OVERLOAD(llvm::Instruction)
 
 #undef FIND_CONST_OVERLOAD
 #undef FIND_OVERLOAD
@@ -207,7 +204,7 @@ public:
 
   // Try to lookup a function which is either the callee of an intrinsic call
   // or a dialect operation.
-  ValueT lookup(const Function &func) const {
+  ValueT lookup(const llvm::Function &func) const {
     auto it = find(func);
     if (auto val = it.val(); val)
       return *val;
@@ -217,7 +214,7 @@ public:
 
   // Try to lookup an instruction which is either an intrinsic instruction,
   // a dialect operation or a core instruction.
-  ValueT lookup(const Instruction &inst) const {
+  ValueT lookup(const llvm::Instruction &inst) const {
     auto it = find(inst);
     if (auto val = it.val(); val)
       return *val;
@@ -377,9 +374,9 @@ public:
 #undef GENERATE_ITERATOR_BODY
 
 private:
-  DenseMap<unsigned, ValueT> m_coreOpcodes;
-  DenseMap<unsigned, ValueT> m_intrinsics;
-  SmallVector<DialectOpKV, 1> m_dialectOps;
+  llvm::DenseMap<unsigned, ValueT> m_coreOpcodes;
+  llvm::DenseMap<unsigned, ValueT> m_intrinsics;
+  llvm::SmallVector<DialectOpKV, 1> m_dialectOps;
 
   template <typename... Args> iterator makeIterator(Args &&...args) {
     return iterator(this, std::forward<Args>(args)...);
@@ -406,13 +403,14 @@ private:
 template <typename ValueT, bool isConst> class OpMapIteratorBase final {
   using OpMapT =
       std::conditional_t<isConst, const OpMap<ValueT>, OpMap<ValueT>>;
-  using BaseIteratorT =
-      std::conditional_t<isConst,
-                         typename DenseMap<unsigned, ValueT>::const_iterator,
-                         typename DenseMap<unsigned, ValueT>::iterator>;
+  using BaseIteratorT = std::conditional_t<
+      isConst, typename llvm::DenseMap<unsigned, ValueT>::const_iterator,
+      typename llvm::DenseMap<unsigned, ValueT>::iterator>;
   using DialectOpIteratorT = std::conditional_t<
-      isConst, typename SmallVectorImpl<typename OpMapT::DialectOpKV>::const_iterator,
-      typename SmallVectorImpl<typename OpMapT::DialectOpKV>::iterator>;
+      isConst,
+      typename llvm::SmallVectorImpl<
+          typename OpMapT::DialectOpKV>::const_iterator,
+      typename llvm::SmallVectorImpl<typename OpMapT::DialectOpKV>::iterator>;
 
   using InternalValueT = std::conditional_t<isConst, const ValueT, ValueT>;
 
@@ -598,15 +596,15 @@ template <typename ValueT, bool isConst> class OpMapIteratorBase final {
     }
   }
 
-  OpMapIteratorBase(OpMapT *map, const Function &func) : m_map{map} {
+  OpMapIteratorBase(OpMapT *map, const llvm::Function &func) : m_map{map} {
     createFromFunc(func);
   }
 
   // Do a lookup for a given instruction. Mark the iterator as invalid
   // if the instruction is a call-like core instruction.
-  OpMapIteratorBase(OpMapT *map, const Instruction &inst) : m_map{map} {
-    if (auto *CI = dyn_cast<CallInst>(&inst)) {
-      const Function *callee = CI->getCalledFunction();
+  OpMapIteratorBase(OpMapT *map, const llvm::Instruction &inst) : m_map{map} {
+    if (auto *CI = llvm::dyn_cast<llvm::CallInst>(&inst)) {
+      const llvm::Function *callee = CI->getCalledFunction();
       if (callee) {
         createFromFunc(*callee);
         return;
@@ -616,7 +614,7 @@ template <typename ValueT, bool isConst> class OpMapIteratorBase final {
     const unsigned op = inst.getOpcode();
 
     // Construct an invalid iterator.
-    if (op == Instruction::Call || op == Instruction::CallBr) {
+    if (op == llvm::Instruction::Call || op == llvm::Instruction::CallBr) {
       invalidate();
       return;
     }
@@ -697,7 +695,7 @@ protected:
 private:
   void invalidate() { m_isInvalid = true; }
 
-  void createFromFunc(const Function &func) {
+  void createFromFunc(const llvm::Function &func) {
     if (func.isIntrinsic()) {
       m_iterator = m_map->m_intrinsics.find(func.getIntrinsicID());
 
@@ -710,7 +708,7 @@ private:
     createFromDialectOp(func.getName());
   }
 
-  void createFromDialectOp(StringRef funcName) {
+  void createFromDialectOp(llvm::StringRef funcName) {
     size_t idx = 0;
     bool found = false;
     for (auto &dialectOpKV : m_map->m_dialectOps) {
