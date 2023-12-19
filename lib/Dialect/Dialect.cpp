@@ -279,7 +279,7 @@ bool llvm_dialects::detail::isOperationDecl(llvm::StringRef fn,
   if (isOverloaded) {
     if (mnemonic.size() >= fn.size())
       return false;
-    if (!fn.startswith(mnemonic))
+    if (!fn.starts_with(mnemonic))
       return false;
 
     return fn[mnemonic.size()] == '.';
