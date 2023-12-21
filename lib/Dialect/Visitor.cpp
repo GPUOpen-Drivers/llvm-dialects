@@ -244,7 +244,7 @@ void VisitorBase::visitByDeclarations(void *payload, llvm::Module &module,
       continue;
     }
 
-    for (Use &use : decl.uses()) {
+    for (Use &use : make_early_inc_range(decl.uses())) {
       if (auto *inst = dyn_cast<Instruction>(use.getUser())) {
         if (!filter(*inst))
           continue;
@@ -260,7 +260,7 @@ void VisitorBase::visitByDeclarations(void *payload, llvm::Module &module,
 void VisitorBase::visit(void *payload, Function &fn) const {
   if (m_strategy == VisitorStrategy::ByInstruction) {
     for (BasicBlock &bb : fn) {
-      for (Instruction &inst : bb)
+      for (Instruction &inst : make_early_inc_range(bb))
         visit(payload, inst);
     }
     return;
@@ -269,7 +269,7 @@ void VisitorBase::visit(void *payload, Function &fn) const {
   if (m_strategy == VisitorStrategy::ReversePostOrder) {
     ReversePostOrderTraversal<Function *> rpot(&fn);
     for (BasicBlock *bb : rpot) {
-      for (Instruction &inst : *bb)
+      for (Instruction &inst : make_early_inc_range(*bb))
         visit(payload, inst);
     }
     return;
