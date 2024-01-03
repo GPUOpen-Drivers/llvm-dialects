@@ -194,8 +194,7 @@ DialectContext::~DialectContext() {
 
   std::unique_ptr<ContextExtensionBase> *extensionArray =
       getTrailingObjects<std::unique_ptr<ContextExtensionBase>>();
-  for (unsigned i = 0; i < m_extensionArraySize; ++i)
-    std::destroy_n(extensionArray, m_extensionArraySize);
+  std::destroy_n(extensionArray, m_extensionArraySize);
 
   Dialect **dialectArray = getTrailingObjects<Dialect *>();
   for (unsigned i = 0; i < m_dialectArraySize; ++i)
