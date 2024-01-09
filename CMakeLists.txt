@@ -82,7 +82,6 @@ endif()
 target_link_libraries(llvm-dialects-tblgen PRIVATE llvm_dialects_tablegen)
 set_compiler_options(llvm-dialects-tblgen)
 
-#if __ANDROID__
 if(ANDROID)
     if (ANDROID_ABI MATCHES "x86_64")
         target_link_options(llvm-dialects-tblgen PRIVATE
@@ -97,7 +96,6 @@ if(ANDROID)
         )
     endif()
 endif()
-#endif
 
 # The llvm_dialects library build depends on llvm/IR/Attributes.inc
 add_dependencies(llvm_dialects intrinsics_gen)
