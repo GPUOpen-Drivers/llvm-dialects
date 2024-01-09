@@ -82,6 +82,23 @@ endif()
 target_link_libraries(llvm-dialects-tblgen PRIVATE llvm_dialects_tablegen)
 set_compiler_options(llvm-dialects-tblgen)
 
+#if __ANDROID__
+if(ANDROID)
+    if (ANDROID_ABI MATCHES "x86_64")
+        target_link_options(llvm-dialects-tblgen PRIVATE
+            LINKER:--rpath,$ENV{ANDROID_PRODUCT_OUT}/system/lib64/bootstrap/:$ENV{ANDROID_PRODUCT_OUT}/system/lib64/
+            LINKER:-dynamic-linker,$ENV{ANDROID_PRODUCT_OUT}/apex/com.android.runtime/bin/linker64
+        )
+    elseif(ANDROID_ABI MATCHES "x86")
+        # There is a limitation here. The PID should less than 65535 for 32-bit executable.
+        target_link_options(llvm-dialects-tblgen PRIVATE
+            LINKER:--rpath,$ENV{ANDROID_PRODUCT_OUT}/system/lib/bootstrap/:$ENV{ANDROID_PRODUCT_OUT}/system/lib/
+            LINKER:-dynamic-linker,$ENV{ANDROID_PRODUCT_OUT}/apex/com.android.runtime/bin/linker
+        )
+    endif()
+endif()
+#endif
+
 # The llvm_dialects library build depends on llvm/IR/Attributes.inc
 add_dependencies(llvm_dialects intrinsics_gen)
 
