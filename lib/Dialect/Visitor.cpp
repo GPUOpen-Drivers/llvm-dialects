@@ -269,8 +269,12 @@ void VisitorBase::visit(void *payload, Function &fn) const {
   if (m_strategy == VisitorStrategy::ReversePostOrder) {
     ReversePostOrderTraversal<Function *> rpot(&fn);
     for (BasicBlock *bb : rpot) {
-      for (Instruction &inst : make_early_inc_range(*bb))
-        visit(payload, inst);
+      // Allow callbacks to directly edit the code adding basic blocks
+      for (Instruction *inst = &*bb->begin(); inst != nullptr;) {
+        auto nextInst = inst->getNextNode();
+        visit(payload, *inst);
+        inst = nextInst;
+      }
     }
     return;
   }
