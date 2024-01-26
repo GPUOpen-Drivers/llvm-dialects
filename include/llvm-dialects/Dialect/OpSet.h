@@ -87,6 +87,8 @@ public:
     return set;
   }
 
+  template <typename ClassT> static const OpSet &getClass();
+
   // Construct an OpSet from a set of dialect ops, given as template
   // arguments.
   template <typename... OpTs> static const OpSet get() {
@@ -117,10 +119,6 @@ public:
   // Checks if a given OpDescription is stored in the set.
   bool contains(const OpDescription &desc) const {
     if (desc.isCoreOp() || desc.isIntrinsic()) {
-      assert(desc.getOpcodes().size() == 1 &&
-             "OpSet only supports querying of single core opcodes and "
-             "intrinsics.");
-
       const unsigned op = desc.getOpcode();
       return (desc.isCoreOp() && containsCoreOp(op)) ||
              (desc.isIntrinsic() && containsIntrinsicID(op));
@@ -193,15 +191,13 @@ private:
   // Tries to insert a given description in the internal data structures.
   void tryInsertOp(const OpDescription &desc) {
     if (desc.isCoreOp()) {
-      for (const unsigned op : desc.getOpcodes())
-        m_coreOpcodes.insert(op);
+      m_coreOpcodes.insert(desc.getOpcode());
 
       return;
     }
 
     if (desc.isIntrinsic()) {
-      for (const unsigned op : desc.getOpcodes())
-        m_intrinsicIDs.insert(op);
+      m_intrinsicIDs.insert(desc.getOpcode());
 
       return;
     }

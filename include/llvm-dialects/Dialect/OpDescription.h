@@ -16,7 +16,6 @@
 
 #pragma once
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <variant>
@@ -44,7 +43,6 @@ public:
       : m_kind(hasOverloads ? Kind::DialectWithOverloads : Kind::Dialect),
         m_op(mnemonic) {}
   OpDescription(Kind kind, unsigned opcode) : m_kind(kind), m_op(opcode) {}
-  OpDescription(Kind kind, llvm::MutableArrayRef<unsigned> opcodes);
 
   static OpDescription fromCoreOp(unsigned op) { return {Kind::Core, op}; }
 
@@ -69,8 +67,6 @@ public:
 
   unsigned getOpcode() const;
 
-  llvm::ArrayRef<unsigned> getOpcodes() const;
-
   llvm::StringRef getMnemonic() const {
     assert(m_kind == Kind::Dialect || m_kind == Kind::DialectWithOverloads);
     return std::get<llvm::StringRef>(m_op);
@@ -92,9 +88,8 @@ private:
 
   // Holds one of:
   //  - core instruction opcode or intrinsic ID
-  //  - sorted array of opcodes or intrinsic IDs
   //  - mnemonic
-  std::variant<unsigned, llvm::ArrayRef<unsigned>, llvm::StringRef> m_op;
+  std::variant<unsigned, llvm::StringRef> m_op;
 };
 
 } // namespace llvm_dialects

@@ -134,10 +134,6 @@ public:
   // Check if the map contains an op described by an OpDescription.
   bool contains(const OpDescription &desc) const {
     if (desc.isCoreOp() || desc.isIntrinsic()) {
-      assert(desc.getOpcodes().size() == 1 &&
-             "OpMap only supports querying of single core opcodes and "
-             "intrinsics.");
-
       const unsigned op = desc.getOpcode();
       return (desc.isCoreOp() && containsCoreOp(op)) ||
              (desc.isIntrinsic() && containsIntrinsic(op));
@@ -237,9 +233,6 @@ public:
       return {found, false};
 
     if (desc.isCoreOp() || desc.isIntrinsic()) {
-      assert(desc.getOpcodes().size() == 1 &&
-             "OpMap: Can only emplace a single op at a time.");
-
       const unsigned op = desc.getOpcode();
       if (desc.isCoreOp()) {
         auto [it, inserted] =
@@ -576,10 +569,6 @@ template <typename ValueT, bool isConst> class OpMapIteratorBase final {
   OpMapIteratorBase(OpMapT *map, const OpDescription &desc)
       : m_map{map}, m_desc{desc} {
     if (desc.isCoreOp() || desc.isIntrinsic()) {
-      assert(desc.getOpcodes().size() == 1 &&
-             "OpMapIterator only supports querying of single core opcodes and "
-             "intrinsics.");
-
       const unsigned op = desc.getOpcode();
 
       if (desc.isCoreOp()) {
@@ -657,10 +646,6 @@ public:
   template <bool Proxy = isConst, typename = std::enable_if_t<!Proxy>>
   bool erase() {
     if (m_desc.isCoreOp() || m_desc.isIntrinsic()) {
-      assert(m_desc.getOpcodes().size() == 1 &&
-             "OpMapIterator only supports erasing of single core opcodes and "
-             "intrinsics.");
-
       const unsigned op = m_desc.getOpcode();
 
       if (m_desc.isCoreOp())
