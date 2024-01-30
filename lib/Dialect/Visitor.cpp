@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Advanced Micro Devices, Inc. All Rights Reserved.
+ * Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -199,12 +199,15 @@ VisitorBase::VisitorBase(VisitorTemplate &&templ)
 
 void VisitorBase::call(HandlerRange handlers, void *payload,
                        Instruction &inst) const {
-  for (unsigned idx = handlers.first; idx != handlers.second; ++idx)
-    call(m_handlers[idx], payload, inst);
+  for (unsigned idx = handlers.first; idx != handlers.second; ++idx) {
+    VisitorResult result = call(m_handlers[idx], payload, inst);
+    if (result == VisitorResult::Stop)
+      return;
+  }
 }
 
-void VisitorBase::call(const VisitorHandler &handler, void *payload,
-                       Instruction &inst) const {
+VisitorResult VisitorBase::call(const VisitorHandler &handler, void *payload,
+                                Instruction &inst) const {
   if (handler.projection.isOffset()) {
     payload = (char *)payload + handler.projection.getOffset();
   } else {
@@ -216,7 +219,7 @@ void VisitorBase::call(const VisitorHandler &handler, void *payload,
     }
   }
 
-  handler.callback(handler.data, payload, &inst);
+  return handler.callback(handler.data, payload, &inst);
 }
 
 void VisitorBase::visit(void *payload, Instruction &inst) const {
