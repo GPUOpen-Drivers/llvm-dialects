@@ -281,7 +281,8 @@ bool llvm_dialects::detail::isOperationDecl(llvm::StringRef fn,
     if (!fn.starts_with(mnemonic))
       return false;
 
-    return fn[mnemonic.size()] == '.';
+    return fn.size() >= mnemonic.size() + 2 && fn[mnemonic.size()] == '_' &&
+           fn[mnemonic.size() + 1] == '_';
   }
 
   return fn == mnemonic;
