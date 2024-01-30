@@ -297,7 +297,7 @@ return true;
 
       const ::llvm::StringLiteral Add32Op::s_name{"xd.add32"};
 
-    Add32Op* Add32Op::create(llvm_dialects::Builder& b, ::llvm::Value * lhs, ::llvm::Value * rhs, uint32_t extra) {
+    Add32Op* Add32Op::create(llvm_dialects::Builder& b, ::llvm::Value * lhs, ::llvm::Value * rhs, uint32_t extra, const llvm::Twine &instName) {
     ::llvm::LLVMContext& context = b.getContext();
     (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
@@ -334,7 +334,7 @@ rhs,
  ::llvm::ConstantInt::get(::llvm::IntegerType::get(context, 32), extra) 
       };
       
-      return ::llvm::cast<Add32Op>(b.CreateCall(fn, args));
+      return ::llvm::cast<Add32Op>(b.CreateCall(fn, args, instName));
     }
 
 
@@ -419,7 +419,7 @@ uint32_t const extra = getExtra();
 
       const ::llvm::StringLiteral CombineOp::s_name{"xd.combine"};
 
-    CombineOp* CombineOp::create(llvm_dialects::Builder& b, ::llvm::Value * lhs, ::llvm::Value * rhs) {
+    CombineOp* CombineOp::create(llvm_dialects::Builder& b, ::llvm::Value * lhs, ::llvm::Value * rhs, const llvm::Twine &instName) {
     ::llvm::LLVMContext& context = b.getContext();
     (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
@@ -453,7 +453,7 @@ lhs,
 rhs
       };
       
-      return ::llvm::cast<CombineOp>(b.CreateCall(fn, args));
+      return ::llvm::cast<CombineOp>(b.CreateCall(fn, args, instName));
     }
 
 
@@ -514,7 +514,7 @@ rhs
 
       const ::llvm::StringLiteral ExtractElementOp::s_name{"xd.extractelement"};
 
-    ExtractElementOp* ExtractElementOp::create(llvm_dialects::Builder& b, ::llvm::Value * vector, ::llvm::Value * index) {
+    ExtractElementOp* ExtractElementOp::create(llvm_dialects::Builder& b, ::llvm::Value * vector, ::llvm::Value * index, const llvm::Twine &instName) {
     ::llvm::LLVMContext& context = b.getContext();
     (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
@@ -548,7 +548,7 @@ vector,
 index
       };
       
-      return ::llvm::cast<ExtractElementOp>(b.CreateCall(fn, args));
+      return ::llvm::cast<ExtractElementOp>(b.CreateCall(fn, args, instName));
     }
 
 
@@ -618,7 +618,7 @@ index
 
       const ::llvm::StringLiteral FromFixedVectorOp::s_name{"xd.fromfixedvector"};
 
-    FromFixedVectorOp* FromFixedVectorOp::create(llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * source) {
+    FromFixedVectorOp* FromFixedVectorOp::create(llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * source, const llvm::Twine &instName) {
     ::llvm::LLVMContext& context = b.getContext();
     (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
@@ -651,7 +651,7 @@ index
 source
       };
       
-      return ::llvm::cast<FromFixedVectorOp>(b.CreateCall(fn, args));
+      return ::llvm::cast<FromFixedVectorOp>(b.CreateCall(fn, args, instName));
     }
 
 
@@ -788,7 +788,7 @@ source
 
       const ::llvm::StringLiteral HandleGetOp::s_name{"xd.handle.get"};
 
-    HandleGetOp* HandleGetOp::create(llvm_dialects::Builder& b) {
+    HandleGetOp* HandleGetOp::create(llvm_dialects::Builder& b, const llvm::Twine &instName) {
     ::llvm::LLVMContext& context = b.getContext();
     (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
@@ -815,7 +815,7 @@ source
     assert(fn.getFunctionType() == fnType);
     assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
-  return ::llvm::cast<HandleGetOp>(b.CreateCall(fn));
+  return ::llvm::cast<HandleGetOp>(b.CreateCall(fn, std::nullopt, instName));
 }
 
 
@@ -850,7 +850,7 @@ source
 
       const ::llvm::StringLiteral IExtOp::s_name{"xd.iext"};
 
-    IExtOp* IExtOp::create(llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * source) {
+    IExtOp* IExtOp::create(llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * source, const llvm::Twine &instName) {
     ::llvm::LLVMContext& context = b.getContext();
     (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
@@ -883,7 +883,7 @@ source
 source
       };
       
-      return ::llvm::cast<IExtOp>(b.CreateCall(fn, args));
+      return ::llvm::cast<IExtOp>(b.CreateCall(fn, args, instName));
     }
 
 
@@ -948,7 +948,7 @@ source
 
       const ::llvm::StringLiteral ITruncOp::s_name{"xd.itrunc"};
 
-    ITruncOp* ITruncOp::create(llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * source) {
+    ITruncOp* ITruncOp::create(llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * source, const llvm::Twine &instName) {
     ::llvm::LLVMContext& context = b.getContext();
     (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
@@ -981,7 +981,7 @@ source
 source
       };
       
-      return ::llvm::cast<ITruncOp>(b.CreateCall(fn, args));
+      return ::llvm::cast<ITruncOp>(b.CreateCall(fn, args, instName));
     }
 
 
@@ -1046,7 +1046,7 @@ source
 
       const ::llvm::StringLiteral InsertElementOp::s_name{"xd.insertelement"};
 
-    InsertElementOp* InsertElementOp::create(llvm_dialects::Builder& b, ::llvm::Value * vector, ::llvm::Value * value, ::llvm::Value * index) {
+    InsertElementOp* InsertElementOp::create(llvm_dialects::Builder& b, ::llvm::Value * vector, ::llvm::Value * value, ::llvm::Value * index, const llvm::Twine &instName) {
     ::llvm::LLVMContext& context = b.getContext();
     (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
@@ -1081,7 +1081,7 @@ value,
 index
       };
       
-      return ::llvm::cast<InsertElementOp>(b.CreateCall(fn, args));
+      return ::llvm::cast<InsertElementOp>(b.CreateCall(fn, args, instName));
     }
 
 
@@ -1168,7 +1168,7 @@ index
 
       const ::llvm::StringLiteral ReadOp::s_name{"xd.read"};
 
-    ReadOp* ReadOp::create(llvm_dialects::Builder& b, ::llvm::Type* dataType) {
+    ReadOp* ReadOp::create(llvm_dialects::Builder& b, ::llvm::Type* dataType, const llvm::Twine &instName) {
     ::llvm::LLVMContext& context = b.getContext();
     (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
@@ -1198,7 +1198,7 @@ index
     assert(fn.getFunctionType() == fnType);
     assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
-  return ::llvm::cast<ReadOp>(b.CreateCall(fn));
+  return ::llvm::cast<ReadOp>(b.CreateCall(fn, std::nullopt, instName));
 }
 
 
@@ -1225,7 +1225,7 @@ index
 
       const ::llvm::StringLiteral SetReadOp::s_name{"xd.set.read"};
 
-    SetReadOp* SetReadOp::create(llvm_dialects::Builder& b, ::llvm::Type* dataType) {
+    SetReadOp* SetReadOp::create(llvm_dialects::Builder& b, ::llvm::Type* dataType, const llvm::Twine &instName) {
     ::llvm::LLVMContext& context = b.getContext();
     (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
@@ -1255,7 +1255,7 @@ index
     assert(fn.getFunctionType() == fnType);
     assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
-  return ::llvm::cast<SetReadOp>(b.CreateCall(fn));
+  return ::llvm::cast<SetReadOp>(b.CreateCall(fn, std::nullopt, instName));
 }
 
 
@@ -1282,7 +1282,7 @@ index
 
       const ::llvm::StringLiteral SetWriteOp::s_name{"xd.set.write"};
 
-    SetWriteOp* SetWriteOp::create(llvm_dialects::Builder& b, ::llvm::Value * data) {
+    SetWriteOp* SetWriteOp::create(llvm_dialects::Builder& b, ::llvm::Value * data, const llvm::Twine &instName) {
     ::llvm::LLVMContext& context = b.getContext();
     (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
@@ -1312,7 +1312,7 @@ index
 data
       };
       
-      return ::llvm::cast<SetWriteOp>(b.CreateCall(fn, args));
+      return ::llvm::cast<SetWriteOp>(b.CreateCall(fn, args, instName));
     }
 
 
@@ -1345,7 +1345,7 @@ data
 
       const ::llvm::StringLiteral SizeOfOp::s_name{"xd.sizeof"};
 
-    SizeOfOp* SizeOfOp::create(llvm_dialects::Builder& b, ::llvm::Type * sizeofType) {
+    SizeOfOp* SizeOfOp::create(llvm_dialects::Builder& b, ::llvm::Type * sizeofType, const llvm::Twine &instName) {
     ::llvm::LLVMContext& context = b.getContext();
     (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
@@ -1375,7 +1375,7 @@ data
 ::llvm::PoisonValue::get(sizeofType)
       };
       
-      return ::llvm::cast<SizeOfOp>(b.CreateCall(fn, args));
+      return ::llvm::cast<SizeOfOp>(b.CreateCall(fn, args, instName));
     }
 
 
@@ -1419,7 +1419,7 @@ data
 
       const ::llvm::StringLiteral StreamAddOp::s_name{"xd.stream.add"};
 
-    StreamAddOp* StreamAddOp::create(llvm_dialects::Builder& b, ::llvm::Value * ptr, ::llvm::Value * count, ::llvm::Value * initial) {
+    StreamAddOp* StreamAddOp::create(llvm_dialects::Builder& b, ::llvm::Value * ptr, ::llvm::Value * count, ::llvm::Value * initial, const llvm::Twine &instName) {
     ::llvm::LLVMContext& context = b.getContext();
     (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
@@ -1454,7 +1454,7 @@ count,
 initial
       };
       
-      return ::llvm::cast<StreamAddOp>(b.CreateCall(fn, args));
+      return ::llvm::cast<StreamAddOp>(b.CreateCall(fn, args, instName));
     }
 
 
@@ -1511,7 +1511,7 @@ initial
 
       const ::llvm::StringLiteral StreamMaxOp::s_name{"xd.stream.max"};
 
-    StreamMaxOp* StreamMaxOp::create(llvm_dialects::Builder& b, ::llvm::Value * ptr, ::llvm::Value * count, ::llvm::Value * initial) {
+    StreamMaxOp* StreamMaxOp::create(llvm_dialects::Builder& b, ::llvm::Value * ptr, ::llvm::Value * count, ::llvm::Value * initial, const llvm::Twine &instName) {
     ::llvm::LLVMContext& context = b.getContext();
     (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
@@ -1546,7 +1546,7 @@ count,
 initial
       };
       
-      return ::llvm::cast<StreamMaxOp>(b.CreateCall(fn, args));
+      return ::llvm::cast<StreamMaxOp>(b.CreateCall(fn, args, instName));
     }
 
 
@@ -1603,7 +1603,7 @@ initial
 
       const ::llvm::StringLiteral StreamMinOp::s_name{"xd.stream.min"};
 
-    StreamMinOp* StreamMinOp::create(llvm_dialects::Builder& b, ::llvm::Value * ptr, ::llvm::Value * count, ::llvm::Value * initial) {
+    StreamMinOp* StreamMinOp::create(llvm_dialects::Builder& b, ::llvm::Value * ptr, ::llvm::Value * count, ::llvm::Value * initial, const llvm::Twine &instName) {
     ::llvm::LLVMContext& context = b.getContext();
     (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
@@ -1638,7 +1638,7 @@ count,
 initial
       };
       
-      return ::llvm::cast<StreamMinOp>(b.CreateCall(fn, args));
+      return ::llvm::cast<StreamMinOp>(b.CreateCall(fn, args, instName));
     }
 
 
@@ -1695,7 +1695,7 @@ initial
 
       const ::llvm::StringLiteral WriteOp::s_name{"xd.write"};
 
-    WriteOp* WriteOp::create(llvm_dialects::Builder& b, ::llvm::Value * data) {
+    WriteOp* WriteOp::create(llvm_dialects::Builder& b, ::llvm::Value * data, const llvm::Twine &instName) {
     ::llvm::LLVMContext& context = b.getContext();
     (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
@@ -1725,7 +1725,7 @@ initial
 data
       };
       
-      return ::llvm::cast<WriteOp>(b.CreateCall(fn, args));
+      return ::llvm::cast<WriteOp>(b.CreateCall(fn, args, instName));
     }
 
 
@@ -1758,7 +1758,7 @@ data
 
       const ::llvm::StringLiteral WriteVarArgOp::s_name{"xd.write.vararg"};
 
-    WriteVarArgOp* WriteVarArgOp::create(llvm_dialects::Builder& b, ::llvm::Value * data, ::llvm::ArrayRef<::llvm::Value *> args) {
+    WriteVarArgOp* WriteVarArgOp::create(llvm_dialects::Builder& b, ::llvm::Value * data, ::llvm::ArrayRef<::llvm::Value *> args, const llvm::Twine &instName) {
     ::llvm::LLVMContext& context = b.getContext();
     (void)context;
     ::llvm::Module& module = *b.GetInsertBlock()->getModule();
@@ -1790,7 +1790,7 @@ data
       
         arguments.append(args.begin(), args.end());
       
-      return ::llvm::cast<WriteVarArgOp>(b.CreateCall(fn, arguments));
+      return ::llvm::cast<WriteVarArgOp>(b.CreateCall(fn, arguments, instName));
     }
 
 
