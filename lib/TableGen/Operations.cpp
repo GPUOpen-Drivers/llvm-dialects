@@ -553,7 +553,7 @@ void BuilderMethod::emitDeclaration(raw_ostream &out, FmtContext &fmt) const {
   for (const auto &builderArg : m_arguments) {
     out << ", " << builderArg.cppType << " " << builderArg.name;
   }
-  out << ");\n";
+  out << ", const llvm::Twine &instName = \"\");\n";
 }
 
 void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
@@ -572,7 +572,7 @@ void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
   for (const auto &builderArg : m_arguments)
     out << tgfmt(", $0 $1", &fmt, builderArg.cppType, builderArg.name);
 
-  out << tgfmt(R"() {
+  out << tgfmt(R"(, const llvm::Twine &instName) {
     ::llvm::LLVMContext& $_context = $_builder.getContext();
     (void)$_context;
     ::llvm::Module& $_module = *$_builder.GetInsertBlock()->getModule();
@@ -711,11 +711,11 @@ void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
     out << tgfmt(R"(
       };
       $varArgInitializer
-      return ::llvm::cast<$_op>($_builder.CreateCall($fn, $args));
+      return ::llvm::cast<$_op>($_builder.CreateCall($fn, $args, instName));
     )",
                  &fmt);
   } else {
-    out << tgfmt("return ::llvm::cast<$_op>($_builder.CreateCall($fn));\n",
+    out << tgfmt("return ::llvm::cast<$_op>($_builder.CreateCall($fn, std::nullopt, instName));\n",
                  &fmt);
   }
 
