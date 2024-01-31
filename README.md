@@ -43,3 +43,5 @@ Common options are:
 Testing
 =======
 Run the `check-llvm-dialects` target to run a suite of automated tests.
+Run the `check-llvm-dialects-lit` target to run only the lit tests, and 
+the `check-llvm-dialects-units` to run only the unit tests.
