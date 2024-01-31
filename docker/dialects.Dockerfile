@@ -38,10 +38,7 @@ WORKDIR /vulkandriver/builds/ci-build
 RUN source /vulkandriver/env.sh \
     && cmake --build . --target llvm-dialects-tblgen
 
-# Run the lit test suite.
+# Run all test suites.
 RUN source /vulkandriver/env.sh \
     && cmake --build . --target check-llvm-dialects -- -v
 
-# Run the unit tests suite.
-RUN source /vulkandriver/env.sh \
-    && cmake --build . --target check-llvm-dialects-units -v

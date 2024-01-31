@@ -40,12 +40,12 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
 )
 
-add_lit_testsuite(check-llvm-dialects "Running the llvm-dialects regression tests"
+add_lit_testsuite(check-llvm-dialects-lit "Running the llvm-dialects regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   ${exclude_from_check_all}
   DEPENDS ${LLVM_DIALECTS_TEST_DEPENDS}
 )
-set_target_properties(check-llvm-dialects PROPERTIES FOLDER "Tests")
+set_target_properties(check-llvm-dialects-lit PROPERTIES FOLDER "Tests")
 
 add_lit_testsuites(LLVM_DIALECTS ${CMAKE_CURRENT_SOURCE_DIR}
   ${exclude_from_check_all}
@@ -53,3 +53,8 @@ add_lit_testsuites(LLVM_DIALECTS ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 add_subdirectory(unit)
+
+# Alias for all relevant tests
+add_custom_target(check-llvm-dialects
+  DEPENDS check-llvm-dialects-lit check-llvm-dialects-units
+)
