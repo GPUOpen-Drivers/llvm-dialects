@@ -115,7 +115,7 @@ uint32_t getNumElements() const;
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static Add32Op* create(::llvm_dialects::Builder& b, ::llvm::Value * lhs, ::llvm::Value * rhs, uint32_t extra, const llvm::Twine &inst__name = "");
+    static Add32Op* create(::llvm_dialects::Builder& b, ::llvm::Value * lhs, ::llvm::Value * rhs, uint32_t extra, const llvm::Twine &instName = "");
 
 bool verifier(::llvm::raw_ostream &errs);
 
@@ -142,7 +142,7 @@ bool verifier(::llvm::raw_ostream &errs);
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static CombineOp* create(::llvm_dialects::Builder& b, ::llvm::Value * lhs, ::llvm::Value * rhs, const llvm::Twine &inst__name = "");
+    static CombineOp* create(::llvm_dialects::Builder& b, ::llvm::Value * lhs, ::llvm::Value * rhs, const llvm::Twine &instName = "");
 
 bool verifier(::llvm::raw_ostream &errs);
 
@@ -167,7 +167,7 @@ bool verifier(::llvm::raw_ostream &errs);
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static ExtractElementOp* create(::llvm_dialects::Builder& b, ::llvm::Value * vector, ::llvm::Value * index, const llvm::Twine &inst__name = "");
+    static ExtractElementOp* create(::llvm_dialects::Builder& b, ::llvm::Value * vector, ::llvm::Value * index, const llvm::Twine &instName = "");
 
 bool verifier(::llvm::raw_ostream &errs);
 
@@ -192,7 +192,7 @@ bool verifier(::llvm::raw_ostream &errs);
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static FromFixedVectorOp* create(::llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * source, const llvm::Twine &inst__name = "");
+    static FromFixedVectorOp* create(::llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * source, const llvm::Twine &instName = "");
 
 bool verifier(::llvm::raw_ostream &errs);
 
@@ -215,7 +215,7 @@ bool verifier(::llvm::raw_ostream &errs);
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static HandleGetOp* create(::llvm_dialects::Builder& b, const llvm::Twine &inst__name = "");
+    static HandleGetOp* create(::llvm_dialects::Builder& b, const llvm::Twine &instName = "");
 
 bool verifier(::llvm::raw_ostream &errs);
 
@@ -236,7 +236,7 @@ bool verifier(::llvm::raw_ostream &errs);
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static IExtOp* create(::llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * source, const llvm::Twine &inst__name = "");
+    static IExtOp* create(::llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * source, const llvm::Twine &instName = "");
 
 bool verifier(::llvm::raw_ostream &errs);
 
@@ -259,7 +259,7 @@ bool verifier(::llvm::raw_ostream &errs);
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static ITruncOp* create(::llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * source, const llvm::Twine &inst__name = "");
+    static ITruncOp* create(::llvm_dialects::Builder& b, ::llvm::Type* resultType, ::llvm::Value * source, const llvm::Twine &instName = "");
 
 bool verifier(::llvm::raw_ostream &errs);
 
@@ -282,7 +282,7 @@ bool verifier(::llvm::raw_ostream &errs);
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static InsertElementOp* create(::llvm_dialects::Builder& b, ::llvm::Value * vector, ::llvm::Value * value, ::llvm::Value * index, const llvm::Twine &inst__name = "");
+    static InsertElementOp* create(::llvm_dialects::Builder& b, ::llvm::Value * vector, ::llvm::Value * value, ::llvm::Value * index, const llvm::Twine &instName = "");
 
 bool verifier(::llvm::raw_ostream &errs);
 
@@ -309,7 +309,7 @@ bool verifier(::llvm::raw_ostream &errs);
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static ReadOp* create(::llvm_dialects::Builder& b, ::llvm::Type* dataType, const llvm::Twine &inst__name = "");
+    static ReadOp* create(::llvm_dialects::Builder& b, ::llvm::Type* dataType, const llvm::Twine &instName = "");
 
 bool verifier(::llvm::raw_ostream &errs);
 
@@ -330,7 +330,7 @@ bool verifier(::llvm::raw_ostream &errs);
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static SetReadOp* create(::llvm_dialects::Builder& b, ::llvm::Type* dataType, const llvm::Twine &inst__name = "");
+    static SetReadOp* create(::llvm_dialects::Builder& b, ::llvm::Type* dataType, const llvm::Twine &instName = "");
 
 bool verifier(::llvm::raw_ostream &errs);
 
@@ -351,7 +351,7 @@ bool verifier(::llvm::raw_ostream &errs);
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static SetWriteOp* create(::llvm_dialects::Builder& b, ::llvm::Value * data, const llvm::Twine &inst__name = "");
+    static SetWriteOp* create(::llvm_dialects::Builder& b, ::llvm::Value * data, const llvm::Twine &instName = "");
 
 bool verifier(::llvm::raw_ostream &errs);
 
@@ -373,7 +373,7 @@ bool verifier(::llvm::raw_ostream &errs);
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static SizeOfOp* create(::llvm_dialects::Builder& b, ::llvm::Type * sizeofType, const llvm::Twine &inst__name = "");
+    static SizeOfOp* create(::llvm_dialects::Builder& b, ::llvm::Type * sizeofType, const llvm::Twine &instName = "");
 
 bool verifier(::llvm::raw_ostream &errs);
 
@@ -396,7 +396,7 @@ bool verifier(::llvm::raw_ostream &errs);
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static StreamAddOp* create(::llvm_dialects::Builder& b, ::llvm::Value * ptr, ::llvm::Value * count, ::llvm::Value * initial, const llvm::Twine &inst__name = "");
+    static StreamAddOp* create(::llvm_dialects::Builder& b, ::llvm::Value * ptr, ::llvm::Value * count, ::llvm::Value * initial, const llvm::Twine &instName = "");
 
 bool verifier(::llvm::raw_ostream &errs);
 
@@ -417,7 +417,7 @@ bool verifier(::llvm::raw_ostream &errs);
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static StreamMaxOp* create(::llvm_dialects::Builder& b, ::llvm::Value * ptr, ::llvm::Value * count, ::llvm::Value * initial, const llvm::Twine &inst__name = "");
+    static StreamMaxOp* create(::llvm_dialects::Builder& b, ::llvm::Value * ptr, ::llvm::Value * count, ::llvm::Value * initial, const llvm::Twine &instName = "");
 
 bool verifier(::llvm::raw_ostream &errs);
 
@@ -438,7 +438,7 @@ bool verifier(::llvm::raw_ostream &errs);
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static StreamMinOp* create(::llvm_dialects::Builder& b, ::llvm::Value * ptr, ::llvm::Value * count, ::llvm::Value * initial, const llvm::Twine &inst__name = "");
+    static StreamMinOp* create(::llvm_dialects::Builder& b, ::llvm::Value * ptr, ::llvm::Value * count, ::llvm::Value * initial, const llvm::Twine &instName = "");
 
 bool verifier(::llvm::raw_ostream &errs);
 
@@ -459,7 +459,7 @@ bool verifier(::llvm::raw_ostream &errs);
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static WriteOp* create(::llvm_dialects::Builder& b, ::llvm::Value * data, const llvm::Twine &inst__name = "");
+    static WriteOp* create(::llvm_dialects::Builder& b, ::llvm::Value * data, const llvm::Twine &instName = "");
 
 bool verifier(::llvm::raw_ostream &errs);
 
@@ -481,7 +481,7 @@ bool verifier(::llvm::raw_ostream &errs);
           return ::llvm::isa<::llvm::CallInst>(v) &&
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
-    static WriteVarArgOp* create(::llvm_dialects::Builder& b, ::llvm::Value * data, ::llvm::ArrayRef<::llvm::Value *> args, const llvm::Twine &inst__name = "");
+    static WriteVarArgOp* create(::llvm_dialects::Builder& b, ::llvm::Value * data, ::llvm::ArrayRef<::llvm::Value *> args, const llvm::Twine &instName = "");
 
 bool verifier(::llvm::raw_ostream &errs);
 
