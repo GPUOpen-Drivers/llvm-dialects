@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Advanced Micro Devices, Inc. All Rights Reserved.
+ * Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,6 +89,25 @@ struct VisitorPayloadProjection {
     static constexpr std::size_t offset = offsetof(PayloadT, field);           \
   };
 
+/// @brief Possible result states of visitor callbacks
+///
+/// A visitor may have multiple callbacks registered that match on the same
+/// instruction. By default, all matching callbacks are invoked in the order in
+/// which they were registered with the visitor. This may not be appropriate.
+/// A common issue is when the callback erases and replaces the visited
+/// instruction.
+///
+/// Callbacks may explicitly return a result state to indicate whether further
+/// visits are desired.
+enum class VisitorResult {
+  /// Continue with the next callbacks on the same instruction. This is the
+  /// default when the callback does not return a value.
+  Continue,
+
+  /// Skip subsequent callbacks
+  Stop,
+};
+
 namespace detail {
 
 class VisitorBase;
@@ -158,8 +177,8 @@ public:
   char data[Size];
 };
 
-using VisitorCallback = void(const VisitorCallbackData &, void *,
-                             llvm::Instruction *);
+using VisitorCallback = VisitorResult(const VisitorCallbackData &, void *,
+                                      llvm::Instruction *);
 using PayloadProjectionCallback = void *(void *);
 
 struct VisitorHandler {
@@ -290,8 +309,8 @@ private:
 
   void call(HandlerRange handlers, void *payload,
             llvm::Instruction &inst) const;
-  void call(const VisitorHandler &handler, void *payload,
-            llvm::Instruction &inst) const;
+  VisitorResult call(const VisitorHandler &handler, void *payload,
+                     llvm::Instruction &inst) const;
 
   template <typename FilterT>
   void visitByDeclarations(void *payload, llvm::Module &module,
@@ -369,8 +388,21 @@ public:
 
   Visitor<PayloadT> build() { return VisitorBuilderBase::build(); }
 
+  template <typename OpT>
+  VisitorBuilder &add(VisitorResult (*fn)(PayloadT &, OpT &)) {
+    addCase<OpT>(detail::VisitorKey::op<OpT>(), fn);
+    return *this;
+  }
+
   template <typename OpT> VisitorBuilder &add(void (*fn)(PayloadT &, OpT &)) {
     addCase<OpT>(detail::VisitorKey::op<OpT>(), fn);
+    return *this;
+  }
+
+  template <typename... OpTs>
+  VisitorBuilder &addSet(VisitorResult (*fn)(PayloadT &,
+                                             llvm::Instruction &I)) {
+    addSetCase(detail::VisitorKey::opSet<OpTs...>(), fn);
     return *this;
   }
 
@@ -381,8 +413,21 @@ public:
   }
 
   VisitorBuilder &addSet(const OpSet &opSet,
+                         VisitorResult (*fn)(PayloadT &,
+                                             llvm::Instruction &I)) {
+    addSetCase(detail::VisitorKey::opSet(opSet), fn);
+    return *this;
+  }
+
+  VisitorBuilder &addSet(const OpSet &opSet,
                          void (*fn)(PayloadT &, llvm::Instruction &I)) {
     addSetCase(detail::VisitorKey::opSet(opSet), fn);
+    return *this;
+  }
+
+  template <typename OpT>
+  VisitorBuilder &add(VisitorResult (PayloadT::*fn)(OpT &)) {
+    addMemberFnCase<OpT>(detail::VisitorKey::op<OpT>(), fn);
     return *this;
   }
 
@@ -392,8 +437,22 @@ public:
   }
 
   VisitorBuilder &addIntrinsic(unsigned id,
+                               VisitorResult (*fn)(PayloadT &,
+                                                   llvm::IntrinsicInst &)) {
+    addCase<llvm::IntrinsicInst>(detail::VisitorKey::intrinsic(id), fn);
+    return *this;
+  }
+
+  VisitorBuilder &addIntrinsic(unsigned id,
                                void (*fn)(PayloadT &, llvm::IntrinsicInst &)) {
     addCase<llvm::IntrinsicInst>(detail::VisitorKey::intrinsic(id), fn);
+    return *this;
+  }
+
+  VisitorBuilder &
+  addIntrinsic(unsigned id,
+               VisitorResult (PayloadT::*fn)(llvm::IntrinsicInst &)) {
+    addMemberFnCase<llvm::IntrinsicInst>(detail::VisitorKey::intrinsic(id), fn);
     return *this;
   }
 
@@ -433,52 +492,72 @@ private:
                  detail::PayloadProjectionCallback *projection)
       : VisitorBuilderBase(parent, projection) {}
 
-  template <typename OpT>
-  void addCase(detail::VisitorKey key, void (*fn)(PayloadT &, OpT &)) {
+  template <typename OpT, typename ReturnT>
+  void addCase(detail::VisitorKey key, ReturnT (*fn)(PayloadT &, OpT &)) {
     detail::VisitorCallbackData data{};
     static_assert(sizeof(fn) <= sizeof(data.data));
     memcpy(&data.data, &fn, sizeof(fn));
-    VisitorBuilderBase::add(key, &VisitorBuilder::forwarder<OpT>, data);
+    VisitorBuilderBase::add(key, &VisitorBuilder::forwarder<OpT, ReturnT>,
+                            data);
   }
 
+  template <typename ReturnT>
   void addSetCase(detail::VisitorKey key,
-                  void (*fn)(PayloadT &, llvm::Instruction &)) {
+                  ReturnT (*fn)(PayloadT &, llvm::Instruction &)) {
     detail::VisitorCallbackData data{};
     static_assert(sizeof(fn) <= sizeof(data.data));
     memcpy(&data.data, &fn, sizeof(fn));
-    VisitorBuilderBase::add(key, &VisitorBuilder::setForwarder, data);
+    VisitorBuilderBase::add(key, &VisitorBuilder::setForwarder<ReturnT>, data);
   }
 
-  template <typename OpT>
-  void addMemberFnCase(detail::VisitorKey key, void (PayloadT::*fn)(OpT &)) {
+  template <typename OpT, typename ReturnT>
+  void addMemberFnCase(detail::VisitorKey key, ReturnT (PayloadT::*fn)(OpT &)) {
     detail::VisitorCallbackData data{};
     static_assert(sizeof(fn) <= sizeof(data.data));
     memcpy(&data.data, &fn, sizeof(fn));
-    VisitorBuilderBase::add(key, &VisitorBuilder::memberFnForwarder<OpT>, data);
+    VisitorBuilderBase::add(
+        key, &VisitorBuilder::memberFnForwarder<OpT, ReturnT>, data);
   }
 
-  template <typename OpT>
-  static void forwarder(const detail::VisitorCallbackData &data, void *payload,
-                        llvm::Instruction *op) {
-    void (*fn)(PayloadT &, OpT &);
+  template <typename OpT, typename ReturnT>
+  static VisitorResult forwarder(const detail::VisitorCallbackData &data,
+                                 void *payload, llvm::Instruction *op) {
+    ReturnT (*fn)(PayloadT &, OpT &);
     memcpy(&fn, &data.data, sizeof(fn));
-    fn(*static_cast<PayloadT *>(payload), *llvm::cast<OpT>(op));
+    if constexpr (std::is_same_v<ReturnT, void>) {
+      fn(*static_cast<PayloadT *>(payload), *llvm::cast<OpT>(op));
+      return VisitorResult::Continue;
+    } else {
+      return fn(*static_cast<PayloadT *>(payload), *llvm::cast<OpT>(op));
+    }
   }
 
-  static void setForwarder(const detail::VisitorCallbackData &data,
-                           void *payload, llvm::Instruction *op) {
-    void (*fn)(PayloadT &, llvm::Instruction &);
+  template <typename ReturnT>
+  static VisitorResult setForwarder(const detail::VisitorCallbackData &data,
+                                    void *payload, llvm::Instruction *op) {
+    ReturnT (*fn)(PayloadT &, llvm::Instruction &);
     memcpy(&fn, &data.data, sizeof(fn));
-    fn(*static_cast<PayloadT *>(payload), *op);
+    if constexpr (std::is_same_v<ReturnT, void>) {
+      fn(*static_cast<PayloadT *>(payload), *op);
+      return VisitorResult::Continue;
+    } else {
+      return fn(*static_cast<PayloadT *>(payload), *op);
+    }
   }
 
-  template <typename OpT>
-  static void memberFnForwarder(const detail::VisitorCallbackData &data,
-                                void *payload, llvm::Instruction *op) {
-    void (PayloadT::*fn)(OpT &);
+  template <typename OpT, typename ReturnT>
+  static VisitorResult
+  memberFnForwarder(const detail::VisitorCallbackData &data, void *payload,
+                    llvm::Instruction *op) {
+    ReturnT (PayloadT::*fn)(OpT &);
     memcpy(&fn, &data.data, sizeof(fn));
     PayloadT *self = static_cast<PayloadT *>(payload);
-    (self->*fn)(*llvm::cast<OpT>(op));
+    if constexpr (std::is_same_v<ReturnT, void>) {
+      (self->*fn)(*llvm::cast<OpT>(op));
+      return VisitorResult::Continue;
+    } else {
+      return (self->*fn)(*llvm::cast<OpT>(op));
+    }
   }
 };
 

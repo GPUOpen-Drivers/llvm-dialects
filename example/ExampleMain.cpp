@@ -148,6 +148,10 @@ struct VisitorNest {
   void visitBinaryOperator(BinaryOperator &inst) {
     *out << "visiting BinaryOperator: " << inst << '\n';
   }
+  VisitorResult visitUnaryInstruction(UnaryInstruction &inst) {
+    *out << "visiting UnaryInstruction (pre): " << inst << '\n';
+    return isa<LoadInst>(inst) ? VisitorResult::Stop : VisitorResult::Continue;
+  }
 };
 
 struct VisitorContainer {
@@ -180,6 +184,12 @@ template <bool rpot> const Visitor<VisitorContainer> &getExampleVisitor() {
           .nest<VisitorNest>([](VisitorBuilder<VisitorNest> &b) {
             b.add<xd::ReadOp>([](VisitorNest &self, xd::ReadOp &op) {
               *self.out << "visiting ReadOp: " << op << '\n';
+            });
+            b.add(&VisitorNest::visitUnaryInstruction);
+            b.add<xd::SetReadOp>([](VisitorNest &self, xd::SetReadOp &op) {
+              *self.out << "visiting SetReadOp: " << op << '\n';
+              return op.getType()->isIntegerTy(1) ? VisitorResult::Stop
+                                                  : VisitorResult::Continue;
             });
             b.addSet<xd::SetReadOp, xd::SetWriteOp>(
                 [](VisitorNest &self, llvm::Instruction &op) {
