@@ -379,6 +379,7 @@ bool Operation::parse(raw_ostream &errs, GenDialectsContext *context,
         convertToCamelFromSnakeCase(opArg.name)));
   }
 
+  builder.m_instName = builder.m_symbolTable.chooseName("instName");
   builder.m_context = builder.m_symbolTable.chooseName("context");
   builder.m_builder = builder.m_symbolTable.chooseName({"b", "builder"});
 
@@ -548,12 +549,14 @@ void Operation::emitVerifierMethod(llvm::raw_ostream &out,
 void BuilderMethod::emitDeclaration(raw_ostream &out, FmtContext &fmt) const {
   FmtContextScope scope{fmt};
   fmt.withBuilder(m_builder);
+  assert(m_instName.size() > 0);
+  fmt.addSubst("_instname", m_instName);
 
   out << tgfmt("static $_op* create(::llvm_dialects::Builder& $_builder", &fmt);
   for (const auto &builderArg : m_arguments) {
     out << ", " << builderArg.cppType << " " << builderArg.name;
   }
-  out << ", const llvm::Twine &inst__name = \"\");\n";
+  out << tgfmt(", const llvm::Twine &$_instname = \"\");\n", &fmt);
 }
 
 void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
@@ -567,12 +570,14 @@ void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
   fmt.withBuilder(m_builder);
   fmt.withContext(m_context);
   fmt.addSubst("_module", symbols.chooseName("module"));
+  assert(m_instName.size() > 0);
+  fmt.addSubst("_instname", m_instName);
 
   out << tgfmt("$_op* $_op::create(llvm_dialects::Builder& $_builder", &fmt);
   for (const auto &builderArg : m_arguments)
     out << tgfmt(", $0 $1", &fmt, builderArg.cppType, builderArg.name);
 
-  out << tgfmt(R"(, const llvm::Twine &inst__name) {
+  out << tgfmt(R"(, const llvm::Twine &$_instname) {
     ::llvm::LLVMContext& $_context = $_builder.getContext();
     (void)$_context;
     ::llvm::Module& $_module = *$_builder.GetInsertBlock()->getModule();
@@ -711,11 +716,11 @@ void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
     out << tgfmt(R"(
       };
       $varArgInitializer
-      return ::llvm::cast<$_op>($_builder.CreateCall($fn, $args, inst__name));
+      return ::llvm::cast<$_op>($_builder.CreateCall($fn, $args, $_instname));
     )",
                  &fmt);
   } else {
-    out << tgfmt("return ::llvm::cast<$_op>($_builder.CreateCall($fn, std::nullopt, inst__name));\n",
+    out << tgfmt("return ::llvm::cast<$_op>($_builder.CreateCall($fn, std::nullopt, $_instname));\n",
                  &fmt);
   }
 

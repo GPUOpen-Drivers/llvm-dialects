@@ -154,6 +154,7 @@ private:
   std::string m_context;
   std::string m_builder;
   std::vector<Arg> m_arguments;
+  std::string m_instName;
   unsigned m_beginOpArguments = 0;
 
   std::string m_prelude;
