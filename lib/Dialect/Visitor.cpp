@@ -19,7 +19,6 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 
@@ -44,9 +43,64 @@ void VisitorTemplate::setStrategy(VisitorStrategy strategy) {
   m_strategy = strategy;
 }
 
+void VisitorTemplate::storeHandlersInOpMap(
+    const VisitorKey &key, unsigned handlerIdx,
+    VisitorCallbackType visitorCallbackTy) {
+  const auto HandlerList =
+      [&](const OpDescription &opDescription) -> llvm::SmallVector<unsigned> & {
+    if (visitorCallbackTy == VisitorCallbackType::PreVisit)
+      return m_opMap[opDescription].PreVisitHandlers;
+
+    return m_opMap[opDescription].VisitHandlers;
+  };
+
+  if (key.m_kind == VisitorKey::Kind::Intrinsic) {
+    HandlerList(OpDescription::fromIntrinsic(key.m_intrinsicId))
+        .push_back(handlerIdx);
+  } else if (key.m_kind == VisitorKey::Kind::OpDescription) {
+    const OpDescription *opDesc = key.m_description;
+
+    if (opDesc->isCoreOp()) {
+      for (const unsigned op : opDesc->getOpcodes())
+        HandlerList(OpDescription::fromCoreOp(op)).push_back(handlerIdx);
+    } else if (opDesc->isIntrinsic()) {
+      for (const unsigned op : opDesc->getOpcodes())
+        HandlerList(OpDescription::fromIntrinsic(op)).push_back(handlerIdx);
+    } else {
+      HandlerList(*opDesc).push_back(handlerIdx);
+    }
+  } else if (key.m_kind == VisitorKey::Kind::OpSet) {
+    const OpSet *opSet = key.m_set;
+
+    if (visitorCallbackTy == VisitorCallbackType::PreVisit && opSet->empty()) {
+      // This adds a handler for every stored op.
+      // Note: should be used with caution.
+      for (auto it : m_opMap)
+        it.second.PreVisitHandlers.push_back(handlerIdx);
+
+      return;
+    }
+
+    for (unsigned opcode : opSet->getCoreOpcodes())
+      HandlerList(OpDescription::fromCoreOp(opcode)).push_back(handlerIdx);
+
+    for (unsigned intrinsicID : opSet->getIntrinsicIDs())
+      HandlerList(OpDescription::fromIntrinsic(intrinsicID))
+          .push_back(handlerIdx);
+
+    for (const auto &dialectOpPair : opSet->getDialectOps())
+      HandlerList(OpDescription::fromDialectOp(dialectOpPair.isOverload,
+                                               dialectOpPair.mnemonic))
+          .push_back(handlerIdx);
+  }
+}
+
 void VisitorTemplate::add(VisitorKey key, VisitorCallback *fn,
                           VisitorCallbackData data,
-                          VisitorHandler::Projection projection) {
+                          VisitorHandler::Projection projection,
+                          VisitorCallbackType visitorCallbackTy) {
+  assert(visitorCallbackTy != VisitorCallbackType::PreVisit || key.m_set);
+
   VisitorHandler handler;
   handler.callback = fn;
   handler.data = data;
@@ -56,36 +110,7 @@ void VisitorTemplate::add(VisitorKey key, VisitorCallback *fn,
 
   const unsigned handlerIdx = m_handlers.size() - 1;
 
-  if (key.m_kind == VisitorKey::Kind::Intrinsic) {
-    m_opMap[OpDescription::fromIntrinsic(key.m_intrinsicId)].push_back(
-        handlerIdx);
-  } else if (key.m_kind == VisitorKey::Kind::OpDescription) {
-    const OpDescription *opDesc = key.m_description;
-
-    if (opDesc->isCoreOp()) {
-      for (const unsigned op : opDesc->getOpcodes())
-        m_opMap[OpDescription::fromCoreOp(op)].push_back(handlerIdx);
-    } else if (opDesc->isIntrinsic()) {
-      for (const unsigned op : opDesc->getOpcodes())
-        m_opMap[OpDescription::fromIntrinsic(op)].push_back(handlerIdx);
-    } else {
-      m_opMap[*opDesc].push_back(handlerIdx);
-    }
-  } else if (key.m_kind == VisitorKey::Kind::OpSet) {
-    const OpSet *opSet = key.m_set;
-
-    for (unsigned opcode : opSet->getCoreOpcodes())
-      m_opMap[OpDescription::fromCoreOp(opcode)].push_back(handlerIdx);
-
-    for (unsigned intrinsicID : opSet->getIntrinsicIDs())
-      m_opMap[OpDescription::fromIntrinsic(intrinsicID)].push_back(handlerIdx);
-
-    for (const auto &dialectOpPair : opSet->getDialectOps()) {
-      m_opMap[OpDescription::fromDialectOp(dialectOpPair.isOverload,
-                                           dialectOpPair.mnemonic)]
-          .push_back(handlerIdx);
-    }
-  }
+  storeHandlersInOpMap(key, handlerIdx, visitorCallbackTy);
 }
 
 VisitorBuilderBase::VisitorBuilderBase() : m_template(&m_ownedTemplate) {}
@@ -144,6 +169,13 @@ void VisitorBuilderBase::setStrategy(VisitorStrategy strategy) {
   m_template->setStrategy(strategy);
 }
 
+void VisitorBuilderBase::addPreVisitCallback(VisitorKey key,
+                                             VisitorCallback *fn,
+                                             VisitorCallbackData data) {
+  m_template->add(key, fn, data, m_projection,
+                  VisitorTemplate::VisitorCallbackType::PreVisit);
+}
+
 void VisitorBuilderBase::add(VisitorKey key, VisitorCallback *fn,
                              VisitorCallbackData data) {
   m_template->add(key, fn, data, m_projection);
@@ -192,9 +224,12 @@ VisitorBase::VisitorBase(VisitorTemplate &&templ)
   BuildHelper helper(*this, templ.m_handlers);
 
   m_opMap.reserve(templ.m_opMap);
-
-  for (auto it : templ.m_opMap)
-    m_opMap[it.first] = helper.mapHandlers(it.second);
+  for (auto it : templ.m_opMap) {
+    m_opMap[it.first].PreVisitCallbacks =
+        helper.mapHandlers(it.second.PreVisitHandlers);
+    m_opMap[it.first].VisitCallbacks =
+        helper.mapHandlers(it.second.VisitHandlers);
+  }
 }
 
 void VisitorBase::call(HandlerRange handlers, void *payload,
@@ -223,11 +258,14 @@ VisitorResult VisitorBase::call(const VisitorHandler &handler, void *payload,
 }
 
 void VisitorBase::visit(void *payload, Instruction &inst) const {
-  auto handlers = m_opMap.find(inst);
-  if (!handlers)
+  auto mappedHandlers = m_opMap.find(inst);
+  if (!mappedHandlers)
     return;
 
-  call(*handlers.val(), payload, inst);
+  auto &callbacks = *mappedHandlers.val();
+
+  call(callbacks.PreVisitCallbacks, payload, inst);
+  call(callbacks.VisitCallbacks, payload, inst);
 }
 
 template <typename FilterT>
@@ -241,19 +279,23 @@ void VisitorBase::visitByDeclarations(void *payload, llvm::Module &module,
 
     LLVM_DEBUG(dbgs() << "visit " << decl.getName() << '\n');
 
-    auto handlers = m_opMap.find(decl);
-    if (!handlers) {
+    auto mappedHandlers = m_opMap.find(decl);
+    if (!mappedHandlers) {
       // Neither a matched intrinsic nor a matched dialect op; skip.
       continue;
     }
+
+    auto &callbacks = *mappedHandlers.val();
 
     for (Use &use : make_early_inc_range(decl.uses())) {
       if (auto *inst = dyn_cast<Instruction>(use.getUser())) {
         if (!filter(*inst))
           continue;
         if (auto *callInst = dyn_cast<CallInst>(inst)) {
-          if (&use == &callInst->getCalledOperandUse())
-            call(*handlers.val(), payload, *callInst);
+          if (&use == &callInst->getCalledOperandUse()) {
+            call(callbacks.PreVisitCallbacks, payload, *callInst);
+            call(callbacks.VisitCallbacks, payload, *callInst);
+          }
         }
       }
     }
