@@ -65,3 +65,27 @@ def DialectOp4 : TestOp<"dialect.op.4", []> {
 
   let summary = "Test operation 4";
 }
+
+def InstNameConflictTestOp : Op<TestDialect, "try.conflict", [WillReturn]> {
+  let results = (outs);
+  let arguments = (ins value:$instName, value:$inst__name);
+
+  let summary = "a test case for instName parameter escaping";
+  let description = [{
+    The builder accepts an additional argument to set the name of the created
+    value like IRBuilder methods. This op tries to produce a conflict
+  }];
+}
+
+def InstNameConflictWithExplRetTestOp : Op<TestDialect, "try.conflict.type.suffix", [WillReturn]> {
+  let results = (outs);
+  let arguments = (ins value:$instName, value:$inst__name);
+
+  let defaultBuilderHasExplicitResultType = true;
+
+  let summary = "same with explicit return";
+  let description = [{
+    The builder accepts an additional argument to set the name of the created
+    value like IRBuilder methods. This op tries to produce a conflict
+  }];
+}
