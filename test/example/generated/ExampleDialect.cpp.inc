@@ -1196,7 +1196,7 @@ index
   
       const ::llvm::AttributeList attrs
           = ExampleDialect::get(context).getAttributeList(4);
-    auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), true);
+    auto fnType = ::llvm::FunctionType::get(::llvm::IntegerType::get(context, 32), true);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
     ::llvm::SmallString<32> newName;
@@ -1238,7 +1238,17 @@ instName_0
 (void)instNameType;
 ::llvm::Type * const instName_0Type = getInstName_0()->getType();
 (void)instName_0Type;
-  return true;
+::llvm::Type * const resultType = getResult()->getType();
+(void)resultType;
+
+        if (::llvm::IntegerType::get(context, 32) != resultType) {
+          errs << "  unexpected value of $result:\n";
+          errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 32)) << '\n';
+          errs << "    actual:    " << printable(resultType) << '\n';
+        
+          return false;
+        }
+        return true;
 }
 
 
@@ -1256,6 +1266,7 @@ instName_0
       void InstNameConflictDoubleOp::setInstName_0(::llvm::Value * instName_0) {
         setArgOperand(1, instName_0);
       }
+::llvm::Value *InstNameConflictDoubleOp::getResult() {return this;}
 
 
 
@@ -1269,7 +1280,7 @@ instName_0
   
       const ::llvm::AttributeList attrs
           = ExampleDialect::get(context).getAttributeList(4);
-    auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), true);
+    auto fnType = ::llvm::FunctionType::get(::llvm::IntegerType::get(context, 32), true);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
     ::llvm::SmallString<32> newName;
@@ -1308,7 +1319,17 @@ instName
       }
   ::llvm::Type * const instNameType = getInstName()->getType();
 (void)instNameType;
-  return true;
+::llvm::Type * const resultType = getResult()->getType();
+(void)resultType;
+
+        if (::llvm::IntegerType::get(context, 32) != resultType) {
+          errs << "  unexpected value of $result:\n";
+          errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 32)) << '\n';
+          errs << "    actual:    " << printable(resultType) << '\n';
+        
+          return false;
+        }
+        return true;
 }
 
 
@@ -1319,6 +1340,7 @@ instName
       void InstNameConflictOp::setInstName(::llvm::Value * instName) {
         setArgOperand(0, instName);
       }
+::llvm::Value *InstNameConflictOp::getResult() {return this;}
 
 
 
@@ -1332,7 +1354,7 @@ instName
   
       const ::llvm::AttributeList attrs
           = ExampleDialect::get(context).getAttributeList(4);
-    auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), true);
+    auto fnType = ::llvm::FunctionType::get(::llvm::IntegerType::get(context, 32), true);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
     ::llvm::SmallString<32> newName;
@@ -1371,7 +1393,17 @@ instName
                << ", expected at least 0\n";
         return false;
       }
-    return true;
+  ::llvm::Type * const resultType = getResult()->getType();
+(void)resultType;
+
+        if (::llvm::IntegerType::get(context, 32) != resultType) {
+          errs << "  unexpected value of $result:\n";
+          errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 32)) << '\n';
+          errs << "    actual:    " << printable(resultType) << '\n';
+        
+          return false;
+        }
+        return true;
 }
 
 
@@ -1380,6 +1412,7 @@ instName
             value_op_iterator(arg_begin() + 0),
             value_op_iterator(arg_end()));
       }
+::llvm::Value *InstNameConflictVarargsOp::getResult() {return this;}
 
 
 

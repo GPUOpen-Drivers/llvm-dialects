@@ -318,6 +318,7 @@ bool verifier(::llvm::raw_ostream &errs);
       ::llvm::Value * getInstName_0();
         void setInstName_0(::llvm::Value * instName_0);
       
+::llvm::Value * getResult();
 
 
       };
@@ -340,6 +341,7 @@ bool verifier(::llvm::raw_ostream &errs);
 ::llvm::Value * getInstName();
         void setInstName(::llvm::Value * instName);
       
+::llvm::Value * getResult();
 
 
       };
@@ -360,6 +362,7 @@ bool verifier(::llvm::raw_ostream &errs);
 bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::iterator_range<::llvm::User::value_op_iterator> getInstName_0();
+::llvm::Value * getResult();
 
 
       };
