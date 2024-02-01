@@ -1186,7 +1186,7 @@ index
 
 
 
-      const ::llvm::StringLiteral InstNameConflictDoubleOp::s_name{"xd.try.conflict"};
+      const ::llvm::StringLiteral InstNameConflictDoubleOp::s_name{"xd.inst.name.conflict.double"};
 
     InstNameConflictDoubleOp* InstNameConflictDoubleOp::create(llvm_dialects::Builder& b, ::llvm::Value * instName, ::llvm::Value * instName_0, const llvm::Twine &instName_1) {
     ::llvm::LLVMContext& context = b.getContext();
@@ -1270,7 +1270,7 @@ instName_0
 
 
 
-      const ::llvm::StringLiteral InstNameConflictOp::s_name{"xd.try.conflict"};
+      const ::llvm::StringLiteral InstNameConflictOp::s_name{"xd.inst.name.conflict"};
 
     InstNameConflictOp* InstNameConflictOp::create(llvm_dialects::Builder& b, ::llvm::Value * instName, const llvm::Twine &instName_0) {
     ::llvm::LLVMContext& context = b.getContext();
@@ -1344,7 +1344,7 @@ instName
 
 
 
-      const ::llvm::StringLiteral InstNameConflictVarargsOp::s_name{"xd.try.conflict.type.suffix"};
+      const ::llvm::StringLiteral InstNameConflictVarargsOp::s_name{"xd.inst.name.conflict.varargs"};
 
     InstNameConflictVarargsOp* InstNameConflictVarargsOp::create(llvm_dialects::Builder& b, ::llvm::ArrayRef<::llvm::Value *> instName_0, const llvm::Twine &instName) {
     ::llvm::LLVMContext& context = b.getContext();
@@ -2144,7 +2144,7 @@ data
       template <>
       const ::llvm_dialects::OpDescription &
       ::llvm_dialects::OpDescription::get<xd::InstNameConflictDoubleOp>() {
-        static const ::llvm_dialects::OpDescription desc{false, "xd.try.conflict"};
+        static const ::llvm_dialects::OpDescription desc{false, "xd.inst.name.conflict.double"};
         return desc;
       }
 
@@ -2152,7 +2152,7 @@ data
       template <>
       const ::llvm_dialects::OpDescription &
       ::llvm_dialects::OpDescription::get<xd::InstNameConflictOp>() {
-        static const ::llvm_dialects::OpDescription desc{false, "xd.try.conflict"};
+        static const ::llvm_dialects::OpDescription desc{false, "xd.inst.name.conflict"};
         return desc;
       }
 
@@ -2160,7 +2160,7 @@ data
       template <>
       const ::llvm_dialects::OpDescription &
       ::llvm_dialects::OpDescription::get<xd::InstNameConflictVarargsOp>() {
-        static const ::llvm_dialects::OpDescription desc{false, "xd.try.conflict.type.suffix"};
+        static const ::llvm_dialects::OpDescription desc{false, "xd.inst.name.conflict.varargs"};
         return desc;
       }
 

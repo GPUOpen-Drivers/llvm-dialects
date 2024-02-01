@@ -269,7 +269,7 @@ def HandleGetOp : ExampleOp<"handle.get", [Memory<[]>, NoUnwind, WillReturn]> {
   }];
 }
 
-def InstNameConflictOp : Op<ExampleDialect, "try.conflict", [WillReturn]> {
+def InstNameConflictOp : Op<ExampleDialect, "inst.name.conflict", [WillReturn]> {
   let results = (outs I32:$result);
   let arguments = (ins value:$instName);
 
@@ -281,7 +281,7 @@ def InstNameConflictOp : Op<ExampleDialect, "try.conflict", [WillReturn]> {
   }];
 }
 
-def InstNameConflictDoubleOp : Op<ExampleDialect, "try.conflict", [WillReturn]> {
+def InstNameConflictDoubleOp : Op<ExampleDialect, "inst.name.conflict.double", [WillReturn]> {
   let results = (outs I32:$result);
   let arguments = (ins value:$instName, value:$instName_0);
 
@@ -292,7 +292,7 @@ def InstNameConflictDoubleOp : Op<ExampleDialect, "try.conflict", [WillReturn]> 
   }];
 }
 
-def InstNameConflictVarargsOp : Op<ExampleDialect, "try.conflict.type.suffix", [WillReturn]> {
+def InstNameConflictVarargsOp : Op<ExampleDialect, "inst.name.conflict.varargs", [WillReturn]> {
   let results = (outs I32:$result);
   let arguments = (ins varargs:$instName_0);
 

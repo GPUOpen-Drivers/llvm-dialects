@@ -299,7 +299,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class InstNameConflictDoubleOp : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.try.conflict"};
+        static const ::llvm::StringLiteral s_name; //{"xd.inst.name.conflict.double"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -324,7 +324,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class InstNameConflictOp : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.try.conflict"};
+        static const ::llvm::StringLiteral s_name; //{"xd.inst.name.conflict"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -347,7 +347,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class InstNameConflictVarargsOp : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.try.conflict.type.suffix"};
+        static const ::llvm::StringLiteral s_name; //{"xd.inst.name.conflict.varargs"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
