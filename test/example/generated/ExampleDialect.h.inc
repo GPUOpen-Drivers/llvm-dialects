@@ -44,7 +44,7 @@ namespace xd {
         }
 
       private:
-        ::std::array<::llvm::AttributeList, 4> m_attributeLists;
+        ::std::array<::llvm::AttributeList, 5> m_attributeLists;
     };
 
     class XdHandleType : public ::llvm::TargetExtType {
@@ -294,6 +294,72 @@ bool verifier(::llvm::raw_ostream &errs);
         void setIndex(::llvm::Value * index);
       
 ::llvm::Value * getResult();
+
+
+      };
+    
+      class InstNameConflictDoubleOp : public ::llvm::CallInst {
+        static const ::llvm::StringLiteral s_name; //{"xd.try.conflict"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isSimpleOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static InstNameConflictDoubleOp* create(::llvm_dialects::Builder& b, ::llvm::Value * instName, ::llvm::Value * instName_0, const llvm::Twine &instName_1 = "");
+
+bool verifier(::llvm::raw_ostream &errs);
+
+::llvm::Value * getInstName();
+        void setInstName(::llvm::Value * instName);
+      ::llvm::Value * getInstName_0();
+        void setInstName_0(::llvm::Value * instName_0);
+      
+
+
+      };
+    
+      class InstNameConflictOp : public ::llvm::CallInst {
+        static const ::llvm::StringLiteral s_name; //{"xd.try.conflict"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isSimpleOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static InstNameConflictOp* create(::llvm_dialects::Builder& b, ::llvm::Value * instName, const llvm::Twine &instName_0 = "");
+
+bool verifier(::llvm::raw_ostream &errs);
+
+::llvm::Value * getInstName();
+        void setInstName(::llvm::Value * instName);
+      
+
+
+      };
+    
+      class InstNameConflictVarargsOp : public ::llvm::CallInst {
+        static const ::llvm::StringLiteral s_name; //{"xd.try.conflict.type.suffix"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isSimpleOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static InstNameConflictVarargsOp* create(::llvm_dialects::Builder& b, ::llvm::ArrayRef<::llvm::Value *> instName_0, const llvm::Twine &instName = "");
+
+bool verifier(::llvm::raw_ostream &errs);
+
+::llvm::iterator_range<::llvm::User::value_op_iterator> getInstName_0();
 
 
       };

@@ -74,6 +74,21 @@ namespace xd {
             state.setError();
         });
       
+        builder.add<InstNameConflictDoubleOp>([](::llvm_dialects::VerifierState &state, InstNameConflictDoubleOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
+        builder.add<InstNameConflictOp>([](::llvm_dialects::VerifierState &state, InstNameConflictOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
+        builder.add<InstNameConflictVarargsOp>([](::llvm_dialects::VerifierState &state, InstNameConflictVarargsOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
         builder.add<ReadOp>([](::llvm_dialects::VerifierState &state, ReadOp &op) {
           if (!op.verifier(state.out()))
             state.setError();
@@ -156,6 +171,11 @@ m_attributeLists[2] = ::llvm::AttributeList::get(context, ::llvm::AttributeList:
 attrBuilder.addAttribute(::llvm::Attribute::NoUnwind);
 attrBuilder.addMemoryAttr(::llvm::MemoryEffects(::llvm::MemoryEffects::Location::InaccessibleMem, ::llvm::ModRefInfo::ModRef));
 m_attributeLists[3] = ::llvm::AttributeList::get(context, ::llvm::AttributeList::FunctionIndex, attrBuilder);
+}
+{
+  ::llvm::AttrBuilder attrBuilder{context};
+attrBuilder.addAttribute(::llvm::Attribute::WillReturn);
+m_attributeLists[4] = ::llvm::AttributeList::get(context, ::llvm::AttributeList::FunctionIndex, attrBuilder);
 }
 }
 
@@ -1166,6 +1186,203 @@ index
 
 
 
+      const ::llvm::StringLiteral InstNameConflictDoubleOp::s_name{"xd.try.conflict"};
+
+    InstNameConflictDoubleOp* InstNameConflictDoubleOp::create(llvm_dialects::Builder& b, ::llvm::Value * instName, ::llvm::Value * instName_0, const llvm::Twine &instName_1) {
+    ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(4);
+    auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), true);
+
+    auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << s_name << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
+
+  ::llvm::SmallVector<::llvm::Value*, 2> args = {
+instName,
+instName_0
+      };
+      
+      return ::llvm::cast<InstNameConflictDoubleOp>(b.CreateCall(fn, args, instName_1));
+    }
+
+
+    bool InstNameConflictDoubleOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      using ::llvm_dialects::printable;
+
+      if (arg_size() != 2) {
+        errs << "  wrong number of arguments: " << arg_size()
+               << ", expected 2\n";
+        return false;
+      }
+  ::llvm::Type * const instNameType = getInstName()->getType();
+(void)instNameType;
+::llvm::Type * const instName_0Type = getInstName_0()->getType();
+(void)instName_0Type;
+  return true;
+}
+
+
+      ::llvm::Value * InstNameConflictDoubleOp::getInstName() {
+        return getArgOperand(0);
+      }
+
+      void InstNameConflictDoubleOp::setInstName(::llvm::Value * instName) {
+        setArgOperand(0, instName);
+      }
+      ::llvm::Value * InstNameConflictDoubleOp::getInstName_0() {
+        return getArgOperand(1);
+      }
+
+      void InstNameConflictDoubleOp::setInstName_0(::llvm::Value * instName_0) {
+        setArgOperand(1, instName_0);
+      }
+
+
+
+      const ::llvm::StringLiteral InstNameConflictOp::s_name{"xd.try.conflict"};
+
+    InstNameConflictOp* InstNameConflictOp::create(llvm_dialects::Builder& b, ::llvm::Value * instName, const llvm::Twine &instName_0) {
+    ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(4);
+    auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), true);
+
+    auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << s_name << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
+
+  ::llvm::SmallVector<::llvm::Value*, 1> args = {
+instName
+      };
+      
+      return ::llvm::cast<InstNameConflictOp>(b.CreateCall(fn, args, instName_0));
+    }
+
+
+    bool InstNameConflictOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      using ::llvm_dialects::printable;
+
+      if (arg_size() != 1) {
+        errs << "  wrong number of arguments: " << arg_size()
+               << ", expected 1\n";
+        return false;
+      }
+  ::llvm::Type * const instNameType = getInstName()->getType();
+(void)instNameType;
+  return true;
+}
+
+
+      ::llvm::Value * InstNameConflictOp::getInstName() {
+        return getArgOperand(0);
+      }
+
+      void InstNameConflictOp::setInstName(::llvm::Value * instName) {
+        setArgOperand(0, instName);
+      }
+
+
+
+      const ::llvm::StringLiteral InstNameConflictVarargsOp::s_name{"xd.try.conflict.type.suffix"};
+
+    InstNameConflictVarargsOp* InstNameConflictVarargsOp::create(llvm_dialects::Builder& b, ::llvm::ArrayRef<::llvm::Value *> instName_0, const llvm::Twine &instName) {
+    ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(4);
+    auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), true);
+
+    auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << s_name << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
+
+  ::llvm::SmallVector<::llvm::Value*, 0> args = {
+
+      };
+      
+        args.append(instName_0.begin(), instName_0.end());
+      
+      return ::llvm::cast<InstNameConflictVarargsOp>(b.CreateCall(fn, args, instName));
+    }
+
+
+    bool InstNameConflictVarargsOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      using ::llvm_dialects::printable;
+
+      if (arg_size() < 0) {
+        errs << "  wrong number of arguments: " << arg_size()
+               << ", expected at least 0\n";
+        return false;
+      }
+    return true;
+}
+
+
+      ::llvm::iterator_range<::llvm::User::value_op_iterator> InstNameConflictVarargsOp::getInstName_0() {
+        return ::llvm::make_range(
+            value_op_iterator(arg_begin() + 0),
+            value_op_iterator(arg_end()));
+      }
+
+
+
       const ::llvm::StringLiteral ReadOp::s_name{"xd.read"};
 
     ReadOp* ReadOp::create(llvm_dialects::Builder& b, ::llvm::Type* dataType, const llvm::Twine &instName) {
@@ -1887,6 +2104,30 @@ data
       const ::llvm_dialects::OpDescription &
       ::llvm_dialects::OpDescription::get<xd::InsertElementOp>() {
         static const ::llvm_dialects::OpDescription desc{true, "xd.insertelement"};
+        return desc;
+      }
+
+    
+      template <>
+      const ::llvm_dialects::OpDescription &
+      ::llvm_dialects::OpDescription::get<xd::InstNameConflictDoubleOp>() {
+        static const ::llvm_dialects::OpDescription desc{false, "xd.try.conflict"};
+        return desc;
+      }
+
+    
+      template <>
+      const ::llvm_dialects::OpDescription &
+      ::llvm_dialects::OpDescription::get<xd::InstNameConflictOp>() {
+        static const ::llvm_dialects::OpDescription desc{false, "xd.try.conflict"};
+        return desc;
+      }
+
+    
+      template <>
+      const ::llvm_dialects::OpDescription &
+      ::llvm_dialects::OpDescription::get<xd::InstNameConflictVarargsOp>() {
+        static const ::llvm_dialects::OpDescription desc{false, "xd.try.conflict.type.suffix"};
         return desc;
       }
 
