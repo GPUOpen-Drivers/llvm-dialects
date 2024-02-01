@@ -268,3 +268,36 @@ def HandleGetOp : ExampleOp<"handle.get", [Memory<[]>, NoUnwind, WillReturn]> {
     Use a dialect type without type arguments.
   }];
 }
+
+def InstNameConflictOp : Op<ExampleDialect, "try.conflict", [WillReturn]> {
+  let results = (outs);
+  let arguments = (ins value:$instName);
+
+  let summary = "demonstrate how name conflict will be avoided";
+  let description = [{
+    The builder accepts an additional argument to set the name of the created
+    value like IRBuilder methods. This op produces a conflict so the parameter
+    will be renamed.
+  }];
+}
+
+def InstNameConflictDoubleOp : Op<ExampleDialect, "try.conflict", [WillReturn]> {
+  let results = (outs);
+  let arguments = (ins value:$instName, value:$instName_0);
+
+  let summary = "demonstrate how name conflict will be avoided";
+  let description = [{
+    Like InstNameConflictOp but this has a second parameter named like the
+    dialect compiler's first choice
+  }];
+}
+
+def InstNameConflictVarargsOp : Op<ExampleDialect, "try.conflict.type.suffix", [WillReturn]> {
+  let results = (outs);
+  let arguments = (ins varargs:$instName_0);
+
+  let summary = "demonstrate how name conflict will be avoided";
+  let description = [{
+    Like InstNameConflictOp but with varargs
+  }];
+}
