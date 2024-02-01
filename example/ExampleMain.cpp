@@ -128,6 +128,19 @@ void createFunctionExample(Module &module, const Twine &name) {
 
   useUnnamedStructTypes(b);
 
+  b.create<xd::HandleGetOp>("name.of.llvm.value");
+  b.create<xd::InstNameConflictOp>(b.getInt32(1));
+  b.create<xd::InstNameConflictOp>(b.getInt32(1), "name.foo");
+  b.create<xd::InstNameConflictDoubleOp>(b.getInt32(1), b.getInt32(2));
+  b.create<xd::InstNameConflictDoubleOp>(b.getInt32(1), b.getInt32(2), "bar");
+  SmallVector<Value *> moreVarArgs = varArgs;
+  b.create<xd::InstNameConflictVarargsOp>(moreVarArgs);
+  b.create<xd::InstNameConflictVarargsOp>(moreVarArgs, "two.varargs");
+  moreVarArgs.push_back(b.getInt32(3));
+  b.create<xd::InstNameConflictVarargsOp>(moreVarArgs, "three.varargs");
+  moreVarArgs.push_back(b.getInt32(4));
+  b.create<xd::InstNameConflictVarargsOp>(moreVarArgs, "four.varargs");
+
   b.CreateRetVoid();
 }
 
