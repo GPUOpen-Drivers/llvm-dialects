@@ -1,2 +1,2 @@
-; RUN: diff -U 5 %S/generated/ExampleDialect.h.inc test_build_dir/../example/ExampleDialect.h.inc
-; RUN: diff -U 5 %S/generated/ExampleDialect.cpp.inc test_build_dir/../example/ExampleDialect.cpp.inc
+; RUN: diff --strip-trailing-cr -U 5 %S/generated/ExampleDialect.h.inc test_build_dir/../example/ExampleDialect.h.inc
+; RUN: diff --strip-trailing-cr -U 5 %S/generated/ExampleDialect.cpp.inc test_build_dir/../example/ExampleDialect.cpp.inc
