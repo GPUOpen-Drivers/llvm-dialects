@@ -152,6 +152,7 @@ std::unique_ptr<Module> createModuleExample(LLVMContext &context) {
 
 struct VisitorInnermost {
   int counter = 0;
+  raw_ostream *out = nullptr;
 };
 
 struct VisitorNest {
@@ -175,6 +176,13 @@ struct VisitorContainer {
 template <>
 struct llvm_dialects::VisitorPayloadProjection<VisitorNest, raw_ostream> {
   static raw_ostream &project(VisitorNest &nest) { return *nest.out; }
+};
+
+template <>
+struct llvm_dialects::VisitorPayloadProjection<VisitorInnermost, raw_ostream> {
+  static raw_ostream &project(VisitorInnermost &innerMost) {
+    return *innerMost.out;
+  }
 };
 
 LLVM_DIALECTS_VISITOR_PAYLOAD_PROJECT_FIELD(VisitorContainer, nest)
@@ -215,8 +223,8 @@ template <bool rpot> const Visitor<VisitorContainer> &getExampleVisitor() {
             b.addSet(complexSet, [](VisitorNest &self, llvm::Instruction &op) {
               assert((op.getOpcode() == Instruction::Ret ||
                       (isa<IntrinsicInst>(&op) &&
-                          cast<IntrinsicInst>(&op)->getIntrinsicID() ==
-                              Intrinsic::umin)) &&
+                       cast<IntrinsicInst>(&op)->getIntrinsicID() ==
+                           Intrinsic::umin)) &&
                      "Unexpected operation detected while visiting OpSet!");
 
               if (op.getOpcode() == Instruction::Ret) {
@@ -249,10 +257,36 @@ template <bool rpot> const Visitor<VisitorContainer> &getExampleVisitor() {
                   Intrinsic::umax, [](raw_ostream &out, IntrinsicInst &umax) {
                     out << "visiting umax intrinsic: " << umax << '\n';
                   });
+              b.addPreVisitCallback<xd::ReadOp, xd::WriteOp>(
+                  [](raw_ostream &out, llvm::Instruction &inst) {
+                    if (isa<xd::ReadOp>(inst))
+                      out << "Will visit ReadOp next: " << inst << '\n';
+                    else if (isa<xd::WriteOp>(inst))
+                      out << "Will visit WriteOp next: " << inst << '\n';
+                    else
+                      llvm_unreachable("Unexpected op!");
+                  });
+
+              b.addPreVisitCallback([](raw_ostream &out, Instruction &inst) {
+                if (isa<IntrinsicInst>(inst))
+                  out << "Pre-visiting intrinsic instruction: " << inst << '\n';
+              });
             });
             b.nest<VisitorInnermost>([](VisitorBuilder<VisitorInnermost> &b) {
-              b.add<xd::ITruncOp>([](VisitorInnermost &inner,
-                                     xd::ITruncOp &op) { inner.counter++; });
+              b.add<xd::ITruncOp>(
+                  [](VisitorInnermost &inner, xd::ITruncOp &op) {
+                    inner.counter++;
+                    *inner.out
+                        << "Counter after visiting ITruncOp: " << inner.counter
+                        << '\n';
+                  });
+
+              b.addPreVisitCallback<xd::ITruncOp>(
+                  [](VisitorInnermost &inner, Instruction &op) {
+                    if (isa<xd::ITruncOp>(op))
+                      *inner.out << "Counter before visiting ITruncOp: "
+                                 << inner.counter << '\n';
+                  });
             });
           })
           .setStrategy(rpot ? VisitorStrategy::ReversePostOrder
@@ -267,6 +301,7 @@ void exampleVisit(Module &module) {
 
   VisitorContainer container;
   container.nest.out = &outs();
+  container.nest.inner.out = &outs();
   visitor.visit(container, module);
 
   outs() << "inner.counter = " << container.nest.inner.counter << '\n';

@@ -238,15 +238,27 @@ class VisitorTemplate {
   friend class VisitorBuilderBase;
 
 public:
+  enum class VisitorCallbackType : uint8_t { PreVisit = 0, Visit = 1 };
+
   void setStrategy(VisitorStrategy strategy);
   void add(VisitorKey key, VisitorCallback *fn, VisitorCallbackData data,
-           VisitorHandler::Projection projection);
+           VisitorHandler::Projection projection,
+           VisitorCallbackType visitorCallbackTy = VisitorCallbackType::Visit);
 
 private:
+  void storeHandlersInOpMap(const VisitorKey &key, unsigned handlerIdx,
+                            VisitorCallbackType callbackTy);
+
   VisitorStrategy m_strategy = VisitorStrategy::Default;
   std::vector<PayloadProjection> m_projections;
   std::vector<VisitorHandler> m_handlers;
-  OpMap<llvm::SmallVector<unsigned>> m_opMap;
+
+  struct Handlers {
+    llvm::SmallVector<unsigned> PreVisitHandlers;
+    llvm::SmallVector<unsigned> VisitHandlers;
+  };
+
+  OpMap<Handlers> m_opMap;
 };
 
 /// @brief Base class for VisitorBuilders
@@ -279,6 +291,9 @@ public:
 
   void setStrategy(VisitorStrategy strategy);
 
+  void addPreVisitCallback(VisitorKey key, VisitorCallback *fn,
+                           VisitorCallbackData data);
+
   void add(VisitorKey key, VisitorCallback *fn, VisitorCallbackData data);
 
   VisitorBase build();
@@ -307,6 +322,11 @@ private:
   class BuildHelper;
   using HandlerRange = std::pair<unsigned, unsigned>;
 
+  struct MappedHandlers {
+    HandlerRange PreVisitCallbacks;
+    HandlerRange VisitCallbacks;
+  };
+
   void call(HandlerRange handlers, void *payload,
             llvm::Instruction &inst) const;
   VisitorResult call(const VisitorHandler &handler, void *payload,
@@ -319,7 +339,7 @@ private:
   VisitorStrategy m_strategy;
   std::vector<PayloadProjection> m_projections;
   std::vector<VisitorHandler> m_handlers;
-  OpMap<HandlerRange> m_opMap;
+  OpMap<MappedHandlers> m_opMap;
 };
 
 } // namespace detail
@@ -383,6 +403,20 @@ public:
 
   VisitorBuilder &setStrategy(VisitorStrategy strategy) {
     VisitorBuilderBase::setStrategy(strategy);
+    return *this;
+  }
+
+  VisitorBuilder &
+  addPreVisitCallback(const OpSet &opSet,
+                      VisitorResult (*fn)(PayloadT &, llvm::Instruction &I)) {
+    addPreVisitCase(detail::VisitorKey::opSet(opSet), fn);
+    return *this;
+  }
+
+  template <typename... OpTs>
+  VisitorBuilder &addPreVisitCallback(void (*fn)(PayloadT &,
+                                                 llvm::Instruction &I)) {
+    addPreVisitCase(detail::VisitorKey::opSet<OpTs...>(), fn);
     return *this;
   }
 
@@ -508,6 +542,16 @@ private:
     static_assert(sizeof(fn) <= sizeof(data.data));
     memcpy(&data.data, &fn, sizeof(fn));
     VisitorBuilderBase::add(key, &VisitorBuilder::setForwarder<ReturnT>, data);
+  }
+
+  template <typename ReturnT>
+  void addPreVisitCase(detail::VisitorKey key,
+                       ReturnT (*fn)(PayloadT &, llvm::Instruction &)) {
+    detail::VisitorCallbackData data{};
+    static_assert(sizeof(fn) <= sizeof(data.data));
+    memcpy(&data.data, &fn, sizeof(fn));
+    VisitorBuilderBase::addPreVisitCallback(
+        key, &VisitorBuilder::setForwarder<ReturnT>, data);
   }
 
   template <typename OpT, typename ReturnT>

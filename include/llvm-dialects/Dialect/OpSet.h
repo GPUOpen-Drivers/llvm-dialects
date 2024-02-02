@@ -91,7 +91,7 @@ public:
   // arguments.
   template <typename... OpTs> static const OpSet get() {
     static OpSet set;
-    (... && appendT<OpTs>(set));
+    (void)(... && appendT<OpTs>(set));
     return set;
   }
 
@@ -151,6 +151,11 @@ public:
       return true;
 
     return isMatchingDialectOp(func.getName());
+  }
+
+  bool empty() const {
+    return m_coreOpcodes.empty() && m_intrinsicIDs.empty() &&
+           m_dialectOps.empty();
   }
 
   // -------------------------------------------------------------
