@@ -89,9 +89,15 @@ public:
 
   // Construct an OpSet from a set of dialect ops, given as template
   // arguments.
-  template <typename... OpTs> static const OpSet get() {
-    static OpSet set;
-    (... && appendT<OpTs>(set));
+  template <typename... OpTs> static const OpSet &get() {
+    static const auto set = ([]() {
+      OpSet set;
+      (void)(... && ([&set]() {
+               set.tryInsertOp(OpDescription::get<OpTs>());
+               return true;
+             })());
+      return set;
+    })();
     return set;
   }
 
@@ -169,15 +175,6 @@ public:
   }
 
 private:
-  // Generates an `OpDescription` for a given `OpT`, extracts the
-  // internal operation representation and collects it in the set.
-  template <typename OpT> static bool appendT(OpSet &set) {
-    static OpDescription desc = OpDescription::get<OpT>();
-    set.tryInsertOp(desc);
-
-    return true;
-  }
-
   // Checks if `mnemonic` can be described by any of the stored dialect
   // operations.
   bool isMatchingDialectOp(llvm::StringRef mnemonic) const {
