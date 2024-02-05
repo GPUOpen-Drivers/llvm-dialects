@@ -28,7 +28,7 @@
 using namespace llvm;
 using namespace llvm_dialects;
 
-void GenDialect::finalize() {
+void GenDialect::finalize(raw_ostream &errs) {
   // Build the list of different attribute lists.
   auto traitLess = [](Trait *lhs, Trait *rhs) {
     return lhs->getName() < rhs->getName();
@@ -40,6 +40,18 @@ void GenDialect::finalize() {
   };
 
   std::vector<Operation *> traitOperations;
+
+  bool hasDuplicates = false;
+  for (const auto &[op, count] : operationCounts) {
+    if (count != 1) {
+      errs << "Found op with non-unique mnemonic: " << op << '\n';
+      hasDuplicates = true;
+    }
+  }
+
+  if (hasDuplicates)
+    report_fatal_error(
+        "Aborting dialect generation since non-unique mnemonics were found!");
 
   for (const auto &op : operations) {
     if (op->traits.empty())
@@ -219,5 +231,5 @@ void GenDialectsContext::init(RecordKeeper &records,
   }
 
   for (auto &dialectEntry : m_dialects)
-    dialectEntry.second->finalize();
+    dialectEntry.second->finalize(llvm::errs());
 }

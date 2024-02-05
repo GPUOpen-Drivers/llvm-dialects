@@ -21,6 +21,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringMap.h"
 
 namespace llvm {
 class DagInit;
@@ -47,10 +48,11 @@ public:
   std::string cppNamespace;
   std::vector<DialectType *> types;
   std::vector<OpClass *> opClasses;
+  llvm::StringMap<unsigned> operationCounts;
   std::vector<std::unique_ptr<Operation>> operations;
 
 public:
-  void finalize();
+  void finalize(llvm::raw_ostream &errs);
 
   llvm::ArrayRef<std::vector<Trait *>> attribute_lists() const {
     return m_attributeLists;

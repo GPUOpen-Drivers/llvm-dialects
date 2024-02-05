@@ -447,6 +447,7 @@ bool Operation::parse(raw_ostream &errs, GenDialectsContext *context,
 
   op->m_builders.push_back(std::move(builder));
 
+  ++dialect->operationCounts[op->mnemonic];
   dialect->operations.push_back(std::move(op));
 
   return true;
