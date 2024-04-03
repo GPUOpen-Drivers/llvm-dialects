@@ -35,6 +35,13 @@
 
 namespace llvm_dialects {
 
+namespace llvm_support_detail =
+#if !defined(LLVM_MAIN_REVISION) || LLVM_MAIN_REVISION >= 494496
+	llvm::support::detail;
+#else
+	llvm::detail;
+#endif
+
 /// Format context containing substitutions for special placeholders.
 ///
 /// This context divides special placeholders into two categories: builtin ones
@@ -185,14 +192,14 @@ protected:
   // std::vector<Base*>.
   struct CreateAdapters {
     template <typename... Ts>
-    std::vector<llvm::detail::format_adapter *> operator()(Ts &...items) {
-      return std::vector<llvm::detail::format_adapter *>{&items...};
+    std::vector<llvm_support_detail::format_adapter *> operator()(Ts &...items) {
+      return std::vector<llvm_support_detail::format_adapter *>{&items...};
     }
   };
 
   llvm::StringRef fmt;
   const FmtContext *context;
-  std::vector<llvm::detail::format_adapter *> adapters;
+  std::vector<llvm_support_detail::format_adapter *> adapters;
   std::vector<FmtReplacement> replacements;
 
 public:
@@ -253,7 +260,7 @@ public:
 class FmtStrVecObject : public FmtObjectBase {
 public:
   using StrFormatAdapter =
-      decltype(llvm::detail::build_format_adapter(std::declval<std::string>()));
+      decltype(llvm_support_detail::build_format_adapter(std::declval<std::string>()));
 
   FmtStrVecObject(llvm::StringRef fmt, const FmtContext *ctx,
                   llvm::ArrayRef<std::string> params);
@@ -313,13 +320,13 @@ private:
 template <typename... Ts>
 inline auto tgfmt(llvm::StringRef fmt, const FmtContext *ctx, Ts &&...vals)
     -> FmtObject<decltype(std::make_tuple(
-        llvm::detail::build_format_adapter(std::forward<Ts>(vals))...))> {
+        llvm_support_detail::build_format_adapter(std::forward<Ts>(vals))...))> {
   using ParamTuple = decltype(std::make_tuple(
-      llvm::detail::build_format_adapter(std::forward<Ts>(vals))...));
+      llvm_support_detail::build_format_adapter(std::forward<Ts>(vals))...));
   return FmtObject<ParamTuple>(
       fmt, ctx,
       std::make_tuple(
-          llvm::detail::build_format_adapter(std::forward<Ts>(vals))...));
+          llvm_support_detail::build_format_adapter(std::forward<Ts>(vals))...));
 }
 
 inline FmtStrVecObject tgfmt(llvm::StringRef fmt, const FmtContext *ctx,
