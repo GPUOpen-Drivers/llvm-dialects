@@ -37,9 +37,9 @@ namespace llvm_dialects {
 
 namespace llvm_support_detail =
 #if !defined(LLVM_MAIN_REVISION) || LLVM_MAIN_REVISION >= 494496
-	llvm::support::detail;
+    llvm::support::detail;
 #else
-	llvm::detail;
+    llvm::detail;
 #endif
 
 /// Format context containing substitutions for special placeholders.
