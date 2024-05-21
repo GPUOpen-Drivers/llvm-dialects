@@ -129,6 +129,11 @@ namespace xd {
             state.setError();
         });
       
+        builder.add<StringAttrOp>([](::llvm_dialects::VerifierState &state, StringAttrOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
         builder.add<WriteOp>([](::llvm_dialects::VerifierState &state, WriteOp &op) {
           if (!op.verifier(state.out()))
             state.setError();
@@ -154,21 +159,21 @@ namespace xd {
   ::llvm::AttrBuilder attrBuilder{context};
 attrBuilder.addAttribute(::llvm::Attribute::NoUnwind);
 attrBuilder.addAttribute(::llvm::Attribute::WillReturn);
-attrBuilder.addMemoryAttr(::llvm::MemoryEffects(::llvm::ModRefInfo::Ref));
+attrBuilder.addMemoryAttr(::llvm::MemoryEffects::none());
 m_attributeLists[0] = ::llvm::AttributeList::get(context, ::llvm::AttributeList::FunctionIndex, attrBuilder);
 }
 {
   ::llvm::AttrBuilder attrBuilder{context};
 attrBuilder.addAttribute(::llvm::Attribute::NoUnwind);
 attrBuilder.addAttribute(::llvm::Attribute::WillReturn);
-attrBuilder.addMemoryAttr(::llvm::MemoryEffects(::llvm::MemoryEffects::Location::InaccessibleMem, ::llvm::ModRefInfo::Mod));
+attrBuilder.addMemoryAttr(::llvm::MemoryEffects(::llvm::ModRefInfo::Ref));
 m_attributeLists[1] = ::llvm::AttributeList::get(context, ::llvm::AttributeList::FunctionIndex, attrBuilder);
 }
 {
   ::llvm::AttrBuilder attrBuilder{context};
 attrBuilder.addAttribute(::llvm::Attribute::NoUnwind);
 attrBuilder.addAttribute(::llvm::Attribute::WillReturn);
-attrBuilder.addMemoryAttr(::llvm::MemoryEffects::none());
+attrBuilder.addMemoryAttr(::llvm::MemoryEffects(::llvm::MemoryEffects::Location::InaccessibleMem, ::llvm::ModRefInfo::Mod));
 m_attributeLists[2] = ::llvm::AttributeList::get(context, ::llvm::AttributeList::FunctionIndex, attrBuilder);
 }
 {
@@ -329,7 +334,7 @@ return true;
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(2);
+          = ExampleDialect::get(context).getAttributeList(0);
     auto fnType = ::llvm::FunctionType::get(::llvm::IntegerType::get(context, 32), {
 lhs->getType(),
 rhs->getType(),
@@ -451,7 +456,7 @@ uint32_t const extra = getExtra();
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(2);
+          = ExampleDialect::get(context).getAttributeList(0);
     
       std::string mangledName =
           ::llvm_dialects::getMangledName(s_name, {lhs->getType()});
@@ -546,7 +551,7 @@ rhs
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(2);
+          = ExampleDialect::get(context).getAttributeList(0);
     
       std::string mangledName =
           ::llvm_dialects::getMangledName(s_name, {::llvm::cast<XdVectorType>(vector->getType())->getElementType()});
@@ -650,7 +655,7 @@ index
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(2);
+          = ExampleDialect::get(context).getAttributeList(0);
     
       std::string mangledName =
           ::llvm_dialects::getMangledName(s_name, {resultType});
@@ -820,7 +825,7 @@ source
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(2);
+          = ExampleDialect::get(context).getAttributeList(0);
     auto fnType = ::llvm::FunctionType::get(XdHandleType::get(context), {
 }, false);
 
@@ -882,7 +887,7 @@ source
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(2);
+          = ExampleDialect::get(context).getAttributeList(0);
     
       std::string mangledName =
           ::llvm_dialects::getMangledName(s_name, {resultType});
@@ -980,7 +985,7 @@ source
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(2);
+          = ExampleDialect::get(context).getAttributeList(0);
     
       std::string mangledName =
           ::llvm_dialects::getMangledName(s_name, {resultType});
@@ -1113,7 +1118,7 @@ source
       (void)context;
 
       using ::llvm_dialects::printable;
-
+  
       if (arg_size() != 1) {
         errs << "  wrong number of arguments: " << arg_size()
                << ", expected 1\n";
@@ -1147,7 +1152,7 @@ source
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(2);
+          = ExampleDialect::get(context).getAttributeList(0);
     
       std::string mangledName =
           ::llvm_dialects::getMangledName(s_name, {vector->getType()});
@@ -1607,7 +1612,7 @@ instName
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(1);
+          = ExampleDialect::get(context).getAttributeList(2);
     auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), true);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
@@ -1670,7 +1675,7 @@ data
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(2);
+          = ExampleDialect::get(context).getAttributeList(0);
     auto fnType = ::llvm::FunctionType::get(::llvm::IntegerType::get(context, 64), true);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
@@ -1744,7 +1749,7 @@ data
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(0);
+          = ExampleDialect::get(context).getAttributeList(1);
     
       std::string mangledName =
           ::llvm_dialects::getMangledName(s_name, {initial->getType()});
@@ -1836,7 +1841,7 @@ initial
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(0);
+          = ExampleDialect::get(context).getAttributeList(1);
     
       std::string mangledName =
           ::llvm_dialects::getMangledName(s_name, {initial->getType()});
@@ -1928,7 +1933,7 @@ initial
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(0);
+          = ExampleDialect::get(context).getAttributeList(1);
     
       std::string mangledName =
           ::llvm_dialects::getMangledName(s_name, {initial->getType()});
@@ -2011,6 +2016,75 @@ initial
 
 
 
+      const ::llvm::StringLiteral StringAttrOp::s_name{"xd.string.attr.op"};
+
+    StringAttrOp* StringAttrOp::create(llvm_dialects::Builder& b, ::llvm::StringRef val, const llvm::Twine &instName) {
+    ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(4);
+    auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), {
+::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0),
+}, false);
+
+    auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << s_name << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
+
+  
+::llvm::SmallVector<::llvm::Value*, 1> args = {
+ b.CreateGlobalString(val) 
+      };
+      
+      return ::llvm::cast<StringAttrOp>(b.CreateCall(fn, args, instName));
+    }
+
+
+    bool StringAttrOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      using ::llvm_dialects::printable;
+  
+      if (arg_size() != 1) {
+        errs << "  wrong number of arguments: " << arg_size()
+               << ", expected 1\n";
+        return false;
+      }
+  
+        if (getArgOperand(0)->getType() != ::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0)) {
+          errs << "  argument 0 (val) has type: "
+                 << *getArgOperand(0)->getType() << '\n';
+          errs << "  expected: " << *::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0) << '\n';
+          return false;
+        }
+      ::llvm::StringRef const val = getVal();
+(void)val;
+  return true;
+}
+
+
+      ::llvm::StringRef StringAttrOp::getVal() {
+        return  ::llvm::cast<::llvm::ConstantDataArray>(::llvm::cast<::llvm::GlobalVariable>(getArgOperand(0))->getInitializer())->getAsString() ;
+      }
+
+
+
       const ::llvm::StringLiteral WriteOp::s_name{"xd.write"};
 
     WriteOp* WriteOp::create(llvm_dialects::Builder& b, ::llvm::Value * data, const llvm::Twine &instName) {
@@ -2020,7 +2094,7 @@ initial
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(1);
+          = ExampleDialect::get(context).getAttributeList(2);
     auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), true);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
@@ -2083,7 +2157,7 @@ data
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(1);
+          = ExampleDialect::get(context).getAttributeList(2);
     auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), true);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
@@ -2293,6 +2367,14 @@ data
       const ::llvm_dialects::OpDescription &
       ::llvm_dialects::OpDescription::get<xd::StreamMinOp>() {
         static const ::llvm_dialects::OpDescription desc{true, "xd.stream.min"};
+        return desc;
+      }
+
+    
+      template <>
+      const ::llvm_dialects::OpDescription &
+      ::llvm_dialects::OpDescription::get<xd::StringAttrOp>() {
+        static const ::llvm_dialects::OpDescription desc{false, "xd.string.attr.op"};
         return desc;
       }
 

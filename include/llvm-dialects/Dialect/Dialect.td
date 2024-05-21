@@ -279,6 +279,15 @@ def : AttrLlvmType<AttrI16, I16>;
 def : AttrLlvmType<AttrI32, I32>;
 def : AttrLlvmType<AttrI64, I64>;
 
+def ImmutableStringAttr : Attr<"::llvm::StringRef"> {
+  let toLlvmValue = [{ $_builder.CreateGlobalString($0) }];
+  let fromLlvmValue = [{ ::llvm::cast<::llvm::ConstantDataArray>(::llvm::cast<::llvm::GlobalVariable>($0)->getInitializer())->getAsString() }];
+  let isImmutable = true;
+}
+ 
+// Global string variables are essentially pointers in addrspace(0).
+def : AttrLlvmType<ImmutableStringAttr, Ptr>;
+
 // ============================================================================
 /// More general attributes
 // ============================================================================

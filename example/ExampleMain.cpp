@@ -141,6 +141,8 @@ void createFunctionExample(Module &module, const Twine &name) {
   moreVarArgs.push_back(b.getInt32(4));
   b.create<xd::InstNameConflictVarargsOp>(moreVarArgs, "four.varargs");
 
+  b.create<xd::StringAttrOp>("Hello world!");
+
   b.CreateRetVoid();
 }
 
@@ -241,6 +243,10 @@ template <bool rpot> const Visitor<VisitorContainer> &getExampleVisitor() {
                     out << "visiting WriteVarArgOp: " << op << ":\n";
                     for (Value *arg : op.getArgs())
                       out << "  " << *arg << '\n';
+                  });
+              b.add<xd::StringAttrOp>(
+                  [](raw_ostream &out, xd::StringAttrOp &op) {
+                    out << "visiting StringAttrOp: " << op.getVal() << '\n';
                   });
               b.add<ReturnInst>([](raw_ostream &out, ReturnInst &ret) {
                 out << "visiting ReturnInst: " << ret << '\n';
