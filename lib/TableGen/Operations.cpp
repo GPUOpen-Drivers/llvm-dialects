@@ -160,7 +160,7 @@ void OperationBase::emitArgumentAccessorDeclarations(llvm::raw_ostream &out,
                                                      FmtContext &fmt) const {
   for (const auto &arg : m_arguments) {
     std::string defaultDeclaration = "$0 get$1();";
-    if (!arg.type->isVarArgList()) {
+    if (!arg.type->isVarArgList() && !arg.type->isImmutable()) {
       defaultDeclaration += R"(
         void set$1($0 $2);
       )";
@@ -205,6 +205,9 @@ void AccessorBuilder::emitGetterDefinition() const {
 }
 
 void AccessorBuilder::emitSetterDefinition() const {
+  if (m_arg.type->isImmutable())
+    return;
+
   std::string toLlvm = m_arg.name;
 
   if (auto *attr = dyn_cast<Attr>(m_arg.type)) {

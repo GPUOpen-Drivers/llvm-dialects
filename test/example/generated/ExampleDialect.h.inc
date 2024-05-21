@@ -271,6 +271,26 @@ bool verifier(::llvm::raw_ostream &errs);
 
       };
     
+      class ImmutableOp : public ::llvm::CallInst {
+        static const ::llvm::StringLiteral s_name; //{"xd.immutable.op"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isSimpleOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static ImmutableOp* create(::llvm_dialects::Builder& b, bool val, const llvm::Twine &instName = "");
+
+bool verifier(::llvm::raw_ostream &errs);
+
+bool getVal();
+
+
+      };
+    
       class InsertElementOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.insertelement"};
 

@@ -203,6 +203,7 @@ public:
   bool isTypeArg() const { return m_kind == Kind::Type; }
   bool isValueArg() const { return m_kind == Kind::Value; }
   bool isVarArgList() const { return m_kind == Kind::VarArgList; }
+  bool isImmutable() const;
 
 protected:
   MetaType(Kind kind) : m_kind(kind) {}
@@ -231,6 +232,7 @@ public:
   llvm::StringRef getToUnsigned() const { return m_toUnsigned; }
   llvm::StringRef getFromUnsigned() const { return m_fromUnsigned; }
   llvm::StringRef getCheck() const { return m_check; }
+  bool getIsImmutable() const { return m_isImmutable; }
 
   // Set the LLVMType once -- used during initialization to break a circular
   // dependency in how IntegerType is defined.
@@ -249,6 +251,7 @@ private:
   std::string m_toUnsigned;
   std::string m_fromUnsigned;
   std::string m_check;
+  bool m_isImmutable;
 };
 
 } // namespace llvm_dialects
