@@ -16,9 +16,12 @@
 ; DEFAULT-NEXT:   %v2 =
 ; DEFAULT-NEXT:   %q =
 ; DEFAULT-NEXT: visiting umin (set): %vm = call i32 @llvm.umin.i32(i32 %v1, i32 %q) 
+; DEFAULT-NEXT: visiting StringAttrOp: Hello world!
 ; DEFAULT-NEXT: visiting Ret (set): ret void
 ; DEFAULT-NEXT: visiting ReturnInst: ret void
 ; DEFAULT-NEXT: inner.counter = 1
+
+@0 = private unnamed_addr constant [13 x i8] c"Hello world!\00", align 1
 
 define void @test1(ptr %p) {
 entry:
@@ -36,6 +39,7 @@ entry:
   call void (...) @xd.set.write(i8 %v.2)
   call void (...) @xd.write.vararg(i8 %t, i32 %v2, i32 %q)
   %vm = call i32 @llvm.umin.i32(i32 %v1, i32 %q)
+  call void @xd.string.attr.op(ptr @0)
   ret void
 }
 
@@ -46,6 +50,6 @@ declare void @xd.write(...)
 declare void @xd.set.write(...)
 declare void @xd.write.vararg(...)
 declare i8 @xd.itrunc__i8(...)
-
+declare void @xd.string.attr.op(ptr)
 declare i32 @llvm.umax.i32(i32, i32)
 declare i32 @llvm.umin.i32(i32, i32)

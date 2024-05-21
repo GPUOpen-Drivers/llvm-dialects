@@ -317,3 +317,13 @@ def ImmutableOp : Op<ExampleDialect, "immutable.op", [WillReturn]> {
     Make an argument immutable
   }];
 }
+
+def StringAttrOp : Op<ExampleDialect, "string.attr.op", [WillReturn]> {
+  let results = (outs);
+  let arguments = (ins ImmutableStringAttr:$val);
+
+  let summary = "demonstrate an argument that takes in a StringRef";
+  let description = [{
+    The argument should not have a setter method
+  }];
+}
