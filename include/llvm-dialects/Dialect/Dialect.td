@@ -69,6 +69,9 @@ class Attr<string cppType_> : MetaType {
   // A check statement that is issued before using the C++ value in builders.
   // $0 is the C++ value.
   string check = "";
+  
+  // Overriding prevents generating a setter method. Attributes are mutable by default.
+  bit isImmutable = false;
 }
 
 class IntegerAttr<string cppType_> : Attr<cppType_> {

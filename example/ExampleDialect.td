@@ -36,6 +36,12 @@ def VectorKindLittleEndian : CppConstant<"xd::VectorKind::LittleEndian">;
 def VectorKindBigEndian : CppConstant<"xd::VectorKind::BigEndian">;
 def VectorKindMiddleEndian : CppConstant<"xd::VectorKind::MiddleEndian">;
 
+def ImmutableAttrI1 : IntegerAttr<"bool"> {
+  let isImmutable = true;
+}
+
+def : AttrLlvmType<ImmutableAttrI1, I1>;
+
 def isReasonableVectorKind : TgPredicate<
     (args AttrVectorKind:$kind),
     (eq $kind, (or VectorKindLittleEndian, VectorKindBigEndian))>;
@@ -299,5 +305,15 @@ def InstNameConflictVarargsOp : Op<ExampleDialect, "inst.name.conflict.varargs",
   let summary = "demonstrate how name conflict will be avoided";
   let description = [{
     Like InstNameConflictOp but with varargs
+  }];
+}
+
+def ImmutableOp : Op<ExampleDialect, "immutable.op", [WillReturn]> {
+  let results = (outs);
+  let arguments = (ins ImmutableAttrI1:$val);
+
+  let summary = "demonstrate how an argument will not get a setter method";
+  let description = [{
+    Make an argument immutable
   }];
 }

@@ -361,6 +361,13 @@ StringRef MetaType::getBuilderCppType() const {
   return getCppType();
 }
 
+bool MetaType::isImmutable() const {
+  if (auto *attr = dyn_cast<Attr>(this))
+    return attr->getIsImmutable();
+
+  return false;
+}
+
 /// Return the C++ expression @p value transformed to be suitable for printing
 /// using LLVM's raw_ostream.
 std::string MetaType::printable(const MetaType *type, llvm::StringRef value) {
@@ -394,6 +401,7 @@ std::unique_ptr<Attr> Attr::parse(raw_ostream &errs,
   attr->m_toUnsigned = record->getValueAsString("toUnsigned");
   attr->m_fromUnsigned = record->getValueAsString("fromUnsigned");
   attr->m_check = record->getValueAsString("check");
+  attr->m_isImmutable = record->getValueAsBit("isImmutable");
 
   return attr;
 }
