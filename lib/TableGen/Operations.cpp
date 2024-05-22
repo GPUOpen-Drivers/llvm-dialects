@@ -460,9 +460,17 @@ void Operation::emitVerifierMethod(llvm::raw_ostream &out,
   fmt.withContext(symbols.chooseName("context"));
   fmt.addSubst("_errs", symbols.chooseName("errs"));
 
+  bool emitArgCountVerifier = true;
   if (m_hasVariadicArgument) {
-    fmt.addSubst("_comparator", "<");
-    fmt.addSubst("_at_least", "at least ");
+    if (getNumFullArguments() == 0) {
+      // If the only argument in an operation is a variadic argument list,
+      // getNumFullArguments() will return zero. Thus, prevent us from emitting
+      // arg_size() < 0 verifier checks.
+      emitArgCountVerifier = false;
+    } else {
+      fmt.addSubst("_comparator", "<");
+      fmt.addSubst("_at_least", "at least ");
+    }
   } else {
     fmt.addSubst("_comparator", "!=");
     fmt.addSubst("_at_least", "");
@@ -474,14 +482,19 @@ void Operation::emitVerifierMethod(llvm::raw_ostream &out,
       (void)$_context;
 
       using ::llvm_dialects::printable;
+  )",
+               &fmt);
 
+  if (emitArgCountVerifier) {
+    out << tgfmt(R"(
       if (arg_size() $_comparator $0) {
         $_errs << "  wrong number of arguments: " << arg_size()
                << ", expected $_at_least$0\n";
         return false;
       }
   )",
-               &fmt, getNumFullArguments());
+                 &fmt, getNumFullArguments());
+  }
 
   Assignment assignment;
   Evaluator eval(symbols, assignment, m_system, out, fmt);
