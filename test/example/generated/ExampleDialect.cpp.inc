@@ -368,7 +368,7 @@ rhs,
       (void)context;
 
       using ::llvm_dialects::printable;
-
+  
       if (arg_size() != 3) {
         errs << "  wrong number of arguments: " << arg_size()
                << ", expected 3\n";
@@ -487,7 +487,7 @@ rhs
       (void)context;
 
       using ::llvm_dialects::printable;
-
+  
       if (arg_size() != 2) {
         errs << "  wrong number of arguments: " << arg_size()
                << ", expected 2\n";
@@ -582,7 +582,7 @@ index
       (void)context;
 
       using ::llvm_dialects::printable;
-
+  
       if (arg_size() != 2) {
         errs << "  wrong number of arguments: " << arg_size()
                << ", expected 2\n";
@@ -685,7 +685,7 @@ source
       (void)context;
 
       using ::llvm_dialects::printable;
-
+  
       if (arg_size() != 1) {
         errs << "  wrong number of arguments: " << arg_size()
                << ", expected 1\n";
@@ -849,7 +849,7 @@ source
       (void)context;
 
       using ::llvm_dialects::printable;
-
+  
       if (arg_size() != 0) {
         errs << "  wrong number of arguments: " << arg_size()
                << ", expected 0\n";
@@ -917,7 +917,7 @@ source
       (void)context;
 
       using ::llvm_dialects::printable;
-
+  
       if (arg_size() != 1) {
         errs << "  wrong number of arguments: " << arg_size()
                << ", expected 1\n";
@@ -1015,7 +1015,7 @@ source
       (void)context;
 
       using ::llvm_dialects::printable;
-
+  
       if (arg_size() != 1) {
         errs << "  wrong number of arguments: " << arg_size()
                << ", expected 1\n";
@@ -1184,7 +1184,7 @@ index
       (void)context;
 
       using ::llvm_dialects::printable;
-
+  
       if (arg_size() != 3) {
         errs << "  wrong number of arguments: " << arg_size()
                << ", expected 3\n";
@@ -1302,7 +1302,7 @@ instName_0
       (void)context;
 
       using ::llvm_dialects::printable;
-
+  
       if (arg_size() != 2) {
         errs << "  wrong number of arguments: " << arg_size()
                << ", expected 2\n";
@@ -1385,7 +1385,7 @@ instName
       (void)context;
 
       using ::llvm_dialects::printable;
-
+  
       if (arg_size() != 1) {
         errs << "  wrong number of arguments: " << arg_size()
                << ", expected 1\n";
@@ -1461,12 +1461,6 @@ instName
       (void)context;
 
       using ::llvm_dialects::printable;
-
-      if (arg_size() < 0) {
-        errs << "  wrong number of arguments: " << arg_size()
-               << ", expected at least 0\n";
-        return false;
-      }
   ::llvm::Type * const resultType = getResult()->getType();
 (void)resultType;
 
@@ -1531,7 +1525,7 @@ instName
       (void)context;
 
       using ::llvm_dialects::printable;
-
+  
       if (arg_size() != 0) {
         errs << "  wrong number of arguments: " << arg_size()
                << ", expected 0\n";
@@ -1588,7 +1582,7 @@ instName
       (void)context;
 
       using ::llvm_dialects::printable;
-
+  
       if (arg_size() != 0) {
         errs << "  wrong number of arguments: " << arg_size()
                << ", expected 0\n";
@@ -1645,7 +1639,7 @@ data
       (void)context;
 
       using ::llvm_dialects::printable;
-
+  
       if (arg_size() != 1) {
         errs << "  wrong number of arguments: " << arg_size()
                << ", expected 1\n";
@@ -1708,7 +1702,7 @@ data
       (void)context;
 
       using ::llvm_dialects::printable;
-
+  
       if (arg_size() != 1) {
         errs << "  wrong number of arguments: " << arg_size()
                << ", expected 1\n";
@@ -1787,7 +1781,7 @@ initial
       (void)context;
 
       using ::llvm_dialects::printable;
-
+  
       if (arg_size() != 3) {
         errs << "  wrong number of arguments: " << arg_size()
                << ", expected 3\n";
@@ -1879,7 +1873,7 @@ initial
       (void)context;
 
       using ::llvm_dialects::printable;
-
+  
       if (arg_size() != 3) {
         errs << "  wrong number of arguments: " << arg_size()
                << ", expected 3\n";
@@ -1971,7 +1965,7 @@ initial
       (void)context;
 
       using ::llvm_dialects::printable;
-
+  
       if (arg_size() != 3) {
         errs << "  wrong number of arguments: " << arg_size()
                << ", expected 3\n";
@@ -2058,7 +2052,7 @@ data
       (void)context;
 
       using ::llvm_dialects::printable;
-
+  
       if (arg_size() != 1) {
         errs << "  wrong number of arguments: " << arg_size()
                << ", expected 1\n";
@@ -2123,7 +2117,7 @@ data
       (void)context;
 
       using ::llvm_dialects::printable;
-
+  
       if (arg_size() < 1) {
         errs << "  wrong number of arguments: " << arg_size()
                << ", expected at least 1\n";
