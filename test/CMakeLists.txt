@@ -1,7 +1,7 @@
 ##
  #######################################################################################################################
  #
- #  Copyright (c) 2020-2023 Advanced Micro Devices, Inc. All Rights Reserved.
+ #  Copyright (c) 2020-2024 Advanced Micro Devices, Inc. All Rights Reserved.
  #
  #  Permission is hereby granted, free of charge, to any person obtaining a copy
  #  of this software and associated documentation files (the "Software"), to deal
@@ -42,10 +42,9 @@ configure_lit_site_cfg(
 
 add_lit_testsuite(check-llvm-dialects-lit "Running the llvm-dialects regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
-  ${exclude_from_check_all}
-  DEPENDS ${LLVM_DIALECTS_TEST_DEPENDS}
+  ${EXCLUDE_FROM_CHECK_ALL}
+  DEPENDS llvm-dialects-test-depends
 )
-set_target_properties(check-llvm-dialects-lit PROPERTIES FOLDER "Tests")
 
 add_lit_testsuites(LLVM_DIALECTS ${CMAKE_CURRENT_SOURCE_DIR}
   ${exclude_from_check_all}
