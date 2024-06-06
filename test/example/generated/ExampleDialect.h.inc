@@ -32,6 +32,9 @@ namespace xd {
 
     public:
       static Key& getKey();
+      static bool isDialectOp(::llvm::CallInst& op);
+      static bool isDialectOp(::llvm::Function& func);
+      static bool isDialectOp(::llvm::StringRef funcName);
 
     private:
       ExampleDialect(::llvm::LLVMContext& context);
