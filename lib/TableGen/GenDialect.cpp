@@ -107,6 +107,9 @@ class Builder;
 
     public:
       static Key& getKey();
+      static bool isDialectOp(::llvm::CallInst& op);
+      static bool isDialectOp(::llvm::Function& func);
+      static bool isDialectOp(::llvm::StringRef funcName);
 
     private:
       $Dialect(::llvm::LLVMContext& context);
@@ -296,6 +299,18 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
     ::llvm_dialects::Dialect::Key& $Dialect::getKey() {
       static Key s_key;
       return s_key;
+    }
+
+    bool $Dialect::isDialectOp(::llvm::CallInst& op) {
+      return isDialectOp(op.getCalledFunction()->getName());
+    }
+
+    bool $Dialect::isDialectOp(::llvm::Function& func) {
+      return isDialectOp(func.getName());
+    }
+
+    bool $Dialect::isDialectOp(::llvm::StringRef funcName) {
+      return funcName.starts_with("$namespace.");
     }
 
     ::llvm_dialects::Dialect* $Dialect::make(::llvm::LLVMContext& context) {

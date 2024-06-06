@@ -30,6 +30,18 @@ namespace xd {
       return s_key;
     }
 
+    bool ExampleDialect::isDialectOp(::llvm::CallInst& op) {
+      return isDialectOp(op.getCalledFunction()->getName());
+    }
+
+    bool ExampleDialect::isDialectOp(::llvm::Function& func) {
+      return isDialectOp(func.getName());
+    }
+
+    bool ExampleDialect::isDialectOp(::llvm::StringRef funcName) {
+      return funcName.starts_with("xd.");
+    }
+
     ::llvm_dialects::Dialect* ExampleDialect::make(::llvm::LLVMContext& context) {
       
       auto verifierBuild = [](::llvm_dialects::VisitorBuilder<::llvm_dialects::VerifierState> &builder) {

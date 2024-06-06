@@ -117,6 +117,8 @@ void createFunctionExample(Module &module, const Twine &name) {
   p2->setName("p2");
   b.create<xd::WriteOp>(p2);
 
+  assert(xd::ExampleDialect::isDialectOp(*cast<CallInst>(p2)));
+
   SmallVector<Value *> varArgs;
   varArgs.push_back(p1);
   varArgs.push_back(p2);
