@@ -302,7 +302,11 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
     }
 
     bool $Dialect::isDialectOp(::llvm::CallInst& op) {
-      return isDialectOp(op.getCalledFunction()->getName());
+      ::llvm::Function *calledFunc = op.getCalledFunction(); 
+      if (!calledFunc)
+        return false;
+      
+      return isDialectOp(calledFunc->getName());
     }
 
     bool $Dialect::isDialectOp(::llvm::Function& func) {

@@ -31,7 +31,11 @@ namespace xd {
     }
 
     bool ExampleDialect::isDialectOp(::llvm::CallInst& op) {
-      return isDialectOp(op.getCalledFunction()->getName());
+      ::llvm::Function *calledFunc = op.getCalledFunction(); 
+      if (!calledFunc)
+        return false;
+      
+      return isDialectOp(calledFunc->getName());
     }
 
     bool ExampleDialect::isDialectOp(::llvm::Function& func) {
