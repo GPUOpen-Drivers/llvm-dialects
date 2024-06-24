@@ -2064,7 +2064,7 @@ initial
 
   
 ::llvm::SmallVector<::llvm::Value*, 1> args = {
- b.CreateGlobalString(val) 
+ b.CreateGlobalString(val, "str") 
       };
       
       return ::llvm::cast<StringAttrOp>(b.CreateCall(fn, args, instName));
