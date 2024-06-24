@@ -3,7 +3,7 @@
 ; RUN: llvm-dialects-example - | FileCheck --check-prefixes=CHECK %s
 
 ;.
-; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [13 x i8] c"Hello world!\00", align 1
+; CHECK: @[[GLOB0:.*]] = private unnamed_addr constant [13 x i8] c"Hello world!\00", align 1
 ;.
 ; CHECK-LABEL: @example(
 ; CHECK-NEXT:  entry:
@@ -45,6 +45,6 @@
 ; CHECK-NEXT:    [[TWO_VARARGS:%.*]] = call i32 (...) @xd.inst.name.conflict.varargs(ptr [[P1]], i8 [[P2]])
 ; CHECK-NEXT:    [[THREE_VARARGS:%.*]] = call i32 (...) @xd.inst.name.conflict.varargs(ptr [[P1]], i8 [[P2]], i32 3)
 ; CHECK-NEXT:    [[FOUR_VARARGS:%.*]] = call i32 (...) @xd.inst.name.conflict.varargs(ptr [[P1]], i8 [[P2]], i32 3, i32 4)
-; CHECK-NEXT:    call void @xd.string.attr.op(ptr @[[GLOB0:[0-9]+]])
+; CHECK-NEXT:    call void @xd.string.attr.op(ptr @[[GLOB0]])
 ; CHECK-NEXT:    ret void
 ;
