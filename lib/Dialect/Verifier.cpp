@@ -18,6 +18,8 @@
 
 #include "llvm-dialects/Dialect/ContextExtension.h"
 
+#include "llvm/IR/Module.h"
+
 using namespace llvm;
 using namespace llvm_dialects;
 
