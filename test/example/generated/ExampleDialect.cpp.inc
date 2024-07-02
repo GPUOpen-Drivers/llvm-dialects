@@ -13,6 +13,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Module.h"
 
 #include "llvm/Support/ModRef.h"
 
