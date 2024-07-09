@@ -159,15 +159,17 @@ unsigned OperationBase::getNumFullArguments() const {
 void OperationBase::emitArgumentAccessorDeclarations(llvm::raw_ostream &out,
                                                      FmtContext &fmt) const {
   for (const auto &arg : m_arguments) {
-    std::string defaultDeclaration = "$0 get$1();";
-    if (!arg.type->isVarArgList() && !arg.type->isImmutable()) {
+    const bool isVarArg = arg.type->isVarArgList();
+    std::string defaultDeclaration = "$0 get$1() $2;";
+
+    if (!isVarArg && !arg.type->isImmutable()) {
       defaultDeclaration += R"(
-        void set$1($0 $2);
+        void set$1($0 $3);
       )";
     }
 
     out << tgfmt(defaultDeclaration, &fmt, arg.type->getGetterCppType(),
-                 convertToCamelFromSnakeCase(arg.name, true), arg.name);
+                 convertToCamelFromSnakeCase(arg.name, true), !isVarArg ? "const" : "", arg.name);
   }
 }
 
@@ -196,9 +198,10 @@ void AccessorBuilder::emitGetterDefinition() const {
   }
 
   m_fmt.addSubst("fromLlvm", fromLlvm);
+  m_fmt.addSubst("const", !m_arg.type->isVarArgList() ? "const" : "");
 
   m_os << tgfmt(R"(
-      $cppType $_op::get$Name() {
+      $cppType $_op::get$Name() $const {
         return $fromLlvm;
       })",
                 &m_fmt);

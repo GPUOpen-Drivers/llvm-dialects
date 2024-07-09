@@ -320,21 +320,21 @@ return true;
       }
 
     
-      ::llvm::Value * StreamReduceOp::getPtr() {
+      ::llvm::Value * StreamReduceOp::getPtr() const {
         return getArgOperand(0);
       }
 
       void StreamReduceOp::setPtr(::llvm::Value * ptr) {
         setArgOperand(0, ptr);
       }
-      ::llvm::Value * StreamReduceOp::getCount() {
+      ::llvm::Value * StreamReduceOp::getCount() const {
         return getArgOperand(1);
       }
 
       void StreamReduceOp::setCount(::llvm::Value * count) {
         setArgOperand(1, count);
       }
-      ::llvm::Value * StreamReduceOp::getInitial() {
+      ::llvm::Value * StreamReduceOp::getInitial() const {
         return getArgOperand(2);
       }
 
@@ -439,21 +439,21 @@ uint32_t const extra = getExtra();
 }
 
 
-      ::llvm::Value * Add32Op::getLhs() {
+      ::llvm::Value * Add32Op::getLhs() const {
         return getArgOperand(0);
       }
 
       void Add32Op::setLhs(::llvm::Value * lhs) {
         setArgOperand(0, lhs);
       }
-      ::llvm::Value * Add32Op::getRhs() {
+      ::llvm::Value * Add32Op::getRhs() const {
         return getArgOperand(1);
       }
 
       void Add32Op::setRhs(::llvm::Value * rhs) {
         setArgOperand(1, rhs);
       }
-      uint32_t Add32Op::getExtra() {
+      uint32_t Add32Op::getExtra() const {
         return  ::llvm::cast<::llvm::ConstantInt>(getArgOperand(2))->getZExtValue() ;
       }
 
@@ -541,14 +541,14 @@ rhs
 }
 
 
-      ::llvm::Value * CombineOp::getLhs() {
+      ::llvm::Value * CombineOp::getLhs() const {
         return getArgOperand(0);
       }
 
       void CombineOp::setLhs(::llvm::Value * lhs) {
         setArgOperand(0, lhs);
       }
-      ::llvm::Value * CombineOp::getRhs() {
+      ::llvm::Value * CombineOp::getRhs() const {
         return getArgOperand(1);
       }
 
@@ -645,14 +645,14 @@ index
 }
 
 
-      ::llvm::Value * ExtractElementOp::getVector() {
+      ::llvm::Value * ExtractElementOp::getVector() const {
         return getArgOperand(0);
       }
 
       void ExtractElementOp::setVector(::llvm::Value * vector) {
         setArgOperand(0, vector);
       }
-      ::llvm::Value * ExtractElementOp::getIndex() {
+      ::llvm::Value * ExtractElementOp::getIndex() const {
         return getArgOperand(1);
       }
 
@@ -822,7 +822,7 @@ source
 }
 
 
-      ::llvm::Value * FromFixedVectorOp::getSource() {
+      ::llvm::Value * FromFixedVectorOp::getSource() const {
         return getArgOperand(0);
       }
 
@@ -982,7 +982,7 @@ source
 }
 
 
-      ::llvm::Value * IExtOp::getSource() {
+      ::llvm::Value * IExtOp::getSource() const {
         return getArgOperand(0);
       }
 
@@ -1080,7 +1080,7 @@ source
 }
 
 
-      ::llvm::Value * ITruncOp::getSource() {
+      ::llvm::Value * ITruncOp::getSource() const {
         return getArgOperand(0);
       }
 
@@ -1154,7 +1154,7 @@ source
 }
 
 
-      bool ImmutableOp::getVal() {
+      bool ImmutableOp::getVal() const {
         return  ::llvm::cast<::llvm::ConstantInt>(getArgOperand(0))->getZExtValue() ;
       }
 
@@ -1257,21 +1257,21 @@ index
 }
 
 
-      ::llvm::Value * InsertElementOp::getVector() {
+      ::llvm::Value * InsertElementOp::getVector() const {
         return getArgOperand(0);
       }
 
       void InsertElementOp::setVector(::llvm::Value * vector) {
         setArgOperand(0, vector);
       }
-      ::llvm::Value * InsertElementOp::getValue() {
+      ::llvm::Value * InsertElementOp::getValue() const {
         return getArgOperand(1);
       }
 
       void InsertElementOp::setValue(::llvm::Value * value) {
         setArgOperand(1, value);
       }
-      ::llvm::Value * InsertElementOp::getIndex() {
+      ::llvm::Value * InsertElementOp::getIndex() const {
         return getArgOperand(2);
       }
 
@@ -1348,14 +1348,14 @@ instName_0
 }
 
 
-      ::llvm::Value * InstNameConflictDoubleOp::getInstName() {
+      ::llvm::Value * InstNameConflictDoubleOp::getInstName() const {
         return getArgOperand(0);
       }
 
       void InstNameConflictDoubleOp::setInstName(::llvm::Value * instName) {
         setArgOperand(0, instName);
       }
-      ::llvm::Value * InstNameConflictDoubleOp::getInstName_0() {
+      ::llvm::Value * InstNameConflictDoubleOp::getInstName_0() const {
         return getArgOperand(1);
       }
 
@@ -1429,7 +1429,7 @@ instName
 }
 
 
-      ::llvm::Value * InstNameConflictOp::getInstName() {
+      ::llvm::Value * InstNameConflictOp::getInstName() const {
         return getArgOperand(0);
       }
 
@@ -1497,7 +1497,7 @@ instName
 }
 
 
-      ::llvm::iterator_range<::llvm::User::value_op_iterator> InstNameConflictVarargsOp::getInstName_0() {
+      ::llvm::iterator_range<::llvm::User::value_op_iterator> InstNameConflictVarargsOp::getInstName_0()  {
         return ::llvm::make_range(
             value_op_iterator(arg_begin() + 0),
             value_op_iterator(arg_end()));
@@ -1673,7 +1673,7 @@ data
 }
 
 
-      ::llvm::Value * SetWriteOp::getData() {
+      ::llvm::Value * SetWriteOp::getData() const {
         return getArgOperand(0);
       }
 
@@ -1746,7 +1746,7 @@ data
 }
 
 
-      ::llvm::Type * SizeOfOp::getSizeofType() {
+      ::llvm::Type * SizeOfOp::getSizeofType() const {
         return getArgOperand(0)->getType();
       }
 
@@ -2096,7 +2096,7 @@ initial
 }
 
 
-      ::llvm::StringRef StringAttrOp::getVal() {
+      ::llvm::StringRef StringAttrOp::getVal() const {
         return  ::llvm::cast<::llvm::ConstantDataArray>(::llvm::cast<::llvm::GlobalVariable>(getArgOperand(0))->getInitializer())->getAsString() ;
       }
 
@@ -2155,7 +2155,7 @@ data
 }
 
 
-      ::llvm::Value * WriteOp::getData() {
+      ::llvm::Value * WriteOp::getData() const {
         return getArgOperand(0);
       }
 
@@ -2220,14 +2220,14 @@ data
 }
 
 
-      ::llvm::Value * WriteVarArgOp::getData() {
+      ::llvm::Value * WriteVarArgOp::getData() const {
         return getArgOperand(0);
       }
 
       void WriteVarArgOp::setData(::llvm::Value * data) {
         setArgOperand(0, data);
       }
-      ::llvm::iterator_range<::llvm::User::value_op_iterator> WriteVarArgOp::getArgs() {
+      ::llvm::iterator_range<::llvm::User::value_op_iterator> WriteVarArgOp::getArgs()  {
         return ::llvm::make_range(
             value_op_iterator(arg_begin() + 1),
             value_op_iterator(arg_end()));
