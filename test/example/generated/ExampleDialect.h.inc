@@ -99,12 +99,12 @@ uint32_t getNumElements() const;
                  classof(::llvm::cast<::llvm::CallInst>(v));
         }
     ::llvm::Value * getPtr() const;
-        void setPtr(::llvm::Value * ptr);
-      ::llvm::Value * getCount() const;
-        void setCount(::llvm::Value * count);
-      ::llvm::Value * getInitial() const;
-        void setInitial(::llvm::Value * initial);
-      
+          void setPtr(::llvm::Value * ptr);
+        ::llvm::Value * getCount() const;
+          void setCount(::llvm::Value * count);
+        ::llvm::Value * getInitial() const;
+          void setInitial(::llvm::Value * initial);
+        
       };
     
       class Add32Op : public ::llvm::CallInst {
@@ -123,12 +123,12 @@ uint32_t getNumElements() const;
 bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getLhs() const;
-        void setLhs(::llvm::Value * lhs);
-      ::llvm::Value * getRhs() const;
-        void setRhs(::llvm::Value * rhs);
-      uint32_t getExtra() const;
-        void setExtra(uint32_t extra);
-      
+          void setLhs(::llvm::Value * lhs);
+        ::llvm::Value * getRhs() const;
+          void setRhs(::llvm::Value * rhs);
+        uint32_t getExtra() const;
+          void setExtra(uint32_t extra);
+        
 ::llvm::Value * getResult();
 
 
@@ -150,10 +150,10 @@ bool verifier(::llvm::raw_ostream &errs);
 bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getLhs() const;
-        void setLhs(::llvm::Value * lhs);
-      ::llvm::Value * getRhs() const;
-        void setRhs(::llvm::Value * rhs);
-      
+          void setLhs(::llvm::Value * lhs);
+        ::llvm::Value * getRhs() const;
+          void setRhs(::llvm::Value * rhs);
+        
 ::llvm::Value * getResult();
 
 
@@ -175,10 +175,10 @@ bool verifier(::llvm::raw_ostream &errs);
 bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getVector() const;
-        void setVector(::llvm::Value * vector);
-      ::llvm::Value * getIndex() const;
-        void setIndex(::llvm::Value * index);
-      
+          void setVector(::llvm::Value * vector);
+        ::llvm::Value * getIndex() const;
+          void setIndex(::llvm::Value * index);
+        
 ::llvm::Value * getResult();
 
 
@@ -200,8 +200,8 @@ bool verifier(::llvm::raw_ostream &errs);
 bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getSource() const;
-        void setSource(::llvm::Value * source);
-      
+          void setSource(::llvm::Value * source);
+        
 ::llvm::Value * getResult();
 
 
@@ -244,8 +244,8 @@ bool verifier(::llvm::raw_ostream &errs);
 bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getSource() const;
-        void setSource(::llvm::Value * source);
-      
+          void setSource(::llvm::Value * source);
+        
 ::llvm::Value * getResult();
 
 
@@ -267,8 +267,8 @@ bool verifier(::llvm::raw_ostream &errs);
 bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getSource() const;
-        void setSource(::llvm::Value * source);
-      
+          void setSource(::llvm::Value * source);
+        
 ::llvm::Value * getResult();
 
 
@@ -310,12 +310,12 @@ bool getVal() const;
 bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getVector() const;
-        void setVector(::llvm::Value * vector);
-      ::llvm::Value * getValue() const;
-        void setValue(::llvm::Value * value);
-      ::llvm::Value * getIndex() const;
-        void setIndex(::llvm::Value * index);
-      
+          void setVector(::llvm::Value * vector);
+        ::llvm::Value * getValue() const;
+          void setValue(::llvm::Value * value);
+        ::llvm::Value * getIndex() const;
+          void setIndex(::llvm::Value * index);
+        
 ::llvm::Value * getResult();
 
 
@@ -337,10 +337,10 @@ bool verifier(::llvm::raw_ostream &errs);
 bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getInstName() const;
-        void setInstName(::llvm::Value * instName);
-      ::llvm::Value * getInstName_0() const;
-        void setInstName_0(::llvm::Value * instName_0);
-      
+          void setInstName(::llvm::Value * instName);
+        ::llvm::Value * getInstName_0() const;
+          void setInstName_0(::llvm::Value * instName_0);
+        
 ::llvm::Value * getResult();
 
 
@@ -362,8 +362,8 @@ bool verifier(::llvm::raw_ostream &errs);
 bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getInstName() const;
-        void setInstName(::llvm::Value * instName);
-      
+          void setInstName(::llvm::Value * instName);
+        
 ::llvm::Value * getResult();
 
 
@@ -385,6 +385,10 @@ bool verifier(::llvm::raw_ostream &errs);
 bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::iterator_range<::llvm::User::value_op_iterator> getInstName_0() ;
+          /// Returns a new op with the same arguments and a new tail argument list.
+          /// The object on which this is called will be invalidated.
+          InstNameConflictVarargsOp *replaceInstName_0AndInvalidate(::llvm_dialects::Builder &, ::llvm::ArrayRef<Value *>);
+        
 ::llvm::Value * getResult();
 
 
@@ -448,8 +452,8 @@ bool verifier(::llvm::raw_ostream &errs);
 bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getData() const;
-        void setData(::llvm::Value * data);
-      
+          void setData(::llvm::Value * data);
+        
 
 
       };
@@ -470,8 +474,8 @@ bool verifier(::llvm::raw_ostream &errs);
 bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Type * getSizeofType() const;
-        void setSizeofType(::llvm::Type * sizeof_type);
-      
+          void setSizeofType(::llvm::Type * sizeof_type);
+        
 ::llvm::Value * getResult();
 
 
@@ -576,8 +580,8 @@ bool verifier(::llvm::raw_ostream &errs);
 bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getData() const;
-        void setData(::llvm::Value * data);
-      
+          void setData(::llvm::Value * data);
+        
 
 
       };
@@ -598,8 +602,12 @@ bool verifier(::llvm::raw_ostream &errs);
 bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getData() const;
-        void setData(::llvm::Value * data);
-      ::llvm::iterator_range<::llvm::User::value_op_iterator> getArgs() ;
+          void setData(::llvm::Value * data);
+        ::llvm::iterator_range<::llvm::User::value_op_iterator> getArgs() ;
+          /// Returns a new op with the same arguments and a new tail argument list.
+          /// The object on which this is called will be invalidated.
+          WriteVarArgOp *replaceArgsAndInvalidate(::llvm_dialects::Builder &, ::llvm::ArrayRef<Value *>);
+        
 
 
       };
