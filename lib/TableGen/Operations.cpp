@@ -64,7 +64,7 @@ public:
       : m_fmt{fmt}, m_os{out}, m_arg{arg}, m_argTypeString{argTypeString} {}
 
   void emitAccessorDefinitions() const;
-  void emitVarArgReplacementDefinition() const;
+  void emitVarArgReplacementDefinition(const size_t numNonVarArgs) const;
 
 private:
   FmtContext &m_fmt;
@@ -171,8 +171,8 @@ void OperationBase::emitArgumentAccessorDeclarations(llvm::raw_ostream &out,
       } else {
         defaultDeclaration += R"(
           /// Returns a new op with the same arguments and a new tail argument list.
-          /// The object on which this is called will be replaced and erased.
-          $_op *replace$1(::llvm::ArrayRef<Value *>);
+          /// The object on which this is called will be invalidated.
+          $_op *replace$1AndInvalidate(::llvm_dialects::Builder &, ::llvm::ArrayRef<Value *>);
         )";
       }
     }
@@ -237,22 +237,25 @@ void AccessorBuilder::emitSetterDefinition() const {
                 &m_fmt);
 }
 
-void AccessorBuilder::emitVarArgReplacementDefinition() const {
+void AccessorBuilder::emitVarArgReplacementDefinition(
+    const size_t numNonVarArgs) const {
   std::string toLlvm = m_arg.name;
+
+  m_fmt.addSubst("numNonVarargs", std::to_string(numNonVarArgs));
 
   m_os << tgfmt(R"(
 
-      $_op *$_op::replace$Name(::llvm::ArrayRef<Value *> $name) {
+      $_op *$_op::replace$0AndInvalidate(::llvm_dialects::Builder &B, ::llvm::ArrayRef<Value *> $1) {
         ::llvm::SmallVector<Value *> newArgs;
-        if ($index > 0)
-          newArgs.append(arg_begin(), arg_begin() + $index);
-        newArgs.append($name.begin(), $name.end());
-        $_op *newOp = cast<$_op>(::llvm::CallInst::Create(getCalledFunction(), newArgs, ::std::nullopt, this->getName(), this->getIterator()));
+        if ($numNonVarargs > 0)
+          newArgs.append(arg_begin(), arg_begin() + $numNonVarargs);
+        newArgs.append($1.begin(), $1.end());
+        $_op *newOp = cast<$_op>(B.CreateCall(getCalledFunction(), newArgs, this->getName()));
         this->replaceAllUsesWith(newOp);
         this->eraseFromParent();
         return newOp;
       })",
-                &m_fmt);
+                &m_fmt, convertToCamelFromSnakeCase(toLlvm, true), toLlvm);
 }
 
 void OperationBase::emitArgumentAccessorDefinitions(llvm::raw_ostream &out,
@@ -261,6 +264,7 @@ void OperationBase::emitArgumentAccessorDefinitions(llvm::raw_ostream &out,
   if (m_superclass)
     numSuperclassArgs = m_superclass->getNumFullArguments();
 
+  unsigned numArgs = 0;
   for (const auto &indexedArg : llvm::enumerate(m_arguments)) {
     FmtContextScope scope(fmt);
 
@@ -275,7 +279,9 @@ void OperationBase::emitArgumentAccessorDefinitions(llvm::raw_ostream &out,
 
     builder.emitAccessorDefinitions();
     if (!arg.type->isImmutable() && arg.type->isVarArgList())
-      builder.emitVarArgReplacementDefinition();
+      builder.emitVarArgReplacementDefinition(numArgs);
+    else
+      ++numArgs;
   }
 }
 
