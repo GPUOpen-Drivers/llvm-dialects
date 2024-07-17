@@ -247,7 +247,7 @@ void AccessorBuilder::emitVarArgReplacementDefinition() const {
         if ($index > 0)
           newArgs.append(arg_begin(), arg_begin() + $index);
         newArgs.append($name.begin(), $name.end());
-        $_op *newOp = cast<$_op>(::llvm::CallInst::Create(getCalledFunction(), newArgs, ::std::nullopt, this->getName(), this->getIterator()));
+        $_op *newOp = ::llvm::cast<$_op>(::llvm::CallInst::Create(getCalledFunction(), newArgs, ::std::nullopt, this->getName(), this->getIterator()));
         this->replaceAllUsesWith(newOp);
         this->eraseFromParent();
         return newOp;
