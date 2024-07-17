@@ -1503,12 +1503,12 @@ instName
             value_op_iterator(arg_end()));
       }
 
-      InstNameConflictVarargsOp *InstNameConflictVarargsOp::replaceInstName_0AndInvalidate(::llvm_dialects::Builder &B, ::llvm::ArrayRef<Value *> instName_0) {
+      InstNameConflictVarargsOp *InstNameConflictVarargsOp::replaceInstName_0(::llvm::ArrayRef<Value *> instName_0) {
         ::llvm::SmallVector<Value *> newArgs;
         if (0 > 0)
           newArgs.append(arg_begin(), arg_begin() + 0);
         newArgs.append(instName_0.begin(), instName_0.end());
-        InstNameConflictVarargsOp *newOp = cast<InstNameConflictVarargsOp>(B.CreateCall(getCalledFunction(), newArgs, this->getName()));
+        InstNameConflictVarargsOp *newOp = cast<InstNameConflictVarargsOp>(::llvm::CallInst::Create(getCalledFunction(), newArgs, ::std::nullopt, this->getName(), this->getIterator()));
         this->replaceAllUsesWith(newOp);
         this->eraseFromParent();
         return newOp;
@@ -2244,12 +2244,12 @@ data
             value_op_iterator(arg_end()));
       }
 
-      WriteVarArgOp *WriteVarArgOp::replaceArgsAndInvalidate(::llvm_dialects::Builder &B, ::llvm::ArrayRef<Value *> args) {
+      WriteVarArgOp *WriteVarArgOp::replaceArgs(::llvm::ArrayRef<Value *> args) {
         ::llvm::SmallVector<Value *> newArgs;
         if (1 > 0)
           newArgs.append(arg_begin(), arg_begin() + 1);
         newArgs.append(args.begin(), args.end());
-        WriteVarArgOp *newOp = cast<WriteVarArgOp>(B.CreateCall(getCalledFunction(), newArgs, this->getName()));
+        WriteVarArgOp *newOp = cast<WriteVarArgOp>(::llvm::CallInst::Create(getCalledFunction(), newArgs, ::std::nullopt, this->getName(), this->getIterator()));
         this->replaceAllUsesWith(newOp);
         this->eraseFromParent();
         return newOp;

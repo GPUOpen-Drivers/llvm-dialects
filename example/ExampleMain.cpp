@@ -129,7 +129,7 @@ void createFunctionExample(Module &module, const Twine &name) {
   SmallVector<Value *> varArgs2 = varArgs;
   varArgs2.push_back(p2);
 
-  replacable->replaceArgsAndInvalidate(b, varArgs2);
+  replacable->replaceArgs(varArgs2);
   b.create<xd::SetReadOp>(FixedVectorType::get(b.getInt32Ty(), 2));
   b.create<xd::SetWriteOp>(y6);
 

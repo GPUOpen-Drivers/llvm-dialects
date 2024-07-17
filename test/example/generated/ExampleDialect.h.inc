@@ -386,8 +386,8 @@ bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::iterator_range<::llvm::User::value_op_iterator> getInstName_0() ;
           /// Returns a new op with the same arguments and a new tail argument list.
-          /// The object on which this is called will be invalidated.
-          InstNameConflictVarargsOp *replaceInstName_0AndInvalidate(::llvm_dialects::Builder &, ::llvm::ArrayRef<Value *>);
+          /// The object on which this is called will be replaced and erased.
+          InstNameConflictVarargsOp *replaceInstName_0(::llvm::ArrayRef<Value *>);
         
 ::llvm::Value * getResult();
 
@@ -605,8 +605,8 @@ bool verifier(::llvm::raw_ostream &errs);
           void setData(::llvm::Value * data);
         ::llvm::iterator_range<::llvm::User::value_op_iterator> getArgs() ;
           /// Returns a new op with the same arguments and a new tail argument list.
-          /// The object on which this is called will be invalidated.
-          WriteVarArgOp *replaceArgsAndInvalidate(::llvm_dialects::Builder &, ::llvm::ArrayRef<Value *>);
+          /// The object on which this is called will be replaced and erased.
+          WriteVarArgOp *replaceArgs(::llvm::ArrayRef<Value *>);
         
 
 
