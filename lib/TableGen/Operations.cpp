@@ -64,7 +64,6 @@ public:
       : m_fmt{fmt}, m_os{out}, m_arg{arg}, m_argTypeString{argTypeString} {}
 
   void emitAccessorDefinitions() const;
-  void emitVarArgReplacementDefinition(const size_t numNonVarArgs) const;
 
 private:
   FmtContext &m_fmt;
@@ -163,18 +162,10 @@ void OperationBase::emitArgumentAccessorDeclarations(llvm::raw_ostream &out,
     const bool isVarArg = arg.type->isVarArgList();
     std::string defaultDeclaration = "$0 get$1() $2;";
 
-    if (!arg.type->isImmutable()) {
-      if (!isVarArg) {
-        defaultDeclaration += R"(
-          void set$1($0 $3);
-        )";
-      } else {
-        defaultDeclaration += R"(
-          /// Returns a new op with the same arguments and a new tail argument list.
-          /// The object on which this is called will be invalidated.
-          $_op *replace$1AndInvalidate(::llvm_dialects::Builder &, ::llvm::ArrayRef<Value *>);
-        )";
-      }
+    if (!isVarArg && !arg.type->isImmutable()) {
+      defaultDeclaration += R"(
+        void set$1($0 $3);
+      )";
     }
 
     out << tgfmt(defaultDeclaration, &fmt, arg.type->getGetterCppType(),
@@ -183,11 +174,8 @@ void OperationBase::emitArgumentAccessorDeclarations(llvm::raw_ostream &out,
 }
 
 void AccessorBuilder::emitAccessorDefinitions() const {
+  // We do not generate a setter for variadic arguments for now.
   emitGetterDefinition();
-
-  if (m_arg.type->isImmutable())
-    return;
-
   if (!m_arg.type->isVarArgList())
     emitSetterDefinition();
 }
@@ -220,6 +208,9 @@ void AccessorBuilder::emitGetterDefinition() const {
 }
 
 void AccessorBuilder::emitSetterDefinition() const {
+  if (m_arg.type->isImmutable())
+    return;
+
   std::string toLlvm = m_arg.name;
 
   if (auto *attr = dyn_cast<Attr>(m_arg.type)) {
@@ -237,34 +228,12 @@ void AccessorBuilder::emitSetterDefinition() const {
                 &m_fmt);
 }
 
-void AccessorBuilder::emitVarArgReplacementDefinition(
-    const size_t numNonVarArgs) const {
-  std::string toLlvm = m_arg.name;
-
-  m_fmt.addSubst("numNonVarargs", std::to_string(numNonVarArgs));
-
-  m_os << tgfmt(R"(
-
-      $_op *$_op::replace$0AndInvalidate(::llvm_dialects::Builder &B, ::llvm::ArrayRef<Value *> $1) {
-        ::llvm::SmallVector<Value *> newArgs;
-        if ($numNonVarargs > 0)
-          newArgs.append(arg_begin(), arg_begin() + $numNonVarargs);
-        newArgs.append($1.begin(), $1.end());
-        $_op *newOp = cast<$_op>(B.CreateCall(getCalledFunction(), newArgs, this->getName()));
-        this->replaceAllUsesWith(newOp);
-        this->eraseFromParent();
-        return newOp;
-      })",
-                &m_fmt, convertToCamelFromSnakeCase(toLlvm, true), toLlvm);
-}
-
 void OperationBase::emitArgumentAccessorDefinitions(llvm::raw_ostream &out,
                                                     FmtContext &fmt) const {
   unsigned numSuperclassArgs = 0;
   if (m_superclass)
     numSuperclassArgs = m_superclass->getNumFullArguments();
 
-  unsigned numArgs = 0;
   for (const auto &indexedArg : llvm::enumerate(m_arguments)) {
     FmtContextScope scope(fmt);
 
@@ -278,10 +247,6 @@ void OperationBase::emitArgumentAccessorDefinitions(llvm::raw_ostream &out,
     fmt.addSubst("Name", convertToCamelFromSnakeCase(arg.name, true));
 
     builder.emitAccessorDefinitions();
-    if (!arg.type->isImmutable() && arg.type->isVarArgList())
-      builder.emitVarArgReplacementDefinition(numArgs);
-    else
-      ++numArgs;
   }
 }
 
