@@ -12,9 +12,12 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+
+#include <optional>
 
 #include "llvm/Support/ModRef.h"
 
@@ -1509,7 +1512,7 @@ instName
         if (0 > 0)
           newArgs.append(arg_begin(), arg_begin() + 0);
         newArgs.append(instName_0.begin(), instName_0.end());
-        InstNameConflictVarargsOp *newOp = ::llvm::cast<InstNameConflictVarargsOp>(::llvm::CallInst::Create(getCalledFunction(), newArgs, this->getName(), this->getIterator()));
+        InstNameConflictVarargsOp *newOp = ::llvm::cast<InstNameConflictVarargsOp>(::llvm::CallInst::Create(getCalledFunction(), newArgs, ::std::nullopt, this->getName(), this->getIterator()));
         this->replaceAllUsesWith(newOp);
         this->eraseFromParent();
         return newOp;
@@ -2250,7 +2253,7 @@ data
         if (1 > 0)
           newArgs.append(arg_begin(), arg_begin() + 1);
         newArgs.append(args.begin(), args.end());
-        WriteVarArgOp *newOp = ::llvm::cast<WriteVarArgOp>(::llvm::CallInst::Create(getCalledFunction(), newArgs, this->getName(), this->getIterator()));
+        WriteVarArgOp *newOp = ::llvm::cast<WriteVarArgOp>(::llvm::CallInst::Create(getCalledFunction(), newArgs, ::std::nullopt, this->getName(), this->getIterator()));
         this->replaceAllUsesWith(newOp);
         this->eraseFromParent();
         return newOp;
