@@ -125,11 +125,11 @@ void createFunctionExample(Module &module, const Twine &name) {
   b.create<xd::WriteVarArgOp>(p2, varArgs);
   b.create<xd::HandleGetOp>();
 
-  auto *replacable = b.create<xd::WriteVarArgOp>(p2, varArgs);
+  auto *replaceable = b.create<xd::WriteVarArgOp>(p2, varArgs);
   SmallVector<Value *> varArgs2 = varArgs;
   varArgs2.push_back(p2);
 
-  replacable->replaceArgs(varArgs2);
+  replaceable->replaceArgs(varArgs2);
   b.create<xd::SetReadOp>(FixedVectorType::get(b.getInt32Ty(), 2));
   b.create<xd::SetWriteOp>(y6);
 
