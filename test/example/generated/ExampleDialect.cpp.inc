@@ -1510,6 +1510,7 @@ instName
           newArgs.append(arg_begin(), arg_begin() + 0);
         newArgs.append(instName_0.begin(), instName_0.end());
         InstNameConflictVarargsOp *newOp = ::llvm::cast<InstNameConflictVarargsOp>(::llvm::CallInst::Create(getCalledFunction(), newArgs, this->getName(), this->getIterator()));
+        newOp->copyMetadata(*this);
         this->replaceAllUsesWith(newOp);
         this->eraseFromParent();
         return newOp;
@@ -2251,6 +2252,7 @@ data
           newArgs.append(arg_begin(), arg_begin() + 1);
         newArgs.append(args.begin(), args.end());
         WriteVarArgOp *newOp = ::llvm::cast<WriteVarArgOp>(::llvm::CallInst::Create(getCalledFunction(), newArgs, this->getName(), this->getIterator()));
+        newOp->copyMetadata(*this);
         this->replaceAllUsesWith(newOp);
         this->eraseFromParent();
         return newOp;

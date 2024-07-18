@@ -34,6 +34,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/Support/CommandLine.h"
@@ -126,6 +127,11 @@ void createFunctionExample(Module &module, const Twine &name) {
   b.create<xd::HandleGetOp>();
 
   auto *replaceable = b.create<xd::WriteVarArgOp>(p2, varArgs);
+  SmallVector<Metadata *, 1> MD;
+  MD.push_back(ConstantAsMetadata::get(
+      ConstantInt::get(Type::getInt32Ty(bb->getContext()), 1)));
+  replaceable->setMetadata("testMd", MDNode::get(bb->getContext(), MD));
+
   SmallVector<Value *> varArgs2 = varArgs;
   varArgs2.push_back(p2);
 

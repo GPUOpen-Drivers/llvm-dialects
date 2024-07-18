@@ -28,7 +28,7 @@
 ; CHECK-NEXT:    call void (...) @xd.write(i8 [[P2]])
 ; CHECK-NEXT:    call void (...) @xd.write.vararg(i8 [[P2]], ptr [[P1]], i8 [[P2]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = call target("xd.handle") @xd.handle.get()
-; CHECK-NEXT:    call void (...) @xd.write.vararg(i8 [[P2]], ptr [[P1]], i8 [[P2]], i8 [[P2]])
+; CHECK-NEXT:    call void (...) @xd.write.vararg(i8 [[P2]], ptr [[P1]], i8 [[P2]], i8 [[P2]]), !testMd !{{.*}}
 ; CHECK-NEXT:    [[TMP15:%.*]] = call <2 x i32> @xd.set.read__v2i32()
 ; CHECK-NEXT:    call void (...) @xd.set.write(target("xd.vector", i32, 1, 2) [[TMP13]])
 ; CHECK-NEXT:    [[TMP16:%.*]] = call [[TMP0]] @xd.read__s_s()

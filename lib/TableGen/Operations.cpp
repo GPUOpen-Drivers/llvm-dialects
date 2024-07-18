@@ -248,6 +248,7 @@ void AccessorBuilder::emitVarArgReplacementDefinition() const {
           newArgs.append(arg_begin(), arg_begin() + $index);
         newArgs.append($name.begin(), $name.end());
         $_op *newOp = ::llvm::cast<$_op>(::llvm::CallInst::Create(getCalledFunction(), newArgs, this->getName(), this->getIterator()));
+        newOp->copyMetadata(*this);
         this->replaceAllUsesWith(newOp);
         this->eraseFromParent();
         return newOp;
