@@ -339,6 +339,10 @@ public:
            m_dialectOps.empty();
   }
 
+  bool emptyCoreOpcodes() const {
+    return m_coreOpcodes.empty();
+  }
+
   // --------------------------------------------------------------------------
   // Iterator definitions.
   // --------------------------------------------------------------------------

@@ -185,8 +185,8 @@ VisitorBase::VisitorBase(VisitorTemplate &&templ)
     : m_strategy(templ.m_strategy),
       m_projections(std::move(templ.m_projections)) {
   if (m_strategy == VisitorStrategy::Default) {
-    m_strategy = templ.m_opMap.empty() ? VisitorStrategy::ByFunctionDeclaration
-                                       : VisitorStrategy::ByInstruction;
+    m_strategy = templ.m_opMap.emptyCoreOpcodes() ? VisitorStrategy::ByFunctionDeclaration
+                                                  : VisitorStrategy::ByInstruction;
   }
 
   BuildHelper helper(*this, templ.m_handlers);
