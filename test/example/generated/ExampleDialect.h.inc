@@ -21,7 +21,7 @@ class Builder;
 #ifdef GET_DIALECT_DECLS
 #undef GET_DIALECT_DECLS
 
-namespace xd {
+namespace xd::cpp {
 
 
     class ExampleDialect : public ::llvm_dialects::DialectImpl<ExampleDialect> {
@@ -611,6 +611,6 @@ bool verifier(::llvm::raw_ostream &errs);
 
 
       };
-    } // namespace xd
+    } // namespace xd::cpp
 
 #endif // GET_DIALECT_DECLS

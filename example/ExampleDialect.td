@@ -27,14 +27,14 @@ include "llvm-dialects/Dialect/Dialect.td"
 
 def ExampleDialect : Dialect {
   let name = "xd.ir";
-  let cppNamespace = "xd";
+  let cppNamespace = "xd::cpp";
 }
 
 defm AttrVectorKind : AttrEnum<"VectorKind">;
 
-def VectorKindLittleEndian : CppConstant<"xd::VectorKind::LittleEndian">;
-def VectorKindBigEndian : CppConstant<"xd::VectorKind::BigEndian">;
-def VectorKindMiddleEndian : CppConstant<"xd::VectorKind::MiddleEndian">;
+def VectorKindLittleEndian : CppConstant<"xd::cpp::VectorKind::LittleEndian">;
+def VectorKindBigEndian : CppConstant<"xd::cpp::VectorKind::BigEndian">;
+def VectorKindMiddleEndian : CppConstant<"xd::cpp::VectorKind::MiddleEndian">;
 
 def ImmutableAttrI1 : IntegerAttr<"bool"> {
   let isImmutable = true;

@@ -28,7 +28,7 @@
 #define GET_INCLUDES
 #include "ExampleDialect.h.inc"
 
-namespace xd {
+namespace xd::cpp {
 
 enum class VectorKind {
   LittleEndian = 0,
@@ -38,7 +38,7 @@ enum class VectorKind {
 
 const char *toString(VectorKind kind);
 
-} // namespace xd
+} // namespace xd::cpp
 
 #define GET_DIALECT_DECLS
 #include "ExampleDialect.h.inc"

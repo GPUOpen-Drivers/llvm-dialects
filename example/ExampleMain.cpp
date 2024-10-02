@@ -69,12 +69,12 @@ void useUnnamedStructTypes(Builder &b) {
   StructType *t2 = StructType::create({b.getInt32Ty(), b.getInt32Ty()}, "");
   StructType *t3 = StructType::create({b.getInt64Ty()}, "");
 
-  Value *z1 = b.create<xd::ReadOp>(t1);
-  Value *z2 = b.create<xd::ReadOp>(t2);
-  Value *z3 = b.create<xd::ReadOp>(t3);
-  b.create<xd::WriteOp>(z1);
-  b.create<xd::WriteOp>(z2);
-  b.create<xd::WriteOp>(z3);
+  Value *z1 = b.create<xd::cpp::ReadOp>(t1);
+  Value *z2 = b.create<xd::cpp::ReadOp>(t2);
+  Value *z3 = b.create<xd::cpp::ReadOp>(t3);
+  b.create<xd::cpp::WriteOp>(z1);
+  b.create<xd::cpp::WriteOp>(z2);
+  b.create<xd::cpp::WriteOp>(z3);
 }
 
 void createFunctionExample(Module &module, const Twine &name) {
@@ -86,47 +86,47 @@ void createFunctionExample(Module &module, const Twine &name) {
   BasicBlock *bb = BasicBlock::Create(module.getContext(), "entry", fn);
   b.SetInsertPoint(bb);
 
-  Value *x1 = b.create<xd::ReadOp>(b.getInt32Ty());
-  Value *sizeOf = b.create<xd::SizeOfOp>(b.getHalfTy());
-  Value *sizeOf32 = b.create<xd::ITruncOp>(b.getInt32Ty(), sizeOf);
-  Value *x2 = b.create<xd::Add32Op>(x1, sizeOf32, 11);
-  Value *x3 = b.create<xd::CombineOp>(x2, x1);
-  Value *x4 = b.create<xd::IExtOp>(b.getInt64Ty(), x3);
-  b.create<xd::WriteOp>(x4);
+  Value *x1 = b.create<xd::cpp::ReadOp>(b.getInt32Ty());
+  Value *sizeOf = b.create<xd::cpp::SizeOfOp>(b.getHalfTy());
+  Value *sizeOf32 = b.create<xd::cpp::ITruncOp>(b.getInt32Ty(), sizeOf);
+  Value *x2 = b.create<xd::cpp::Add32Op>(x1, sizeOf32, 11);
+  Value *x3 = b.create<xd::cpp::CombineOp>(x2, x1);
+  Value *x4 = b.create<xd::cpp::IExtOp>(b.getInt64Ty(), x3);
+  b.create<xd::cpp::WriteOp>(x4);
 
-  cast<xd::SizeOfOp>(sizeOf)->setSizeofType(b.getDoubleTy());
-  cast<xd::Add32Op>(x2)->setExtra(7);
+  cast<xd::cpp::SizeOfOp>(sizeOf)->setSizeofType(b.getDoubleTy());
+  cast<xd::cpp::Add32Op>(x2)->setExtra(7);
 
-  Value *q1 = b.create<xd::ReadOp>(FixedVectorType::get(b.getInt32Ty(), 2));
-  Value *q2 = b.create<xd::FromFixedVectorOp>(
-      xd::XdVectorType::get(xd::VectorKind::BigEndian, b.getInt32Ty(), 2), q1);
+  Value *q1 = b.create<xd::cpp::ReadOp>(FixedVectorType::get(b.getInt32Ty(), 2));
+  Value *q2 = b.create<xd::cpp::FromFixedVectorOp>(
+      xd::cpp::XdVectorType::get(xd::cpp::VectorKind::BigEndian, b.getInt32Ty(), 2), q1);
 
-  Value *y1 = b.create<xd::ReadOp>(
-      xd::XdVectorType::get(xd::VectorKind::BigEndian, b.getInt32Ty(), 4));
-  Value *y2 = b.create<xd::ExtractElementOp>(y1, x1);
-  Value *y3 = b.create<xd::ExtractElementOp>(y1, b.getInt32(2));
+  Value *y1 = b.create<xd::cpp::ReadOp>(
+      xd::cpp::XdVectorType::get(xd::cpp::VectorKind::BigEndian, b.getInt32Ty(), 4));
+  Value *y2 = b.create<xd::cpp::ExtractElementOp>(y1, x1);
+  Value *y3 = b.create<xd::cpp::ExtractElementOp>(y1, b.getInt32(2));
   Value *y4 = b.CreateAdd(y2, y3);
-  Value *y5 = b.create<xd::InsertElementOp>(q2, y4, x1);
-  auto *y6 = b.create<xd::InsertElementOp>(y5, y2, b.getInt32(5));
-  b.create<xd::WriteOp>(y6);
+  Value *y5 = b.create<xd::cpp::InsertElementOp>(q2, y4, x1);
+  auto *y6 = b.create<xd::cpp::InsertElementOp>(y5, y2, b.getInt32(5));
+  b.create<xd::cpp::WriteOp>(y6);
 
   y6->setIndex(b.getInt32(1));
 
-  Value *p1 = b.create<xd::ReadOp>(b.getPtrTy(0));
+  Value *p1 = b.create<xd::cpp::ReadOp>(b.getPtrTy(0));
   p1->setName("p1");
-  Value *p2 = b.create<xd::StreamAddOp>(p1, b.getInt64(14), b.getInt8(0));
+  Value *p2 = b.create<xd::cpp::StreamAddOp>(p1, b.getInt64(14), b.getInt8(0));
   p2->setName("p2");
-  b.create<xd::WriteOp>(p2);
+  b.create<xd::cpp::WriteOp>(p2);
 
-  assert(xd::ExampleDialect::isDialectOp(*cast<CallInst>(p2)));
+  assert(xd::cpp::ExampleDialect::isDialectOp(*cast<CallInst>(p2)));
 
   SmallVector<Value *> varArgs;
   varArgs.push_back(p1);
   varArgs.push_back(p2);
-  b.create<xd::WriteVarArgOp>(p2, varArgs);
-  b.create<xd::HandleGetOp>();
+  b.create<xd::cpp::WriteVarArgOp>(p2, varArgs);
+  b.create<xd::cpp::HandleGetOp>();
 
-  auto *replaceable = b.create<xd::WriteVarArgOp>(p2, varArgs);
+  auto *replaceable = b.create<xd::cpp::WriteVarArgOp>(p2, varArgs);
   SmallVector<Metadata *, 1> MD;
   MD.push_back(ConstantAsMetadata::get(
       ConstantInt::get(Type::getInt32Ty(bb->getContext()), 1)));
@@ -136,25 +136,25 @@ void createFunctionExample(Module &module, const Twine &name) {
   varArgs2.push_back(p2);
 
   replaceable->replaceArgs(varArgs2);
-  b.create<xd::SetReadOp>(FixedVectorType::get(b.getInt32Ty(), 2));
-  b.create<xd::SetWriteOp>(y6);
+  b.create<xd::cpp::SetReadOp>(FixedVectorType::get(b.getInt32Ty(), 2));
+  b.create<xd::cpp::SetWriteOp>(y6);
 
   useUnnamedStructTypes(b);
 
-  b.create<xd::HandleGetOp>("name.of.llvm.value");
-  b.create<xd::InstNameConflictOp>(b.getInt32(1));
-  b.create<xd::InstNameConflictOp>(b.getInt32(1), "name.foo");
-  b.create<xd::InstNameConflictDoubleOp>(b.getInt32(1), b.getInt32(2));
-  b.create<xd::InstNameConflictDoubleOp>(b.getInt32(1), b.getInt32(2), "bar");
+  b.create<xd::cpp::HandleGetOp>("name.of.llvm.value");
+  b.create<xd::cpp::InstNameConflictOp>(b.getInt32(1));
+  b.create<xd::cpp::InstNameConflictOp>(b.getInt32(1), "name.foo");
+  b.create<xd::cpp::InstNameConflictDoubleOp>(b.getInt32(1), b.getInt32(2));
+  b.create<xd::cpp::InstNameConflictDoubleOp>(b.getInt32(1), b.getInt32(2), "bar");
   SmallVector<Value *> moreVarArgs = varArgs;
-  b.create<xd::InstNameConflictVarargsOp>(moreVarArgs);
-  b.create<xd::InstNameConflictVarargsOp>(moreVarArgs, "two.varargs");
+  b.create<xd::cpp::InstNameConflictVarargsOp>(moreVarArgs);
+  b.create<xd::cpp::InstNameConflictVarargsOp>(moreVarArgs, "two.varargs");
   moreVarArgs.push_back(b.getInt32(3));
-  b.create<xd::InstNameConflictVarargsOp>(moreVarArgs, "three.varargs");
+  b.create<xd::cpp::InstNameConflictVarargsOp>(moreVarArgs, "three.varargs");
   moreVarArgs.push_back(b.getInt32(4));
-  b.create<xd::InstNameConflictVarargsOp>(moreVarArgs, "four.varargs");
+  b.create<xd::cpp::InstNameConflictVarargsOp>(moreVarArgs, "four.varargs");
 
-  b.create<xd::StringAttrOp>("Hello world!");
+  b.create<xd::cpp::StringAttrOp>("Hello world!");
 
   b.CreateRetVoid();
 }
@@ -210,20 +210,20 @@ template <bool rpot> const Visitor<VisitorContainer> &getExampleVisitor() {
   static const auto visitor =
       VisitorBuilder<VisitorContainer>()
           .nest<VisitorNest>([](VisitorBuilder<VisitorNest> &b) {
-            b.add<xd::ReadOp>([](VisitorNest &self, xd::ReadOp &op) {
+            b.add<xd::cpp::ReadOp>([](VisitorNest &self, xd::cpp::ReadOp &op) {
               *self.out << "visiting ReadOp: " << op << '\n';
             });
             b.add(&VisitorNest::visitUnaryInstruction);
-            b.add<xd::SetReadOp>([](VisitorNest &self, xd::SetReadOp &op) {
+            b.add<xd::cpp::SetReadOp>([](VisitorNest &self, xd::cpp::SetReadOp &op) {
               *self.out << "visiting SetReadOp: " << op << '\n';
               return op.getType()->isIntegerTy(1) ? VisitorResult::Stop
                                                   : VisitorResult::Continue;
             });
-            b.addSet<xd::SetReadOp, xd::SetWriteOp>(
+            b.addSet<xd::cpp::SetReadOp, xd::cpp::SetWriteOp>(
                 [](VisitorNest &self, llvm::Instruction &op) {
-                  if (isa<xd::SetReadOp>(op)) {
+                  if (isa<xd::cpp::SetReadOp>(op)) {
                     *self.out << "visiting SetReadOp (set): " << op << '\n';
-                  } else if (isa<xd::SetWriteOp>(op)) {
+                  } else if (isa<xd::cpp::SetWriteOp>(op)) {
                     *self.out << "visiting SetWriteOp (set): " << op << '\n';
                   }
                 });
@@ -248,17 +248,17 @@ template <bool rpot> const Visitor<VisitorContainer> &getExampleVisitor() {
                 });
             b.add(&VisitorNest::visitBinaryOperator);
             b.nest<raw_ostream>([](VisitorBuilder<raw_ostream> &b) {
-              b.add<xd::WriteOp>([](raw_ostream &out, xd::WriteOp &op) {
+              b.add<xd::cpp::WriteOp>([](raw_ostream &out, xd::cpp::WriteOp &op) {
                 out << "visiting WriteOp: " << op << '\n';
               });
-              b.add<xd::WriteVarArgOp>(
-                  [](raw_ostream &out, xd::WriteVarArgOp &op) {
+              b.add<xd::cpp::WriteVarArgOp>(
+                  [](raw_ostream &out, xd::cpp::WriteVarArgOp &op) {
                     out << "visiting WriteVarArgOp: " << op << ":\n";
                     for (Value *arg : op.getArgs())
                       out << "  " << *arg << '\n';
                   });
-              b.add<xd::StringAttrOp>(
-                  [](raw_ostream &out, xd::StringAttrOp &op) {
+              b.add<xd::cpp::StringAttrOp>(
+                  [](raw_ostream &out, xd::cpp::StringAttrOp &op) {
                     out << "visiting StringAttrOp: " << op.getVal() << '\n';
                   });
               b.add<ReturnInst>([](raw_ostream &out, ReturnInst &ret) {
@@ -270,8 +270,8 @@ template <bool rpot> const Visitor<VisitorContainer> &getExampleVisitor() {
                   });
             });
             b.nest<VisitorInnermost>([](VisitorBuilder<VisitorInnermost> &b) {
-              b.add<xd::ITruncOp>([](VisitorInnermost &inner,
-                                     xd::ITruncOp &op) { inner.counter++; });
+              b.add<xd::cpp::ITruncOp>([](VisitorInnermost &inner,
+                                     xd::cpp::ITruncOp &op) { inner.counter++; });
             });
           })
           .setStrategy(rpot ? VisitorStrategy::ReversePostOrder
@@ -295,7 +295,7 @@ int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
   LLVMContext context;
-  auto dialectContext = DialectContext::make<xd::ExampleDialect>(context);
+  auto dialectContext = DialectContext::make<xd::cpp::ExampleDialect>(context);
 
   if (g_action == Action::Build) {
     auto module = createModuleExample(context);

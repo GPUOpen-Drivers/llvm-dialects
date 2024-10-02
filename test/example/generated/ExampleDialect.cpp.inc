@@ -23,7 +23,7 @@
 
 #ifdef GET_DIALECT_DEFS
 #undef GET_DIALECT_DEFS
-namespace xd {
+namespace xd::cpp {
 
     void ExampleDialect::anchor() {}
 
@@ -759,7 +759,7 @@ source
     
       && !([&]() {
     
-        if (xd::VectorKind::LittleEndian != ::llvm::cast<XdVectorType>(resultType)->getKind()) {
+        if (xd::cpp::VectorKind::LittleEndian != ::llvm::cast<XdVectorType>(resultType)->getKind()) {
           return false;
         }
       return true;
@@ -767,7 +767,7 @@ source
 
       && !([&]() {
     
-        if (xd::VectorKind::BigEndian != ::llvm::cast<XdVectorType>(resultType)->getKind()) {
+        if (xd::cpp::VectorKind::BigEndian != ::llvm::cast<XdVectorType>(resultType)->getKind()) {
           return false;
         }
       return true;
@@ -780,10 +780,10 @@ source
         errs << "  failed option 0 (VectorKindLittleEndian):\n";
         ([&]() {
       
-        if (xd::VectorKind::LittleEndian != ::llvm::cast<XdVectorType>(resultType)->getKind()) {
+        if (xd::cpp::VectorKind::LittleEndian != ::llvm::cast<XdVectorType>(resultType)->getKind()) {
           errs << "  inconsistent value of eq:$rhs found\n";
           errs << "  while checking VectorKindLittleEndian:\n";
-          errs << "    here:       " << printable(xd::VectorKind::LittleEndian) << '\n';
+          errs << "    here:       " << printable(xd::cpp::VectorKind::LittleEndian) << '\n';
           errs << "    previously: " << printable(::llvm::cast<XdVectorType>(resultType)->getKind()) << '\n';
         
           return false;
@@ -795,10 +795,10 @@ source
         errs << "  failed option 1 (VectorKindBigEndian):\n";
         ([&]() {
       
-        if (xd::VectorKind::BigEndian != ::llvm::cast<XdVectorType>(resultType)->getKind()) {
+        if (xd::cpp::VectorKind::BigEndian != ::llvm::cast<XdVectorType>(resultType)->getKind()) {
           errs << "  inconsistent value of eq:$rhs found\n";
           errs << "  while checking VectorKindBigEndian:\n";
-          errs << "    here:       " << printable(xd::VectorKind::BigEndian) << '\n';
+          errs << "    here:       " << printable(xd::cpp::VectorKind::BigEndian) << '\n';
           errs << "    previously: " << printable(::llvm::cast<XdVectorType>(resultType)->getKind()) << '\n';
         
           return false;
@@ -2259,11 +2259,11 @@ data
       }
 
 
-} // namespace xd
+} // namespace xd::cpp
 
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::Add32Op>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::Add32Op>() {
         static const ::llvm_dialects::OpDescription desc{false, "xd.ir.add32"};
         return desc;
       }
@@ -2271,7 +2271,7 @@ data
     
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::CombineOp>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::CombineOp>() {
         static const ::llvm_dialects::OpDescription desc{true, "xd.ir.combine"};
         return desc;
       }
@@ -2279,7 +2279,7 @@ data
     
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::ExtractElementOp>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::ExtractElementOp>() {
         static const ::llvm_dialects::OpDescription desc{true, "xd.ir.extractelement"};
         return desc;
       }
@@ -2287,7 +2287,7 @@ data
     
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::FromFixedVectorOp>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::FromFixedVectorOp>() {
         static const ::llvm_dialects::OpDescription desc{true, "xd.ir.fromfixedvector"};
         return desc;
       }
@@ -2295,7 +2295,7 @@ data
     
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::HandleGetOp>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::HandleGetOp>() {
         static const ::llvm_dialects::OpDescription desc{false, "xd.ir.handle.get"};
         return desc;
       }
@@ -2303,7 +2303,7 @@ data
     
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::IExtOp>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::IExtOp>() {
         static const ::llvm_dialects::OpDescription desc{true, "xd.ir.iext"};
         return desc;
       }
@@ -2311,7 +2311,7 @@ data
     
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::ITruncOp>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::ITruncOp>() {
         static const ::llvm_dialects::OpDescription desc{true, "xd.ir.itrunc"};
         return desc;
       }
@@ -2319,7 +2319,7 @@ data
     
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::ImmutableOp>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::ImmutableOp>() {
         static const ::llvm_dialects::OpDescription desc{false, "xd.ir.immutable.op"};
         return desc;
       }
@@ -2327,7 +2327,7 @@ data
     
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::InsertElementOp>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::InsertElementOp>() {
         static const ::llvm_dialects::OpDescription desc{true, "xd.ir.insertelement"};
         return desc;
       }
@@ -2335,7 +2335,7 @@ data
     
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::InstNameConflictDoubleOp>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::InstNameConflictDoubleOp>() {
         static const ::llvm_dialects::OpDescription desc{false, "xd.ir.inst.name.conflict.double"};
         return desc;
       }
@@ -2343,7 +2343,7 @@ data
     
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::InstNameConflictOp>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::InstNameConflictOp>() {
         static const ::llvm_dialects::OpDescription desc{false, "xd.ir.inst.name.conflict"};
         return desc;
       }
@@ -2351,7 +2351,7 @@ data
     
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::InstNameConflictVarargsOp>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::InstNameConflictVarargsOp>() {
         static const ::llvm_dialects::OpDescription desc{false, "xd.ir.inst.name.conflict.varargs"};
         return desc;
       }
@@ -2359,7 +2359,7 @@ data
     
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::ReadOp>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::ReadOp>() {
         static const ::llvm_dialects::OpDescription desc{true, "xd.ir.read"};
         return desc;
       }
@@ -2367,7 +2367,7 @@ data
     
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::SetReadOp>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::SetReadOp>() {
         static const ::llvm_dialects::OpDescription desc{true, "xd.ir.set.read"};
         return desc;
       }
@@ -2375,7 +2375,7 @@ data
     
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::SetWriteOp>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::SetWriteOp>() {
         static const ::llvm_dialects::OpDescription desc{false, "xd.ir.set.write"};
         return desc;
       }
@@ -2383,7 +2383,7 @@ data
     
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::SizeOfOp>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::SizeOfOp>() {
         static const ::llvm_dialects::OpDescription desc{false, "xd.ir.sizeof"};
         return desc;
       }
@@ -2391,7 +2391,7 @@ data
     
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::StreamAddOp>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::StreamAddOp>() {
         static const ::llvm_dialects::OpDescription desc{true, "xd.ir.stream.add"};
         return desc;
       }
@@ -2399,7 +2399,7 @@ data
     
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::StreamMaxOp>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::StreamMaxOp>() {
         static const ::llvm_dialects::OpDescription desc{true, "xd.ir.stream.max"};
         return desc;
       }
@@ -2407,7 +2407,7 @@ data
     
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::StreamMinOp>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::StreamMinOp>() {
         static const ::llvm_dialects::OpDescription desc{true, "xd.ir.stream.min"};
         return desc;
       }
@@ -2415,7 +2415,7 @@ data
     
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::StringAttrOp>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::StringAttrOp>() {
         static const ::llvm_dialects::OpDescription desc{false, "xd.ir.string.attr.op"};
         return desc;
       }
@@ -2423,7 +2423,7 @@ data
     
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::WriteOp>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::WriteOp>() {
         static const ::llvm_dialects::OpDescription desc{false, "xd.ir.write"};
         return desc;
       }
@@ -2431,7 +2431,7 @@ data
     
       template <>
       const ::llvm_dialects::OpDescription &
-      ::llvm_dialects::OpDescription::get<xd::WriteVarArgOp>() {
+      ::llvm_dialects::OpDescription::get<xd::cpp::WriteVarArgOp>() {
         static const ::llvm_dialects::OpDescription desc{false, "xd.ir.write.vararg"};
         return desc;
       }
