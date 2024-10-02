@@ -14,6 +14,7 @@
  * limitations under the License. 
  */
 
+#include "llvm-dialects/TableGen/Common.h"
 #include "llvm-dialects/TableGen/GenDialect.h"
 
 #include "llvm/Support/CommandLine.h"
@@ -53,7 +54,7 @@ cl::opt<Action> g_action(
                    "Generate dialect definitions (.cpp.inc)")
         ));
 
-bool llvmDialectsTableGenMain(raw_ostream& out, RecordKeeper& records) {
+bool llvmDialectsTableGenMain(raw_ostream &out, RecordKeeperTy &records) {
   switch (g_action) {
   case Action::PrintRecords:
     // Redundant with llvm-tblgen, but may be convenient for users.

@@ -18,6 +18,7 @@
 
 #include <memory>
 
+#include "llvm-dialects/TableGen/Common.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -42,7 +43,7 @@ class Trait;
 
 class GenDialect {
 public:
-  llvm::Record *record;
+  RecordTy *record;
   std::string cppName;
   std::string name;
   std::string cppNamespace;
@@ -69,14 +70,14 @@ public:
   GenDialectsContext();
   ~GenDialectsContext();
 
-  void init(llvm::RecordKeeper &records,
+  void init(RecordKeeperTy &records,
             const llvm::DenseSet<llvm::StringRef> &dialects);
 
-  Trait *getTrait(llvm::Record *traitRec);
+  Trait *getTrait(RecordTy *traitRec);
   Predicate *getPredicate(llvm::Init *init, llvm::raw_ostream &errs);
-  Attr *getAttr(llvm::Record *record, llvm::raw_ostream &errs);
-  OpClass *getOpClass(llvm::Record *opClassRec);
-  GenDialect *getDialect(llvm::Record *dialectRec);
+  Attr *getAttr(RecordTy *record, llvm::raw_ostream &errs);
+  OpClass *getOpClass(RecordTy *opClassRec);
+  GenDialect *getDialect(RecordTy *dialectRec);
 
   llvm::Init *getVoidTy() const { return m_voidTy; }
   llvm::Init *getAny() const { return m_any; }
@@ -92,11 +93,11 @@ private:
   llvm::Init *m_voidTy = nullptr;
   llvm::Init *m_any = nullptr;
   bool m_attrsComplete = false;
-  llvm::DenseMap<llvm::Record *, std::unique_ptr<Trait>> m_traits;
+  llvm::DenseMap<RecordTy *, std::unique_ptr<Trait>> m_traits;
   llvm::DenseMap<llvm::Init *, std::unique_ptr<Predicate>> m_predicates;
-  llvm::DenseMap<llvm::Record *, std::unique_ptr<Attr>> m_attrs;
-  llvm::DenseMap<llvm::Record *, std::unique_ptr<OpClass>> m_opClasses;
-  llvm::DenseMap<llvm::Record *, std::unique_ptr<GenDialect>> m_dialects;
+  llvm::DenseMap<RecordTy *, std::unique_ptr<Attr>> m_attrs;
+  llvm::DenseMap<RecordTy *, std::unique_ptr<OpClass>> m_opClasses;
+  llvm::DenseMap<RecordTy *, std::unique_ptr<GenDialect>> m_dialects;
 };
 
 } // namespace llvm_dialects

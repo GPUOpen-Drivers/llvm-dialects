@@ -17,6 +17,15 @@
 #pragma once
 
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/Record.h"
+
+#if !defined(LLVM_MAIN_REVISION) || LLVM_MAIN_REVISION >= 513628
+using RecordKeeperTy = const llvm::RecordKeeper;
+using RecordTy = const llvm::Record;
+#else
+using RecordKeeperTy = llvm::RecordKeeper;
+using RecordTy = llvm::Record;
+#endif
 
 namespace llvm_dialects {
 

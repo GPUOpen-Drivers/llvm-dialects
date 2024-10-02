@@ -67,7 +67,7 @@ public:
 
 protected:
   bool init(llvm::raw_ostream &errs, GenDialectsContext &context,
-            llvm::Record *record);
+            RecordTy *record);
 
   /// Records if this Operation has a variadic argument
   bool m_hasVariadicArgument = false;
@@ -91,9 +91,8 @@ public:
   std::vector<OpClass *> subclasses;
   std::vector<Operation *> operations;
 
-  static std::unique_ptr<OpClass> parse(llvm::raw_ostream &errs,
-                                        GenDialectsContext &context,
-                                        llvm::Record *record);
+  static std::unique_ptr<OpClass>
+  parse(llvm::raw_ostream &errs, GenDialectsContext &context, RecordTy *record);
 };
 
 class Operation : public OperationBase {
@@ -110,7 +109,7 @@ public:
   ~Operation();
 
   static bool parse(llvm::raw_ostream &errs, GenDialectsContext *context,
-                    GenDialect *dialect, llvm::Record *record);
+                    GenDialect *dialect, RecordTy *record);
 
   bool haveResultOverloads() const { return m_haveResultOverloads; }
   bool haveArgumentOverloads() const { return m_haveArgumentOverloads; }

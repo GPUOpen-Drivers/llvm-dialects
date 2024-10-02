@@ -93,7 +93,7 @@ bool ConstraintSystem::addConstraint(raw_ostream &errs, Init *init,
 bool ConstraintSystem::addConstraintImpl(raw_ostream &errs, Init *init,
                                          Variable *self) {
   if (auto *dag = dyn_cast<DagInit>(init)) {
-    Record *op = dag->getOperatorAsDef({});
+    RecordTy *op = dag->getOperatorAsDef({});
 
     auto isValidOperand = [&dag, &errs](size_t index,
                                         StringRef opName) -> bool {
@@ -385,8 +385,8 @@ StringRef MetaType::getName() const {
   return "value";
 }
 
-std::unique_ptr<Attr> Attr::parse(raw_ostream &errs,
-                                  GenDialectsContext &context, Record *record) {
+std::unique_ptr<Attr>
+Attr::parse(raw_ostream &errs, GenDialectsContext &context, RecordTy *record) {
   if (!record->isSubClassOf("Attr")) {
     errs << record->getName() << ": must be a subclass of Attr\n";
     return {};

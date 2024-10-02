@@ -77,7 +77,7 @@ void GenDialect::finalize(raw_ostream &errs) {
 GenDialectsContext::GenDialectsContext() = default;
 GenDialectsContext::~GenDialectsContext() = default;
 
-Trait *GenDialectsContext::getTrait(Record *traitRec) {
+Trait *GenDialectsContext::getTrait(RecordTy *traitRec) {
   if (!traitRec->isSubClassOf("Trait"))
     report_fatal_error(Twine("Trying to use '") + traitRec->getName() +
                        "' as a trait, but it is not a subclass of 'Trait'");
@@ -113,8 +113,7 @@ Predicate *GenDialectsContext::getPredicateImpl(Init *init, raw_ostream &errs) {
   return op;
 }
 
-Attr *GenDialectsContext::getAttr(llvm::Record *record,
-                                  llvm::raw_ostream &errs) {
+Attr *GenDialectsContext::getAttr(RecordTy *record, llvm::raw_ostream &errs) {
   auto it = m_attrs.find(record);
   if (it == m_attrs.end()) {
     errs << "  not an attribute: " << record->getName() << '\n';
@@ -126,7 +125,7 @@ Attr *GenDialectsContext::getAttr(llvm::Record *record,
   return attr;
 }
 
-GenDialect *GenDialectsContext::getDialect(Record *dialectRec) {
+GenDialect *GenDialectsContext::getDialect(RecordTy *dialectRec) {
   if (!dialectRec->isSubClassOf("Dialect"))
     report_fatal_error(Twine("Trying to use '") + dialectRec->getName() +
                        "' as a dialect, but it is not a subclass of 'Dialect'");
@@ -140,7 +139,7 @@ GenDialect *GenDialectsContext::getDialect(Record *dialectRec) {
   return it->second.get();
 }
 
-OpClass *GenDialectsContext::getOpClass(Record *opClassRec) {
+OpClass *GenDialectsContext::getOpClass(RecordTy *opClassRec) {
   if (opClassRec->getName() == "NoSuperClass")
     return nullptr;
 
@@ -172,9 +171,9 @@ OpClass *GenDialectsContext::getOpClass(Record *opClassRec) {
   return opClass;
 }
 
-void GenDialectsContext::init(RecordKeeper &records,
+void GenDialectsContext::init(RecordKeeperTy &records,
                               const DenseSet<StringRef> &dialects) {
-  for (Record *record : records.getAllDerivedDefinitions("Attr")) {
+  for (RecordTy *record : records.getAllDerivedDefinitions("Attr")) {
     auto owner = Attr::parse(llvm::errs(), *this, record);
     if (!record)
       report_fatal_error(Twine("Error parsing Attr ") + record->getName());
@@ -182,7 +181,7 @@ void GenDialectsContext::init(RecordKeeper &records,
     m_attrs.try_emplace(record, std::move(owner));
   }
 
-  for (Record *record : records.getAllDerivedDefinitions("AttrLlvmType")) {
+  for (RecordTy *record : records.getAllDerivedDefinitions("AttrLlvmType")) {
     Attr *attr = getAttr(record->getValueAsDef("attr"), llvm::errs());
     assert(attr);
     attr->setLlvmType(record->getValueInit("llvmType"));
@@ -193,7 +192,7 @@ void GenDialectsContext::init(RecordKeeper &records,
   m_any = records.getDef("any")->getDefInit();
   assert(m_voidTy && m_any);
 
-  for (Record *dialectRec : records.getAllDerivedDefinitions("Dialect")) {
+  for (RecordTy *dialectRec : records.getAllDerivedDefinitions("Dialect")) {
     auto name = dialectRec->getValueAsString("name");
     if (!dialects.contains(name))
       continue;
@@ -206,7 +205,7 @@ void GenDialectsContext::init(RecordKeeper &records,
     m_dialects.insert(std::make_pair(dialectRec, std::move(dialect)));
   }
 
-  for (Record *typeRec : records.getAllDerivedDefinitions("DialectType")) {
+  for (RecordTy *typeRec : records.getAllDerivedDefinitions("DialectType")) {
     auto *dialectType =
         cast<DialectType>(getPredicate(typeRec->getDefInit(), llvm::errs()));
     if (!dialectType) {
@@ -218,8 +217,8 @@ void GenDialectsContext::init(RecordKeeper &records,
       dialectIt->second->types.push_back(dialectType);
   }
 
-  for (Record *opRec : records.getAllDerivedDefinitions("Op")) {
-    Record *dialectRec = opRec->getValueAsDef("dialect");
+  for (RecordTy *opRec : records.getAllDerivedDefinitions("Op")) {
+    RecordTy *dialectRec = opRec->getValueAsDef("dialect");
     auto dialectIt = m_dialects.find(dialectRec);
     if (dialectIt == m_dialects.end())
       continue;

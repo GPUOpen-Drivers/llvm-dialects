@@ -57,7 +57,7 @@ NamedValue::parseList(raw_ostream &errs, GenDialectsContext &context,
     bool accepted = false;
 
     if (auto *defInit = dyn_cast<DefInit>(valueInit)) {
-      Record *def = defInit->getDef();
+      RecordTy *def = defInit->getDef();
 
       if (def->getName() == "type") {
         if (mode == Parser::OperationResults ||
