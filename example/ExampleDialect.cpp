@@ -28,7 +28,7 @@
 #define GET_INCLUDES
 #include "ExampleDialect.cpp.inc"
 
-namespace xd {
+namespace xd::cpp {
 
 const char *toString(VectorKind kind) {
   switch (kind) {
@@ -48,7 +48,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &out, VectorKind x) {
   return out;
 }
 
-} // namespace xd
+} // namespace xd::cpp
 
 #define GET_DIALECT_DEFS
 #include "ExampleDialect.cpp.inc"

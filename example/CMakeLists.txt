@@ -23,9 +23,9 @@ set(EXAMPLE_TABLEGEN_EXE llvm-dialects-tblgen)
 set(EXAMPLE_TABLEGEN_TARGET llvm-dialects-tblgen)
 set(LLVM_TARGET_DEFINITIONS ExampleDialect.td)
 
-tablegen(EXAMPLE ExampleDialect.h.inc -gen-dialect-decls --dialect xd
+tablegen(EXAMPLE ExampleDialect.h.inc -gen-dialect-decls --dialect xd.ir
     EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../include)
-tablegen(EXAMPLE ExampleDialect.cpp.inc -gen-dialect-defs --dialect xd
+tablegen(EXAMPLE ExampleDialect.cpp.inc -gen-dialect-defs --dialect xd.ir
     EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 add_public_tablegen_target(ExampleDialectTableGen)
 

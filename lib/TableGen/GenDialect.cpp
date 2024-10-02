@@ -316,7 +316,7 @@ void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
     }
 
     bool $Dialect::isDialectOp(::llvm::StringRef funcName) {
-      return funcName.starts_with("$namespace.");
+      return funcName.starts_with("$dialect.");
     }
 
     ::llvm_dialects::Dialect* $Dialect::make(::llvm::LLVMContext& context) {
