@@ -51,7 +51,7 @@ namespace xd {
     };
 
     class XdHandleType : public ::llvm::TargetExtType {
-      static constexpr ::llvm::StringLiteral s_name{"xd.handle"};
+      static constexpr ::llvm::StringLiteral s_name{"xd.ir.handle"};
 
     public:
       static bool classof(const ::llvm::TargetExtType *t) {
@@ -70,7 +70,7 @@ namespace xd {
 
 
     class XdVectorType : public ::llvm::TargetExtType {
-      static constexpr ::llvm::StringLiteral s_name{"xd.vector"};
+      static constexpr ::llvm::StringLiteral s_name{"xd.ir.vector"};
 
     public:
       static bool classof(const ::llvm::TargetExtType *t) {
@@ -108,7 +108,7 @@ uint32_t getNumElements() const;
       };
     
       class Add32Op : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.add32"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.add32"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -135,7 +135,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class CombineOp : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.combine"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.combine"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -160,7 +160,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class ExtractElementOp : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.extractelement"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.extractelement"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -185,7 +185,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class FromFixedVectorOp : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.fromfixedvector"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.fromfixedvector"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -208,7 +208,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class HandleGetOp : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.handle.get"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.handle.get"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -229,7 +229,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class IExtOp : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.iext"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.iext"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -252,7 +252,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class ITruncOp : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.itrunc"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.itrunc"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -275,7 +275,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class ImmutableOp : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.immutable.op"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.immutable.op"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -295,7 +295,7 @@ bool getVal() const;
       };
     
       class InsertElementOp : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.insertelement"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.insertelement"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -322,7 +322,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class InstNameConflictDoubleOp : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.inst.name.conflict.double"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.inst.name.conflict.double"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -347,7 +347,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class InstNameConflictOp : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.inst.name.conflict"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.inst.name.conflict"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -370,7 +370,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class InstNameConflictVarargsOp : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.inst.name.conflict.varargs"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.inst.name.conflict.varargs"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -395,7 +395,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class ReadOp : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.read"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.read"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -416,7 +416,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class SetReadOp : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.set.read"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.set.read"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -437,7 +437,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class SetWriteOp : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.set.write"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.set.write"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -459,7 +459,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class SizeOfOp : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.sizeof"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.sizeof"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -482,7 +482,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class StreamAddOp : public StreamReduceOp {
-        static const ::llvm::StringLiteral s_name; //{"xd.stream.add"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.stream.add"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -503,7 +503,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class StreamMaxOp : public StreamReduceOp {
-        static const ::llvm::StringLiteral s_name; //{"xd.stream.max"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.stream.max"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -524,7 +524,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class StreamMinOp : public StreamReduceOp {
-        static const ::llvm::StringLiteral s_name; //{"xd.stream.min"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.stream.min"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -545,7 +545,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class StringAttrOp : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.string.attr.op"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.string.attr.op"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -565,7 +565,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class WriteOp : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.write"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.write"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {
@@ -587,7 +587,7 @@ bool verifier(::llvm::raw_ostream &errs);
       };
     
       class WriteVarArgOp : public ::llvm::CallInst {
-        static const ::llvm::StringLiteral s_name; //{"xd.write.vararg"};
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.write.vararg"};
 
       public:
         static bool classof(const ::llvm::CallInst* i) {

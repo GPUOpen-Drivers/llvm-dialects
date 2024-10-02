@@ -26,7 +26,7 @@
 include "llvm-dialects/Dialect/Dialect.td"
 
 def ExampleDialect : Dialect {
-  let name = "xd";
+  let name = "xd.ir";
   let cppNamespace = "xd";
 }
 
