@@ -41,7 +41,7 @@ cl::opt<std::string> g_dialect("dialect", cl::desc("the dialect to generate"), c
 } // anonymous namespace
 
 static std::pair<std::unique_ptr<GenDialectsContext>, GenDialect *>
-getSelectedDialect(RecordKeeper &records) {
+getSelectedDialect(RecordKeeperTy &records) {
   if (g_dialect.empty())
     report_fatal_error(Twine("Must select a dialect using the --dialect option"));
 
@@ -51,7 +51,7 @@ getSelectedDialect(RecordKeeper &records) {
 
   context->init(records, dialects);
 
-  for (Record* dialectRec : records.getAllDerivedDefinitions("Dialect")) {
+  for (RecordTy *dialectRec : records.getAllDerivedDefinitions("Dialect")) {
     if (dialectRec->getValueAsString("name") == g_dialect) {
       GenDialect *selectedDialect = context->getDialect(dialectRec);
       return {std::move(context), selectedDialect};
@@ -61,7 +61,7 @@ getSelectedDialect(RecordKeeper &records) {
   report_fatal_error(Twine("Could not find dialect. Check the '--dialect' option."));
 }
 
-void llvm_dialects::genDialectDecls(raw_ostream& out, RecordKeeper& records) {
+void llvm_dialects::genDialectDecls(raw_ostream &out, RecordKeeperTy &records) {
   auto [context, dialect] = getSelectedDialect(records);
 
   emitHeader(out);
@@ -218,7 +218,7 @@ class Builder;
 )";
 }
 
-void llvm_dialects::genDialectDefs(raw_ostream& out, RecordKeeper& records) {
+void llvm_dialects::genDialectDefs(raw_ostream &out, RecordKeeperTy &records) {
   auto [contextPtr, dialect] = getSelectedDialect(records);
   auto &genDialectsContext = *contextPtr;
 

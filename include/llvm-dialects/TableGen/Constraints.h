@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include "llvm-dialects/TableGen/Common.h"
 #include "llvm-dialects/TableGen/NamedValue.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -220,9 +221,8 @@ public:
     return type->getKind() == Kind::Attr;
   }
 
-  static std::unique_ptr<Attr> parse(llvm::raw_ostream &errs,
-                                     GenDialectsContext &context,
-                                     llvm::Record *record);
+  static std::unique_ptr<Attr>
+  parse(llvm::raw_ostream &errs, GenDialectsContext &context, RecordTy *record);
 
   llvm::StringRef getName() const;
   llvm::StringRef getCppType() const { return m_cppType; }
@@ -243,7 +243,7 @@ public:
   }
 
 private:
-  llvm::Record *m_record = nullptr;
+  RecordTy *m_record = nullptr;
   std::string m_cppType;
   llvm::Init *m_llvmType = nullptr;
   std::string m_toLlvmValue;

@@ -34,7 +34,7 @@ std::unique_ptr<Predicate> Predicate::parse(raw_ostream &errs,
   if (isa<IntInit>(theInit)) {
     result = std::make_unique<Constant>();
   } else if (auto *defInit = dyn_cast<DefInit>(theInit)) {
-    Record *record = defInit->getDef();
+    RecordTy *record = defInit->getDef();
     if (!record->isSubClassOf("Predicate")) {
       errs << record->getName()
            << ": trying to use as predicate, but not a subclass of Predicate\n";
@@ -73,10 +73,10 @@ bool Predicate::init(raw_ostream &errs, GenDialectsContext &genContext,
   m_init = theInit;
 
   if (auto *defInit = dyn_cast<DefInit>(theInit)) {
-    Record *record = defInit->getDef();
+    RecordTy *record = defInit->getDef();
 
     auto *arguments = record->getValueAsDag("arguments");
-    Record *argOp = arguments->getOperatorAsDef({});
+    RecordTy *argOp = arguments->getOperatorAsDef({});
     if (argOp->getName() != "args") {
       errs << "  argument list has unexpected operator: " << argOp->getName()
            << '\n';
@@ -108,7 +108,7 @@ bool TgPredicate::init(raw_ostream &errs, GenDialectsContext &genContext,
   if (!Predicate::init(errs, genContext, theInit))
     return false;
 
-  Record *record = cast<DefInit>(theInit)->getDef();
+  RecordTy *record = cast<DefInit>(theInit)->getDef();
 
   for (const auto &argument : arguments())
     m_variables.push_back(m_scope.getVariable(argument.name));
@@ -155,7 +155,7 @@ bool CppPredicate::init(raw_ostream &errs, GenDialectsContext &genContext,
   if (!BaseCppPredicate::init(errs, genContext, theInit))
     return false;
 
-  Record *record = cast<DefInit>(theInit)->getDef();
+  RecordTy *record = cast<DefInit>(theInit)->getDef();
 
   m_evaluate = record->getValueAsString("evaluate");
   m_canDerive.push_back(!m_evaluate.empty());

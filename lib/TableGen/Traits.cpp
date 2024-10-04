@@ -15,6 +15,7 @@
  */
 
 #include "llvm-dialects/TableGen/Traits.h"
+#include "llvm-dialects/TableGen/Common.h"
 
 #include "llvm-dialects/TableGen/Format.h"
 
@@ -35,7 +36,7 @@ class LlvmEnumAttributeTrait : public LlvmAttributeTrait {
 public:
   LlvmEnumAttributeTrait() : LlvmAttributeTrait(Kind::LlvmEnumAttributeTrait) {}
 
-  void init(GenDialectsContext *context, llvm::Record *record) override;
+  void init(GenDialectsContext *context, RecordTy *record) override;
 
   void addAttribute(llvm::raw_ostream &out, FmtContext &fmt) const override;
 
@@ -54,7 +55,7 @@ public:
   LlvmMemoryAttributeTrait()
       : LlvmAttributeTrait(Kind::LlvmMemoryAttributeTrait) {}
 
-  void init(GenDialectsContext *context, llvm::Record *record) override;
+  void init(GenDialectsContext *context, RecordTy *record) override;
 
   void addAttribute(llvm::raw_ostream &out, FmtContext &fmt) const override;
 
@@ -80,7 +81,7 @@ bool llvm_dialects::noMemoryEffects() {
 }
 
 std::unique_ptr<Trait> Trait::fromRecord(GenDialectsContext *context,
-                                         llvm::Record *traitRec) {
+                                         RecordTy *traitRec) {
   std::unique_ptr<Trait> result;
   if (traitRec->isSubClassOf("LlvmEnumAttributeTrait")) {
     result = std::make_unique<LlvmEnumAttributeTrait>();
@@ -93,13 +94,14 @@ std::unique_ptr<Trait> Trait::fromRecord(GenDialectsContext *context,
   return result;
 }
 
-void Trait::init(GenDialectsContext *context, Record *record) {
+void Trait::init(GenDialectsContext *context, RecordTy *record) {
   m_record = record;
 }
 
 StringRef Trait::getName() const { return m_record->getName(); }
 
-void LlvmEnumAttributeTrait::init(GenDialectsContext *context, Record *record) {
+void LlvmEnumAttributeTrait::init(GenDialectsContext *context,
+                                  RecordTy *record) {
   LlvmAttributeTrait::init(context, record);
   m_llvmEnum = record->getValueAsString("llvmEnum");
 }
@@ -111,14 +113,14 @@ void LlvmEnumAttributeTrait::addAttribute(raw_ostream &out,
 }
 
 void LlvmMemoryAttributeTrait::init(GenDialectsContext *context,
-                                    llvm::Record *record) {
+                                    RecordTy *record) {
   LlvmAttributeTrait::init(context, record);
 
   auto *effects = record->getValueAsListInit("effects");
   for (auto *effectInit : *effects) {
     Effect effect;
     auto *effectDag = cast<DagInit>(effectInit);
-    Record *op = effectDag->getOperatorAsDef(record->getLoc());
+    RecordTy *op = effectDag->getOperatorAsDef(record->getLoc());
     if (op->getName() == "read") {
       effect.read = true;
     } else if (op->getName() == "write") {

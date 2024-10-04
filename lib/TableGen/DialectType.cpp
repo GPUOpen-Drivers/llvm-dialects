@@ -30,7 +30,7 @@ bool DialectType::init(raw_ostream &errs, GenDialectsContext &context,
   if (!BaseCppPredicate::init(errs, context, theInit))
     return false;
 
-  Record *record = cast<DefInit>(theInit)->getDef();
+  RecordTy *record = cast<DefInit>(theInit)->getDef();
 
   m_dialectRec = record->getValueAsDef("dialect");
   if (!m_dialectRec->isSubClassOf("Dialect")) {

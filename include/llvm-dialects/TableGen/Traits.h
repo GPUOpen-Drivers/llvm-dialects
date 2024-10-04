@@ -20,6 +20,7 @@
 #include <memory>
 #include <string>
 
+#include "llvm-dialects/TableGen/Common.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm {
@@ -42,14 +43,14 @@ public:
   };
 
   static std::unique_ptr<Trait> fromRecord(GenDialectsContext *context,
-                                           llvm::Record *record);
+                                           RecordTy *record);
 
   virtual ~Trait() = default;
 
-  virtual void init(GenDialectsContext *context, llvm::Record *record);
+  virtual void init(GenDialectsContext *context, RecordTy *record);
 
   Kind getKind() const { return m_kind; }
-  llvm::Record *getRecord() const { return m_record; }
+  RecordTy *getRecord() const { return m_record; }
   llvm::StringRef getName() const;
 
 protected:
@@ -57,7 +58,7 @@ protected:
 
 private:
   const Kind m_kind;
-  llvm::Record *m_record = nullptr;
+  RecordTy *m_record = nullptr;
 };
 
 class LlvmAttributeTrait : public Trait {

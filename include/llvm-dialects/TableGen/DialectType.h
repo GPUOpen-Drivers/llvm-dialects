@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include "llvm-dialects/TableGen/Common.h"
 #include "llvm-dialects/TableGen/Predicates.h"
 
 #include "llvm-dialects/TableGen/SymbolTable.h"
@@ -40,7 +41,7 @@ public:
     return arguments().drop_front(1);
   }
 
-  llvm::Record *getDialectRec() const { return m_dialectRec; }
+  RecordTy *getDialectRec() const { return m_dialectRec; }
   llvm::StringRef getName() const { return m_name; }
   llvm::StringRef getMnemonic() const { return m_mnemonic; }
   bool defaultGetterHasExplicitContextArgument() const {
@@ -58,7 +59,7 @@ private:
     std::string name;
   };
 
-  llvm::Record *m_dialectRec = nullptr;
+  RecordTy *m_dialectRec = nullptr;
   std::string m_name;
   std::string m_mnemonic;
   bool m_defaultGetterHasExplicitContextArgument = false;

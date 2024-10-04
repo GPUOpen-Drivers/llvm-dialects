@@ -32,8 +32,8 @@ static std::string evaluateAttrLlvmType(raw_ostream &errs, raw_ostream &out,
                                         SymbolTable &symbols);
 
 static std::optional<std::vector<NamedValue>>
-parseArguments(raw_ostream &errs, GenDialectsContext &context, Record *rec) {
-  Record *superClassRec = rec->getValueAsDef("superclass");
+parseArguments(raw_ostream &errs, GenDialectsContext &context, RecordTy *rec) {
+  RecordTy *superClassRec = rec->getValueAsDef("superclass");
   OpClass *superclass = context.getOpClass(superClassRec);
   DagInit *argsInit = rec->getValueAsDag("arguments");
 
@@ -78,7 +78,7 @@ private:
 } // namespace
 
 bool OperationBase::init(raw_ostream &errs, GenDialectsContext &context,
-                         Record *record) {
+                         RecordTy *record) {
   m_dialect = context.getDialect(record->getValueAsDef("dialect"));
   m_superclass = context.getOpClass(record->getValueAsDef("superclass"));
 
@@ -280,8 +280,9 @@ void OperationBase::emitArgumentAccessorDefinitions(llvm::raw_ostream &out,
   }
 }
 
-std::unique_ptr<OpClass>
-OpClass::parse(raw_ostream &errs, GenDialectsContext &context, Record *record) {
+std::unique_ptr<OpClass> OpClass::parse(raw_ostream &errs,
+                                        GenDialectsContext &context,
+                                        RecordTy *record) {
   auto opClass = std::make_unique<OpClass>();
   opClass->name = record->getName();
 
@@ -329,7 +330,7 @@ Operation::Operation(GenDialectsContext &context) : m_system(context, m_scope) {
 Operation::~Operation() = default;
 
 bool Operation::parse(raw_ostream &errs, GenDialectsContext *context,
-                      GenDialect *dialect, Record *record) {
+                      GenDialect *dialect, RecordTy *record) {
   auto op = std::make_unique<Operation>(*context);
 
   if (!op->init(errs, *context, record))
@@ -342,7 +343,7 @@ bool Operation::parse(raw_ostream &errs, GenDialectsContext *context,
 
   op->name = record->getName();
   op->mnemonic = record->getValueAsString("mnemonic");
-  for (Record *traitRec : record->getValueAsListOfDefs("traits"))
+  for (RecordTy *traitRec : record->getValueAsListOfDefs("traits"))
     op->traits.push_back(context->getTrait(traitRec));
 
   EvaluationPlanner evaluation(op->m_system);

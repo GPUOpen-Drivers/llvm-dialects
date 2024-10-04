@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include "llvm-dialects/TableGen/Common.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -24,7 +25,7 @@ class RecordKeeper;
 
 namespace llvm_dialects {
 
-void genDialectDecls(llvm::raw_ostream& out, llvm::RecordKeeper& records);
-void genDialectDefs(llvm::raw_ostream& out, llvm::RecordKeeper& records);
+void genDialectDecls(llvm::raw_ostream &out, RecordKeeperTy &records);
+void genDialectDefs(llvm::raw_ostream &out, RecordKeeperTy &records);
 
 } // namespace llvm_dialects
