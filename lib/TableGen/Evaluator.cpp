@@ -643,14 +643,13 @@ bool Evaluator::checkLogicOr(bool writeErrs, const LogicOr *logicOr) {
                      &m_fmt);
     }
 
-    for (unsigned i = 0; i < logicOr->branches().size(); ++i) {
+    for (auto [i, childSystem] : llvm::enumerate(logicOr->branches())) {
       m_out << tgfmt(R"(
         $_errs << "  failed option $0 ($1):\n";
         ([&]() {
       )",
                      &m_fmt, i, logicOr->branchInits()[i]->getAsString());
 
-      const ConstraintSystem &childSystem = logicOr->branches()[i];
       Assignment scopedAssignment{&m_assignment};
       Evaluator childEvaluator(*m_symbols, scopedAssignment, childSystem, m_out,
                                m_fmt);
