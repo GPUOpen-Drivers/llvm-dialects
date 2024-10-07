@@ -218,7 +218,7 @@ void FmtObjectBase::format(raw_ostream &s) const {
         s << repl.spec << kMarkerForNoSubst;
         continue;
       }
-      auto range = ArrayRef<llvm_support_detail::format_adapter *>(adapters);
+      auto range = ArrayRef<llvm::support::detail::format_adapter *>(adapters);
       range = range.drop_front(repl.index);
       llvm::interleaveComma(range, s,
                             [&](auto &x) { x->format(s, /*Options=*/""); });
@@ -254,7 +254,8 @@ FmtStrVecObject::FmtStrVecObject(StringRef fmt, const FmtContext *ctx,
     : FmtObjectBase(fmt, ctx, params.size()) {
   parameters.reserve(params.size());
   for (std::string p : params)
-    parameters.push_back(llvm_support_detail::build_format_adapter(std::move(p)));
+    parameters.push_back(
+        llvm::support::detail::build_format_adapter(std::move(p)));
 
   adapters.reserve(parameters.size());
   for (auto &p : parameters)
