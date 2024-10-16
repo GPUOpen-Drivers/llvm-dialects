@@ -342,6 +342,7 @@ def AlwaysInline : LlvmEnumAttributeTrait<"AlwaysInline">;
 def Cold : LlvmEnumAttributeTrait<"Cold">;
 def Hot : LlvmEnumAttributeTrait<"Hot">;
 def Convergent : LlvmEnumAttributeTrait<"Convergent">;
+def Speculatable : LlvmEnumAttributeTrait<"Speculatable">;
 
 /// Represent the LLVM `memory(...)` attribute as the OR (or union) of memory
 /// effects. An empty effects list means the operation does not access memory
