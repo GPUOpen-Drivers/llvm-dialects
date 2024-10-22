@@ -92,10 +92,7 @@ public:
   template <typename... OpTs> static const OpSet &get() {
     static const auto set = ([]() {
       OpSet set;
-      (void)(... && ([&set]() {
-               set.tryInsertOp(OpDescription::get<OpTs>());
-               return true;
-             })());
+      (..., set.tryInsertOp(OpDescription::get<OpTs>()));
       return set;
     })();
     return set;
