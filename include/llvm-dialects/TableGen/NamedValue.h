@@ -40,7 +40,7 @@ struct NamedValue {
   std::string name;
 
   /// The implied constraint on the value.
-  llvm::Init *constraint = nullptr;
+  const llvm::Init *constraint = nullptr;
 
   enum class Parser {
     ApplyArguments,
@@ -52,7 +52,7 @@ struct NamedValue {
 
   static std::optional<std::vector<NamedValue>>
   parseList(llvm::raw_ostream &errs, GenDialectsContext &context,
-            llvm::DagInit *init, unsigned begin, Parser mode);
+            const llvm::DagInit *init, unsigned begin, Parser mode);
 
   std::string toString() const;
 };

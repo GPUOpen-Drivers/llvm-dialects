@@ -88,14 +88,16 @@ Trait *GenDialectsContext::getTrait(RecordTy *traitRec) {
   return result.get();
 }
 
-Predicate *GenDialectsContext::getPredicate(Init *init, raw_ostream &errs) {
+Predicate *GenDialectsContext::getPredicate(const Init *init,
+                                            raw_ostream &errs) {
   Predicate *op = getPredicateImpl(init, errs);
   if (!op)
     errs << "... while looking up predicate: " << init->getAsString() << '\n';
   return op;
 }
 
-Predicate *GenDialectsContext::getPredicateImpl(Init *init, raw_ostream &errs) {
+Predicate *GenDialectsContext::getPredicateImpl(const Init *init,
+                                                raw_ostream &errs) {
   auto it = m_predicates.find(init);
   if (it != m_predicates.end()) {
     if (!it->second)

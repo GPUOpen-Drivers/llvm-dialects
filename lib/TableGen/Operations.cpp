@@ -35,7 +35,7 @@ static std::optional<std::vector<NamedValue>>
 parseArguments(raw_ostream &errs, GenDialectsContext &context, RecordTy *rec) {
   RecordTy *superClassRec = rec->getValueAsDef("superclass");
   OpClass *superclass = context.getOpClass(superClassRec);
-  DagInit *argsInit = rec->getValueAsDag("arguments");
+  const DagInit *argsInit = rec->getValueAsDag("arguments");
 
   if (argsInit->getOperatorAsDef({})->getName() != "ins") {
     errs << "argument list operator must be 'ins'\n";
@@ -368,7 +368,7 @@ bool Operation::parse(raw_ostream &errs, GenDialectsContext *context,
     op->m_system.merge(std::move(singletonSystem));
   }
 
-  DagInit *results = record->getValueAsDag("results");
+  const DagInit *results = record->getValueAsDag("results");
   if (results->getOperatorAsDef({})->getName() != "outs") {
     errs << "result list operator must be 'outs'\n";
     return false;
@@ -400,8 +400,8 @@ bool Operation::parse(raw_ostream &errs, GenDialectsContext *context,
   op->m_defaultBuilderHasExplicitResultType =
       record->getValueAsBit("defaultBuilderHasExplicitResultType");
 
-  ListInit *verifier = record->getValueAsListInit("verifier");
-  for (Init *constraint : *verifier) {
+  const ListInit *verifier = record->getValueAsListInit("verifier");
+  for (const Init *constraint : *verifier) {
     if (!op->m_system.addConstraint(errs, constraint, nullptr))
       return false;
   }

@@ -26,7 +26,7 @@ using namespace llvm_dialects;
 
 std::optional<std::vector<NamedValue>>
 NamedValue::parseList(raw_ostream &errs, GenDialectsContext &context,
-                      DagInit *init, unsigned begin, Parser mode) {
+                      const DagInit *init, unsigned begin, Parser mode) {
   std::vector<NamedValue> values;
   bool isOperation =
       mode == Parser::OperationArguments || mode == Parser::OperationResults;
@@ -46,7 +46,7 @@ NamedValue::parseList(raw_ostream &errs, GenDialectsContext &context,
       return {};
     }
 
-    Init *valueInit = init->getArg(i);
+    const Init *valueInit = init->getArg(i);
     if (mode != Parser::ApplyArguments && isa<UnsetInit>(valueInit)) {
       errs << "Type/constraint missing for $" << value.name
            << " in: " << init->getAsString() << '\n';

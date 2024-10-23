@@ -138,7 +138,7 @@ private:
   bool checkApplyCapture(bool writeErrs, const Apply *apply);
   bool checkLogicOr(bool writeErrs, const LogicOr *logicOr);
   void checkAssignment(bool writeErrs, Variable *variable, std::string value,
-                       llvm::Init *constraint);
+                       const llvm::Init *constraint);
 };
 
 } // namespace llvm_dialects

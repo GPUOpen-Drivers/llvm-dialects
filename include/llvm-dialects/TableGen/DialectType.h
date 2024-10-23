@@ -35,7 +35,7 @@ public:
   }
 
   bool init(llvm::raw_ostream &errs, GenDialectsContext &context,
-            llvm::Init *theInit) override final;
+            const llvm::Init *theInit) override final;
 
   llvm::ArrayRef<NamedValue> typeArguments() const {
     return arguments().drop_front(1);

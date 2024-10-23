@@ -81,7 +81,7 @@ void ConstraintSystem::dump() const {
   print(dbgs(), "  ");
 }
 
-bool ConstraintSystem::addConstraint(raw_ostream &errs, Init *init,
+bool ConstraintSystem::addConstraint(raw_ostream &errs, const Init *init,
                                      Variable *self) {
   if (!addConstraintImpl(errs, init, self)) {
     errs << ".. in " << init->getAsString() << '\n';
@@ -90,7 +90,7 @@ bool ConstraintSystem::addConstraint(raw_ostream &errs, Init *init,
   return true;
 }
 
-bool ConstraintSystem::addConstraintImpl(raw_ostream &errs, Init *init,
+bool ConstraintSystem::addConstraintImpl(raw_ostream &errs, const Init *init,
                                          Variable *self) {
   if (auto *dag = dyn_cast<DagInit>(init)) {
     RecordTy *op = dag->getOperatorAsDef({});
@@ -115,7 +115,7 @@ bool ConstraintSystem::addConstraintImpl(raw_ostream &errs, Init *init,
         if (!isValidOperand(i, op->getName()))
           return false;
 
-        Init *operand = dag->getArg(i);
+        const Init *operand = dag->getArg(i);
         if (!addConstraint(errs, operand, self))
           return false;
       }
@@ -138,7 +138,7 @@ bool ConstraintSystem::addConstraintImpl(raw_ostream &errs, Init *init,
         if (!isValidOperand(i, op->getName()))
           return false;
 
-        Init *operand = dag->getArg(i);
+        const Init *operand = dag->getArg(i);
         ConstraintSystem branchSystem(m_context, m_scope);
         if (!branchSystem.addConstraint(errs, operand, self))
           return false;
@@ -165,12 +165,7 @@ bool ConstraintSystem::addConstraintImpl(raw_ostream &errs, Init *init,
   result->m_self = self;
 
   auto *dag = dyn_cast<DagInit>(init);
-  Init *predicateInit;
-  if (dag) {
-    predicateInit = dag->getOperator();
-  } else {
-    predicateInit = init;
-  }
+  const Init *predicateInit = dag ? dag->getOperator() : init;
 
   result->m_predicate = m_context.getPredicate(predicateInit, errs);
   if (!result->m_predicate)
