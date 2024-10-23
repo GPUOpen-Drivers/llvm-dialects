@@ -26,7 +26,7 @@ using namespace llvm;
 using namespace llvm_dialects;
 
 bool DialectType::init(raw_ostream &errs, GenDialectsContext &context,
-                       Init *theInit) {
+                       const Init *theInit) {
   if (!BaseCppPredicate::init(errs, context, theInit))
     return false;
 

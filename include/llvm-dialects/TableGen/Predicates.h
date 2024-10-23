@@ -41,13 +41,13 @@ public:
 
   static std::unique_ptr<Predicate> parse(llvm::raw_ostream &errs,
                                           GenDialectsContext &context,
-                                          llvm::Init *theInit);
+                                          const llvm::Init *theInit);
 
   virtual bool init(llvm::raw_ostream &errs, GenDialectsContext &genContext,
-                    llvm::Init *theInit);
+                    const llvm::Init *theInit);
 
   Kind getKind() const { return m_kind; }
-  llvm::Init *getInit() const { return m_init; }
+  const llvm::Init *getInit() const { return m_init; }
   llvm::ArrayRef<NamedValue> arguments() const { return m_arguments; }
   bool canDerive(unsigned argumentIndex) const {
     assert(argumentIndex < m_canDerive.size());
@@ -59,7 +59,7 @@ protected:
   Predicate(Kind kind) : m_kind(kind) {}
 
   const Kind m_kind;
-  llvm::Init *m_init = nullptr;
+  const llvm::Init *m_init = nullptr;
   std::vector<NamedValue> m_arguments;
 
   /// Whether the constraint can be fully checked given only the "self"
@@ -82,7 +82,7 @@ public:
   }
 
   bool init(llvm::raw_ostream &errs, GenDialectsContext &genContext,
-            llvm::Init *theInit) override final;
+            const llvm::Init *theInit) override final;
 
   const ConstraintSystem &getSystem() const { return m_system; }
   llvm::ArrayRef<Variable *> variables() const { return m_variables; }
@@ -122,7 +122,7 @@ public:
   CppPredicate() : BaseCppPredicate(Kind::CppPredicate) {}
 
   bool init(llvm::raw_ostream &errs, GenDialectsContext &genContext,
-            llvm::Init *theInit) override final;
+            const llvm::Init *theInit) override final;
 };
 
 class Constant : public BaseCppPredicate {
@@ -130,7 +130,7 @@ public:
   Constant() : BaseCppPredicate(Kind::Constant) {}
 
   bool init(llvm::raw_ostream &errs, GenDialectsContext &genContext,
-            llvm::Init *theInit) override final;
+            const llvm::Init *theInit) override final;
 };
 
 } // namespace llvm_dialects

@@ -74,13 +74,13 @@ public:
             const llvm::DenseSet<llvm::StringRef> &dialects);
 
   Trait *getTrait(RecordTy *traitRec);
-  Predicate *getPredicate(llvm::Init *init, llvm::raw_ostream &errs);
+  Predicate *getPredicate(const llvm::Init *init, llvm::raw_ostream &errs);
   Attr *getAttr(RecordTy *record, llvm::raw_ostream &errs);
   OpClass *getOpClass(RecordTy *opClassRec);
   GenDialect *getDialect(RecordTy *dialectRec);
 
-  llvm::Init *getVoidTy() const { return m_voidTy; }
-  llvm::Init *getAny() const { return m_any; }
+  const llvm::Init *getVoidTy() const { return m_voidTy; }
+  const llvm::Init *getAny() const { return m_any; }
 
 private:
   GenDialectsContext(const GenDialectsContext &rhs) = delete;
@@ -88,13 +88,14 @@ private:
   GenDialectsContext(GenDialectsContext &&rhs) = delete;
   GenDialectsContext &operator=(GenDialectsContext &&rhs) = delete;
 
-  Predicate *getPredicateImpl(llvm::Init *record, llvm::raw_ostream &errs);
+  Predicate *getPredicateImpl(const llvm::Init *record,
+                              llvm::raw_ostream &errs);
 
-  llvm::Init *m_voidTy = nullptr;
-  llvm::Init *m_any = nullptr;
+  const llvm::Init *m_voidTy = nullptr;
+  const llvm::Init *m_any = nullptr;
   bool m_attrsComplete = false;
   llvm::DenseMap<RecordTy *, std::unique_ptr<Trait>> m_traits;
-  llvm::DenseMap<llvm::Init *, std::unique_ptr<Predicate>> m_predicates;
+  llvm::DenseMap<const llvm::Init *, std::unique_ptr<Predicate>> m_predicates;
   llvm::DenseMap<RecordTy *, std::unique_ptr<Attr>> m_attrs;
   llvm::DenseMap<RecordTy *, std::unique_ptr<OpClass>> m_opClasses;
   llvm::DenseMap<RecordTy *, std::unique_ptr<GenDialect>> m_dialects;

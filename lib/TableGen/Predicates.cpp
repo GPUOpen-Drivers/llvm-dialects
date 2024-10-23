@@ -29,7 +29,7 @@ using namespace llvm_dialects;
 
 std::unique_ptr<Predicate> Predicate::parse(raw_ostream &errs,
                                             GenDialectsContext &context,
-                                            Init *theInit) {
+                                            const Init *theInit) {
   std::unique_ptr<Predicate> result;
   if (isa<IntInit>(theInit)) {
     result = std::make_unique<Constant>();
@@ -69,7 +69,7 @@ std::unique_ptr<Predicate> Predicate::parse(raw_ostream &errs,
 }
 
 bool Predicate::init(raw_ostream &errs, GenDialectsContext &genContext,
-                     Init *theInit) {
+                     const Init *theInit) {
   m_init = theInit;
 
   if (auto *defInit = dyn_cast<DefInit>(theInit)) {
@@ -104,7 +104,7 @@ bool Predicate::init(raw_ostream &errs, GenDialectsContext &genContext,
 }
 
 bool TgPredicate::init(raw_ostream &errs, GenDialectsContext &genContext,
-                       Init *theInit) {
+                       const Init *theInit) {
   if (!Predicate::init(errs, genContext, theInit))
     return false;
 
@@ -113,7 +113,7 @@ bool TgPredicate::init(raw_ostream &errs, GenDialectsContext &genContext,
   for (const auto &argument : arguments())
     m_variables.push_back(m_scope.getVariable(argument.name));
 
-  DagInit *expression = record->getValueAsDag("expression");
+  const DagInit *expression = record->getValueAsDag("expression");
   if (!m_system.addConstraint(errs, expression, nullptr))
     return false;
 
@@ -151,7 +151,7 @@ bool TgPredicate::init(raw_ostream &errs, GenDialectsContext &genContext,
 }
 
 bool CppPredicate::init(raw_ostream &errs, GenDialectsContext &genContext,
-                        Init *theInit) {
+                        const Init *theInit) {
   if (!BaseCppPredicate::init(errs, genContext, theInit))
     return false;
 
@@ -187,7 +187,7 @@ bool CppPredicate::init(raw_ostream &errs, GenDialectsContext &genContext,
 }
 
 bool Constant::init(raw_ostream &errs, GenDialectsContext &context,
-                    Init *theInit) {
+                    const Init *theInit) {
   if (!BaseCppPredicate::init(errs, context, theInit))
     return false;
 

@@ -667,7 +667,7 @@ bool Evaluator::checkLogicOr(bool writeErrs, const LogicOr *logicOr) {
 }
 
 void Evaluator::checkAssignment(bool writeErrs, Variable *variable,
-                                std::string value, Init *constraint) {
+                                std::string value, const Init *constraint) {
   assert(variable);
   assert(!value.empty());
 

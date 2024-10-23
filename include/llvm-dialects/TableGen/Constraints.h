@@ -76,14 +76,15 @@ public:
 
   llvm::ArrayRef<Variable *> variables() const { return m_variables; }
 
-  bool addConstraint(llvm::raw_ostream &errs, llvm::Init *init, Variable *self);
+  bool addConstraint(llvm::raw_ostream &errs, const llvm::Init *init,
+                     Variable *self);
   void merge(ConstraintSystem &&rhs);
 
   void print(llvm::raw_ostream &out, llvm::StringRef prefix) const;
   void dump() const;
 
 private:
-  bool addConstraintImpl(llvm::raw_ostream &errs, llvm::Init *init,
+  bool addConstraintImpl(llvm::raw_ostream &errs, const llvm::Init *init,
                          Variable *self);
   void addVariable(Variable *variable);
   void addGlobalVariable(Variable *variable);
@@ -117,7 +118,7 @@ public:
   virtual void print(llvm::raw_ostream &out, llvm::StringRef prefix) const = 0;
 
   Kind getKind() const { return m_kind; }
-  llvm::Init *getInit() const { return m_init; }
+  const llvm::Init *getInit() const { return m_init; }
   Variable *getSelf() const { return m_self; }
   llvm::ArrayRef<Variable *> variables() const { return m_variables; }
 
@@ -134,7 +135,7 @@ private:
 
   /// Only for error messages: The TableGen init (if any) from which this
   /// constraint was derived.
-  llvm::Init *m_init = nullptr;
+  const llvm::Init *m_init = nullptr;
 
   /// Only for error messages: The variable in the valued position that this
   /// constraint originally appeared in (if any).
@@ -178,13 +179,15 @@ public:
   void print(llvm::raw_ostream &out, llvm::StringRef prefix) const override;
 
   llvm::ArrayRef<ConstraintSystem> branches() const { return m_branches; }
-  llvm::ArrayRef<llvm::Init *> branchInits() const { return m_branchInits; }
+  llvm::ArrayRef<const llvm::Init *> branchInits() const {
+    return m_branchInits;
+  }
 
 private:
   std::vector<ConstraintSystem> m_branches;
 
   /// Only for error messages.
-  std::vector<llvm::Init *> m_branchInits;
+  std::vector<const llvm::Init *> m_branchInits;
 };
 
 class MetaType {
@@ -226,7 +229,7 @@ public:
 
   llvm::StringRef getName() const;
   llvm::StringRef getCppType() const { return m_cppType; }
-  llvm::Init *getLlvmType() const { return m_llvmType; }
+  const llvm::Init *getLlvmType() const { return m_llvmType; }
   llvm::StringRef getToLlvmValue() const { return m_toLlvmValue; }
   llvm::StringRef getFromLlvmValue() const { return m_fromLlvmValue; }
   llvm::StringRef getToUnsigned() const { return m_toUnsigned; }
@@ -236,7 +239,7 @@ public:
 
   // Set the LLVMType once -- used during initialization to break a circular
   // dependency in how IntegerType is defined.
-  void setLlvmType(llvm::Init *llvmType) {
+  void setLlvmType(const llvm::Init *llvmType) {
     assert(!m_llvmType);
     assert(llvmType);
     m_llvmType = llvmType;
@@ -245,7 +248,7 @@ public:
 private:
   RecordTy *m_record = nullptr;
   std::string m_cppType;
-  llvm::Init *m_llvmType = nullptr;
+  const llvm::Init *m_llvmType = nullptr;
   std::string m_toLlvmValue;
   std::string m_fromLlvmValue;
   std::string m_toUnsigned;
