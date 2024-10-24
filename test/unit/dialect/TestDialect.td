@@ -66,6 +66,17 @@ def DialectOp4 : TestOp<"dialect.op.4", []> {
   let summary = "Test operation 4";
 }
 
+def DialectOp5 : TestOp<"dialect.op.5", []> {
+  let results = (outs Ptr:$ptr);
+  let arguments = (ins Ptr:$result);
+
+  let value_traits = [
+    (ReadOnly $ptr),
+    (NoCapture $ptr),
+    (NonNull $result)
+  ];
+}
+
 def InstNameConflictTestOp : Op<TestDialect, "try.conflict", [WillReturn]> {
   let results = (outs);
   let arguments = (ins value:$instName, value:$inst__name);

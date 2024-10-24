@@ -346,6 +346,29 @@ bool Operation::parse(raw_ostream &errs, GenDialectsContext *context,
   for (RecordTy *traitRec : record->getValueAsListOfDefs("traits"))
     op->traits.push_back(context->getTrait(traitRec));
 
+  ListInit *List = record->getValueAsListInit("value_traits");
+  for (const Init *I : List->getValues()) {
+    if (const DagInit *DI = dyn_cast<DagInit>(I)) {
+      if (DI->getNumArgs() != 1) {
+        errs << "value_traits " << *DI << " is missing argument name";
+        return false;
+      }
+      StringRef name = DI->getArgNameStr(0);
+      std::vector<Trait*>& traits = op->value_traits[name];
+
+      if (const DefInit *Op = dyn_cast<DefInit>(DI->getOperator()))
+        traits.push_back(context->getTrait(Op->getDef()));
+      else {
+        errs << "value_traits " << *DI << " is not of form (Trait $arg)";
+        return false;
+      }
+    }
+    else {
+      errs << "value_traits was not a list of DAG's";
+      return false;
+    }
+  }
+
   EvaluationPlanner evaluation(op->m_system);
 
   for (const auto &arg : op->getFullArguments()) {
