@@ -104,7 +104,11 @@ uint32_t getNumElements() const;
           void setCount(::llvm::Value * count);
         ::llvm::Value * getInitial() const;
           void setInitial(::llvm::Value * initial);
-        
+        enum class ArgumentIndex: uint32_t {
+Count = 1,
+Initial = 2,
+Ptr = 0,
+};
       };
     
       class Add32Op : public ::llvm::CallInst {
@@ -128,7 +132,11 @@ bool verifier(::llvm::raw_ostream &errs);
           void setRhs(::llvm::Value * rhs);
         uint32_t getExtra() const;
           void setExtra(uint32_t extra);
-        
+        enum class ArgumentIndex: uint32_t {
+Extra = 2,
+Lhs = 0,
+Rhs = 1,
+};
 ::llvm::Value * getResult();
 
 
@@ -153,7 +161,10 @@ bool verifier(::llvm::raw_ostream &errs);
           void setLhs(::llvm::Value * lhs);
         ::llvm::Value * getRhs() const;
           void setRhs(::llvm::Value * rhs);
-        
+        enum class ArgumentIndex: uint32_t {
+Lhs = 0,
+Rhs = 1,
+};
 ::llvm::Value * getResult();
 
 
@@ -178,7 +189,10 @@ bool verifier(::llvm::raw_ostream &errs);
           void setVector(::llvm::Value * vector);
         ::llvm::Value * getIndex() const;
           void setIndex(::llvm::Value * index);
-        
+        enum class ArgumentIndex: uint32_t {
+Index = 1,
+Vector = 0,
+};
 ::llvm::Value * getResult();
 
 
@@ -201,7 +215,9 @@ bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getSource() const;
           void setSource(::llvm::Value * source);
-        
+        enum class ArgumentIndex: uint32_t {
+Source = 0,
+};
 ::llvm::Value * getResult();
 
 
@@ -245,7 +261,9 @@ bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getSource() const;
           void setSource(::llvm::Value * source);
-        
+        enum class ArgumentIndex: uint32_t {
+Source = 0,
+};
 ::llvm::Value * getResult();
 
 
@@ -268,7 +286,9 @@ bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getSource() const;
           void setSource(::llvm::Value * source);
-        
+        enum class ArgumentIndex: uint32_t {
+Source = 0,
+};
 ::llvm::Value * getResult();
 
 
@@ -289,7 +309,9 @@ bool verifier(::llvm::raw_ostream &errs);
 
 bool verifier(::llvm::raw_ostream &errs);
 
-bool getVal() const;
+bool getVal() const;enum class ArgumentIndex: uint32_t {
+Val = 0,
+};
 
 
       };
@@ -315,7 +337,11 @@ bool verifier(::llvm::raw_ostream &errs);
           void setValue(::llvm::Value * value);
         ::llvm::Value * getIndex() const;
           void setIndex(::llvm::Value * index);
-        
+        enum class ArgumentIndex: uint32_t {
+Index = 2,
+Value = 1,
+Vector = 0,
+};
 ::llvm::Value * getResult();
 
 
@@ -340,7 +366,10 @@ bool verifier(::llvm::raw_ostream &errs);
           void setInstName(::llvm::Value * instName);
         ::llvm::Value * getInstName_0() const;
           void setInstName_0(::llvm::Value * instName_0);
-        
+        enum class ArgumentIndex: uint32_t {
+InstName = 0,
+InstName_0 = 1,
+};
 ::llvm::Value * getResult();
 
 
@@ -363,7 +392,9 @@ bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getInstName() const;
           void setInstName(::llvm::Value * instName);
-        
+        enum class ArgumentIndex: uint32_t {
+InstName = 0,
+};
 ::llvm::Value * getResult();
 
 
@@ -453,7 +484,9 @@ bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getData() const;
           void setData(::llvm::Value * data);
-        
+        enum class ArgumentIndex: uint32_t {
+Data = 0,
+};
 
 
       };
@@ -475,7 +508,9 @@ bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Type * getSizeofType() const;
           void setSizeofType(::llvm::Type * sizeof_type);
-        
+        enum class ArgumentIndex: uint32_t {
+SizeofType = 0,
+};
 ::llvm::Value * getResult();
 
 
@@ -559,7 +594,9 @@ bool verifier(::llvm::raw_ostream &errs);
 
 bool verifier(::llvm::raw_ostream &errs);
 
-::llvm::StringRef getVal() const;
+::llvm::StringRef getVal() const;enum class ArgumentIndex: uint32_t {
+Val = 0,
+};
 
 
       };
@@ -581,7 +618,9 @@ bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getData() const;
           void setData(::llvm::Value * data);
-        
+        enum class ArgumentIndex: uint32_t {
+Data = 0,
+};
 
 
       };
@@ -607,7 +646,9 @@ bool verifier(::llvm::raw_ostream &errs);
           /// Returns a new op with the same arguments and a new tail argument list.
           /// The object on which this is called will be replaced and erased.
           WriteVarArgOp *replaceArgs(::llvm::ArrayRef<Value *>);
-        
+        enum class ArgumentIndex: uint32_t {
+Data = 0,
+};
 
 
       };
