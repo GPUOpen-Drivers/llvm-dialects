@@ -215,7 +215,8 @@ void AccessorBuilder::emitGetterDefinition() const {
   std::string fromLlvm;
 
   if (!m_arg.type->isVarArgList()) {
-    fromLlvm = tgfmt("getArgOperand($index)", &m_fmt);
+    fromLlvm = tgfmt(
+        "getArgOperand(static_cast<uint32_t>(ArgumentIndex::$Name))", &m_fmt);
     if (auto *attr = dyn_cast<Attr>(m_arg.type))
       fromLlvm = tgfmt(attr->getFromLlvmValue(), &m_fmt, fromLlvm);
     else if (m_arg.type->isTypeArg())
@@ -223,9 +224,9 @@ void AccessorBuilder::emitGetterDefinition() const {
   } else {
     fromLlvm = tgfmt(
         R"(::llvm::make_range(
-            value_op_iterator(arg_begin() + $index),
+            value_op_iterator(arg_begin() + static_cast<uint32_t>(ArgumentIndex::$Name$0)),
             value_op_iterator(arg_end())))",
-        &m_fmt);
+        &m_fmt, "Start");
   }
 
   m_fmt.addSubst("fromLlvm", fromLlvm);
@@ -251,7 +252,7 @@ void AccessorBuilder::emitSetterDefinition() const {
   m_os << tgfmt(R"(
 
       void $_op::set$Name($cppType $name) {
-        setArgOperand($index, $toLlvm);
+        setArgOperand(static_cast<uint32_t>(ArgumentIndex::$Name), $toLlvm);
       })",
                 &m_fmt);
 }
@@ -263,8 +264,8 @@ void AccessorBuilder::emitVarArgReplacementDefinition() const {
 
       $_op *$_op::replace$Name(::llvm::ArrayRef<Value *> $name) {
         ::llvm::SmallVector<Value *> newArgs;
-        if ($index > 0)
-          newArgs.append(arg_begin(), arg_begin() + $index);
+        if (static_cast<uint32_t>(ArgumentIndex::$Name$0) > 0)
+          newArgs.append(arg_begin(), arg_begin() + static_cast<uint32_t>(ArgumentIndex::$Name$0));
         newArgs.append($name.begin(), $name.end());
         $_op *newOp = ::llvm::cast<$_op>(::llvm::CallInst::Create(getCalledFunction(), newArgs, this->getName(), this->getIterator()));
         newOp->copyMetadata(*this);
@@ -272,15 +273,11 @@ void AccessorBuilder::emitVarArgReplacementDefinition() const {
         this->eraseFromParent();
         return newOp;
       })",
-                &m_fmt);
+                &m_fmt, "Start");
 }
 
 void OperationBase::emitArgumentAccessorDefinitions(llvm::raw_ostream &out,
                                                     FmtContext &fmt) const {
-  unsigned numSuperclassArgs = 0;
-  if (m_superclass)
-    numSuperclassArgs = m_superclass->getNumFullArguments();
-
   for (const auto &indexedArg : llvm::enumerate(m_arguments)) {
     FmtContextScope scope(fmt);
 
@@ -288,7 +285,6 @@ void OperationBase::emitArgumentAccessorDefinitions(llvm::raw_ostream &out,
     AccessorBuilder builder{fmt, out, arg, m_attrTypes[indexedArg.index()]};
 
     fmt.withContext("getContext()");
-    fmt.addSubst("index", Twine(numSuperclassArgs + indexedArg.index()));
     fmt.addSubst("cppType", arg.type->getGetterCppType());
     fmt.addSubst("name", arg.name);
     fmt.addSubst("Name", convertToCamelFromSnakeCase(arg.name, true));
