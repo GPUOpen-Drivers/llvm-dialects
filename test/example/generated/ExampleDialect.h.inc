@@ -419,7 +419,9 @@ bool verifier(::llvm::raw_ostream &errs);
           /// Returns a new op with the same arguments and a new tail argument list.
           /// The object on which this is called will be replaced and erased.
           InstNameConflictVarargsOp *replaceInstName_0(::llvm::ArrayRef<Value *>);
-        
+        enum class ArgumentIndex: uint32_t {
+InstName_0Start = 0,
+};
 ::llvm::Value * getResult();
 
 
@@ -648,6 +650,7 @@ bool verifier(::llvm::raw_ostream &errs);
           WriteVarArgOp *replaceArgs(::llvm::ArrayRef<Value *>);
         enum class ArgumentIndex: uint32_t {
 Data = 0,
+ArgsStart = 1,
 };
 
 

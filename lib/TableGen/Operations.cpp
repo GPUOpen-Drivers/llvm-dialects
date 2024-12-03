@@ -171,8 +171,7 @@ void OperationBase::emitArgumentAccessorDeclarations(llvm::raw_ostream &out,
 
     const bool isVarArg = arg.type->isVarArgList();
 
-    if (!isVarArg)
-      argNames.push_back(capitalizedArgName);
+    argNames.push_back(capitalizedArgName + (isVarArg ? "Start" : ""));
 
     std::string defaultDeclaration = "$0 get$1() $2;";
 
