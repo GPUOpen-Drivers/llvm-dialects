@@ -165,7 +165,7 @@ void OperationBase::emitArgumentAccessorDeclarations(llvm::raw_ostream &out,
   if (m_superclass)
     numSuperclassArgs = m_superclass->getNumFullArguments();
 
-  for (const auto &[index, arg] : llvm::enumerate(m_arguments)) {
+  for (const auto &arg : m_arguments) {
     const std::string capitalizedArgName =
         convertToCamelFromSnakeCase(arg.name, true);
 
