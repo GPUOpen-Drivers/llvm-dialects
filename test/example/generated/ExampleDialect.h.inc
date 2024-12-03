@@ -105,9 +105,9 @@ uint32_t getNumElements() const;
         ::llvm::Value * getInitial() const;
           void setInitial(::llvm::Value * initial);
         enum class ArgumentIndex: uint32_t {
+Ptr = 0,
 Count = 1,
 Initial = 2,
-Ptr = 0,
 };
       };
     
@@ -133,9 +133,9 @@ bool verifier(::llvm::raw_ostream &errs);
         uint32_t getExtra() const;
           void setExtra(uint32_t extra);
         enum class ArgumentIndex: uint32_t {
-Extra = 2,
 Lhs = 0,
 Rhs = 1,
+Extra = 2,
 };
 ::llvm::Value * getResult();
 
@@ -190,8 +190,8 @@ bool verifier(::llvm::raw_ostream &errs);
         ::llvm::Value * getIndex() const;
           void setIndex(::llvm::Value * index);
         enum class ArgumentIndex: uint32_t {
-Index = 1,
 Vector = 0,
+Index = 1,
 };
 ::llvm::Value * getResult();
 
@@ -338,9 +338,9 @@ bool verifier(::llvm::raw_ostream &errs);
         ::llvm::Value * getIndex() const;
           void setIndex(::llvm::Value * index);
         enum class ArgumentIndex: uint32_t {
-Index = 2,
-Value = 1,
 Vector = 0,
+Value = 1,
+Index = 2,
 };
 ::llvm::Value * getResult();
 

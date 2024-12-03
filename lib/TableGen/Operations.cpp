@@ -21,7 +21,6 @@
 #include "llvm-dialects/TableGen/Format.h"
 
 #include "llvm/TableGen/Record.h"
-#include <map>
 
 using namespace llvm;
 using namespace llvm_dialects;
@@ -160,7 +159,8 @@ unsigned OperationBase::getNumFullArguments() const {
 
 void OperationBase::emitArgumentAccessorDeclarations(llvm::raw_ostream &out,
                                                      FmtContext &fmt) const {
-  std::map<std::string, uint32_t> argIndexMap;
+  llvm::SmallVector<std::string> argNames;
+
   unsigned numSuperclassArgs = 0;
   if (m_superclass)
     numSuperclassArgs = m_superclass->getNumFullArguments();
@@ -172,7 +172,7 @@ void OperationBase::emitArgumentAccessorDeclarations(llvm::raw_ostream &out,
     const bool isVarArg = arg.type->isVarArgList();
 
     if (!isVarArg)
-      argIndexMap[capitalizedArgName] = numSuperclassArgs + index;
+      argNames.push_back(capitalizedArgName);
 
     std::string defaultDeclaration = "$0 get$1() $2;";
 
@@ -194,10 +194,10 @@ void OperationBase::emitArgumentAccessorDeclarations(llvm::raw_ostream &out,
                  capitalizedArgName, !isVarArg ? "const" : "", arg.name);
   }
 
-  if (!argIndexMap.empty()) {
+  if (!argNames.empty()) {
     out << "enum class ArgumentIndex: uint32_t {\n";
-    for (auto &[argName, index] : argIndexMap)
-      out << tgfmt("$0 = $1,\n", &fmt, argName, index);
+    for (const auto &[index, argName] : llvm::enumerate(argNames))
+      out << tgfmt("$0 = $1,\n", &fmt, argName, numSuperclassArgs + index);
     out << "};";
   }
 }
