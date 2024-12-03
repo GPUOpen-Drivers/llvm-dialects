@@ -159,8 +159,20 @@ unsigned OperationBase::getNumFullArguments() const {
 
 void OperationBase::emitArgumentAccessorDeclarations(llvm::raw_ostream &out,
                                                      FmtContext &fmt) const {
+  llvm::SmallVector<std::string> argNames;
+
+  unsigned numSuperclassArgs = 0;
+  if (m_superclass)
+    numSuperclassArgs = m_superclass->getNumFullArguments();
+
   for (const auto &arg : m_arguments) {
+    const std::string capitalizedArgName =
+        convertToCamelFromSnakeCase(arg.name, true);
+
     const bool isVarArg = arg.type->isVarArgList();
+
+    argNames.push_back(capitalizedArgName + (isVarArg ? "Start" : ""));
+
     std::string defaultDeclaration = "$0 get$1() $2;";
 
     if (!arg.type->isImmutable()) {
@@ -178,7 +190,14 @@ void OperationBase::emitArgumentAccessorDeclarations(llvm::raw_ostream &out,
     }
 
     out << tgfmt(defaultDeclaration, &fmt, arg.type->getGetterCppType(),
-                 convertToCamelFromSnakeCase(arg.name, true), !isVarArg ? "const" : "", arg.name);
+                 capitalizedArgName, !isVarArg ? "const" : "", arg.name);
+  }
+
+  if (!argNames.empty()) {
+    out << "enum class ArgumentIndex: uint32_t {\n";
+    for (const auto &[index, argName] : llvm::enumerate(argNames))
+      out << tgfmt("$0 = $1,\n", &fmt, argName, numSuperclassArgs + index);
+    out << "};";
   }
 }
 
