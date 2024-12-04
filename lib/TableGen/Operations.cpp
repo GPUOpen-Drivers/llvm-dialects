@@ -194,7 +194,7 @@ void OperationBase::emitArgumentAccessorDeclarations(llvm::raw_ostream &out,
   }
 
   if (!argNames.empty()) {
-    out << "struct ArgumentIndex { enum Value: uint32_t {\n";
+    out << "struct ArgumentIndex { enum Enum : uint32_t {\n";
     for (const auto &[index, argName] : llvm::enumerate(argNames))
       out << tgfmt("$0 = $1,\n", &fmt, argName, numSuperclassArgs + index);
     out << "};};";
@@ -216,7 +216,7 @@ void AccessorBuilder::emitGetterDefinition() const {
 
   if (!m_arg.type->isVarArgList()) {
     fromLlvm = tgfmt(
-        "getArgOperand(ArgumentIndex::Value::$Name)", &m_fmt);
+        "getArgOperand(ArgumentIndex::$Name)", &m_fmt);
     if (auto *attr = dyn_cast<Attr>(m_arg.type))
       fromLlvm = tgfmt(attr->getFromLlvmValue(), &m_fmt, fromLlvm);
     else if (m_arg.type->isTypeArg())
@@ -224,7 +224,7 @@ void AccessorBuilder::emitGetterDefinition() const {
   } else {
     fromLlvm = tgfmt(
         R"(::llvm::make_range(
-            value_op_iterator(arg_begin() + ArgumentIndex::Value::$Name$0),
+            value_op_iterator(arg_begin() + ArgumentIndex::$Name$0),
             value_op_iterator(arg_end())))",
         &m_fmt, "Start");
   }
@@ -252,7 +252,7 @@ void AccessorBuilder::emitSetterDefinition() const {
   m_os << tgfmt(R"(
 
       void $_op::set$Name($cppType $name) {
-        setArgOperand(ArgumentIndex::Value::$Name, $toLlvm);
+        setArgOperand(ArgumentIndex::$Name, $toLlvm);
       })",
                 &m_fmt);
 }
@@ -264,8 +264,8 @@ void AccessorBuilder::emitVarArgReplacementDefinition() const {
 
       $_op *$_op::replace$Name(::llvm::ArrayRef<Value *> $name) {
         ::llvm::SmallVector<Value *> newArgs;
-        if (ArgumentIndex::Value::$Name$0 > 0)
-          newArgs.append(arg_begin(), arg_begin() + ArgumentIndex::Value::$Name$0);
+        if (ArgumentIndex::$Name$0 > 0)
+          newArgs.append(arg_begin(), arg_begin() + ArgumentIndex::$Name$0);
         newArgs.append($name.begin(), $name.end());
         $_op *newOp = ::llvm::cast<$_op>(::llvm::CallInst::Create(getCalledFunction(), newArgs, this->getName(), this->getIterator()));
         newOp->copyMetadata(*this);

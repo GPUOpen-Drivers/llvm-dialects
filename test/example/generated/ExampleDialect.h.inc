@@ -104,7 +104,7 @@ uint32_t getNumElements() const;
           void setCount(::llvm::Value * count);
         ::llvm::Value * getInitial() const;
           void setInitial(::llvm::Value * initial);
-        struct ArgumentIndex { enum Value: uint32_t {
+        struct ArgumentIndex { enum Enum : uint32_t {
 Ptr = 0,
 Count = 1,
 Initial = 2,
@@ -132,7 +132,7 @@ bool verifier(::llvm::raw_ostream &errs);
           void setRhs(::llvm::Value * rhs);
         uint32_t getExtra() const;
           void setExtra(uint32_t extra);
-        struct ArgumentIndex { enum Value: uint32_t {
+        struct ArgumentIndex { enum Enum : uint32_t {
 Lhs = 0,
 Rhs = 1,
 Extra = 2,
@@ -161,7 +161,7 @@ bool verifier(::llvm::raw_ostream &errs);
           void setLhs(::llvm::Value * lhs);
         ::llvm::Value * getRhs() const;
           void setRhs(::llvm::Value * rhs);
-        struct ArgumentIndex { enum Value: uint32_t {
+        struct ArgumentIndex { enum Enum : uint32_t {
 Lhs = 0,
 Rhs = 1,
 };};
@@ -189,7 +189,7 @@ bool verifier(::llvm::raw_ostream &errs);
           void setVector(::llvm::Value * vector);
         ::llvm::Value * getIndex() const;
           void setIndex(::llvm::Value * index);
-        struct ArgumentIndex { enum Value: uint32_t {
+        struct ArgumentIndex { enum Enum : uint32_t {
 Vector = 0,
 Index = 1,
 };};
@@ -215,7 +215,7 @@ bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getSource() const;
           void setSource(::llvm::Value * source);
-        struct ArgumentIndex { enum Value: uint32_t {
+        struct ArgumentIndex { enum Enum : uint32_t {
 Source = 0,
 };};
 ::llvm::Value * getResult();
@@ -261,7 +261,7 @@ bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getSource() const;
           void setSource(::llvm::Value * source);
-        struct ArgumentIndex { enum Value: uint32_t {
+        struct ArgumentIndex { enum Enum : uint32_t {
 Source = 0,
 };};
 ::llvm::Value * getResult();
@@ -286,7 +286,7 @@ bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getSource() const;
           void setSource(::llvm::Value * source);
-        struct ArgumentIndex { enum Value: uint32_t {
+        struct ArgumentIndex { enum Enum : uint32_t {
 Source = 0,
 };};
 ::llvm::Value * getResult();
@@ -309,7 +309,7 @@ Source = 0,
 
 bool verifier(::llvm::raw_ostream &errs);
 
-bool getVal() const;struct ArgumentIndex { enum Value: uint32_t {
+bool getVal() const;struct ArgumentIndex { enum Enum : uint32_t {
 Val = 0,
 };};
 
@@ -337,7 +337,7 @@ bool verifier(::llvm::raw_ostream &errs);
           void setValue(::llvm::Value * value);
         ::llvm::Value * getIndex() const;
           void setIndex(::llvm::Value * index);
-        struct ArgumentIndex { enum Value: uint32_t {
+        struct ArgumentIndex { enum Enum : uint32_t {
 Vector = 0,
 Value = 1,
 Index = 2,
@@ -366,7 +366,7 @@ bool verifier(::llvm::raw_ostream &errs);
           void setInstName(::llvm::Value * instName);
         ::llvm::Value * getInstName_0() const;
           void setInstName_0(::llvm::Value * instName_0);
-        struct ArgumentIndex { enum Value: uint32_t {
+        struct ArgumentIndex { enum Enum : uint32_t {
 InstName = 0,
 InstName_0 = 1,
 };};
@@ -392,7 +392,7 @@ bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getInstName() const;
           void setInstName(::llvm::Value * instName);
-        struct ArgumentIndex { enum Value: uint32_t {
+        struct ArgumentIndex { enum Enum : uint32_t {
 InstName = 0,
 };};
 ::llvm::Value * getResult();
@@ -419,7 +419,7 @@ bool verifier(::llvm::raw_ostream &errs);
           /// Returns a new op with the same arguments and a new tail argument list.
           /// The object on which this is called will be replaced and erased.
           InstNameConflictVarargsOp *replaceInstName_0(::llvm::ArrayRef<Value *>);
-        struct ArgumentIndex { enum Value: uint32_t {
+        struct ArgumentIndex { enum Enum : uint32_t {
 InstName_0Start = 0,
 };};
 ::llvm::Value * getResult();
@@ -486,7 +486,7 @@ bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getData() const;
           void setData(::llvm::Value * data);
-        struct ArgumentIndex { enum Value: uint32_t {
+        struct ArgumentIndex { enum Enum : uint32_t {
 Data = 0,
 };};
 
@@ -510,7 +510,7 @@ bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Type * getSizeofType() const;
           void setSizeofType(::llvm::Type * sizeof_type);
-        struct ArgumentIndex { enum Value: uint32_t {
+        struct ArgumentIndex { enum Enum : uint32_t {
 SizeofType = 0,
 };};
 ::llvm::Value * getResult();
@@ -596,7 +596,7 @@ bool verifier(::llvm::raw_ostream &errs);
 
 bool verifier(::llvm::raw_ostream &errs);
 
-::llvm::StringRef getVal() const;struct ArgumentIndex { enum Value: uint32_t {
+::llvm::StringRef getVal() const;struct ArgumentIndex { enum Enum : uint32_t {
 Val = 0,
 };};
 
@@ -620,7 +620,7 @@ bool verifier(::llvm::raw_ostream &errs);
 
 ::llvm::Value * getData() const;
           void setData(::llvm::Value * data);
-        struct ArgumentIndex { enum Value: uint32_t {
+        struct ArgumentIndex { enum Enum : uint32_t {
 Data = 0,
 };};
 
@@ -648,7 +648,7 @@ bool verifier(::llvm::raw_ostream &errs);
           /// Returns a new op with the same arguments and a new tail argument list.
           /// The object on which this is called will be replaced and erased.
           WriteVarArgOp *replaceArgs(::llvm::ArrayRef<Value *>);
-        struct ArgumentIndex { enum Value: uint32_t {
+        struct ArgumentIndex { enum Enum : uint32_t {
 Data = 0,
 ArgsStart = 1,
 };};
