@@ -47,6 +47,21 @@ separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})
 add_definitions("-DHAVE_LLVM_VERSION_MAJOR=${LLVM_VERSION_MAJOR}")
 
+set(LLVM_DIALECTS_TABLEGEN_SOURCES
+    lib/TableGen/Common.cpp
+    lib/TableGen/Constraints.cpp
+    lib/TableGen/Dialects.cpp
+    lib/TableGen/DialectType.cpp
+    lib/TableGen/Evaluator.cpp
+    lib/TableGen/Format.cpp
+    lib/TableGen/GenDialect.cpp
+    lib/TableGen/NamedValue.cpp
+    lib/TableGen/Operations.cpp
+    lib/TableGen/Predicates.cpp
+    lib/TableGen/SymbolTable.cpp
+    lib/TableGen/Traits.cpp
+    )
+
 set(llvm_deps
     Support
     TableGen
@@ -63,8 +78,20 @@ if (llvm_dialects_is_in_llvm_build_tree)
         ${llvm_deps}
     )
 
-    set(LLVM_LINK_COMPONENTS ${llvm_deps})
-    add_llvm_tool(llvm-dialects-tblgen DISABLE_LLVM_LINK_LLVM_DYLIB)
+    set(PROJECT_NAME LLVM)
+    set(LLVM_LINK_COMPONENTS Support)
+    add_tablegen(llvm-dialects-tblgen LLVM_DIALECTS
+        DESTINATION "${LLVM_TOOLS_INSTALL_DIR}"
+        EXPORT LLVM
+        ${LLVM_DIALECTS_TABLEGEN_SOURCES}
+    )
+    if(CMAKE_CROSSCOMPILING)
+        set(LLVM_DIALECTS_TABLEGEN_EXE_HOST "${LLVM_DIALECTS_TABLEGEN_EXE}" CACHE
+                STRING "Native llvm-dialects TableGen executable.")
+        set(LLVM_DIALECTS_TABLEGEN_TARGET_HOST "llvm-dialects-tblgen-host" CACHE
+                STRING "Native llvm-dialects TableGen target.")
+    endif()
+
 else()
     add_library(llvm_dialects)
     llvm_update_compile_flags(llvm_dialects)
@@ -105,19 +132,7 @@ target_include_directories(llvm_dialects_tablegen PRIVATE
     include
     ${LLVM_INCLUDE_DIRS})
 
-target_sources(llvm_dialects_tablegen PRIVATE
-    lib/TableGen/Common.cpp
-    lib/TableGen/Constraints.cpp
-    lib/TableGen/Dialects.cpp
-    lib/TableGen/DialectType.cpp
-    lib/TableGen/Evaluator.cpp
-    lib/TableGen/Format.cpp
-    lib/TableGen/GenDialect.cpp
-    lib/TableGen/NamedValue.cpp
-    lib/TableGen/Operations.cpp
-    lib/TableGen/Predicates.cpp
-    lib/TableGen/SymbolTable.cpp
-    lib/TableGen/Traits.cpp)
+target_sources(llvm_dialects_tablegen PRIVATE ${LLVM_DIALECTS_TABLEGEN_SOURCES})
 
 target_include_directories(llvm-dialects-tblgen PRIVATE
     include
