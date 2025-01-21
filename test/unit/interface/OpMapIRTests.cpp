@@ -118,12 +118,13 @@ TEST_F(OpMapIRTestFixture, IntrinsicOpMatchesInstructionTest) {
   EXPECT_EQ(map[AssumeDesc], "assume");
 
   const auto &SideEffect = *B.CreateCall(
-      Intrinsic::getDeclaration(Mod.get(), Intrinsic::sideeffect));
+      Intrinsic::getOrInsertDeclaration(Mod.get(), Intrinsic::sideeffect));
 
   const std::array<Value *, 1> AssumeArgs = {
       ConstantInt::getBool(Type::getInt1Ty(Context), true)};
   const auto &Assume = *B.CreateCall(
-      Intrinsic::getDeclaration(Mod.get(), Intrinsic::assume), AssumeArgs);
+      Intrinsic::getOrInsertDeclaration(Mod.get(), Intrinsic::assume),
+      AssumeArgs);
 
   EXPECT_FALSE(map.lookup(SideEffect) == map.lookup(Assume));
   EXPECT_EQ(map.lookup(SideEffect), "sideeffect");
@@ -171,7 +172,7 @@ TEST_F(OpMapIRTestFixture, MixedOpMatchesInstructionTest) {
   EXPECT_EQ(map[SideEffectDesc], "sideeffect");
 
   const auto &SideEffect = *B.CreateCall(
-      Intrinsic::getDeclaration(Mod.get(), Intrinsic::sideeffect));
+      Intrinsic::getOrInsertDeclaration(Mod.get(), Intrinsic::sideeffect));
 
   EXPECT_EQ(map.lookup(SideEffect), "sideeffect");
 
@@ -251,4 +252,44 @@ TEST_F(OpMapIRTestFixture, DialectOpOverloadTests) {
 
   EXPECT_EQ(map.lookup(Op1), "DialectOp4");
   EXPECT_EQ(map.lookup(Op2), "DialectOp4");
+}
+
+TEST_F(OpMapIRTestFixture, CallInstCoreOpMatchesInstructionTest) {
+  // Declare %OpaqueTy = type opaque
+  StructType *OpaqueTy = StructType::create(Context, "OpaqueTy");
+
+  // Define types
+  PointerType *OpaquePtrTy = PointerType::get(OpaqueTy, 0);
+  IntegerType *I32Ty = Type::getInt32Ty(Context);
+
+  // Declare: %OpaqueTy* @ProcOpaqueHandle(i32, %OpaqueTy*)
+  FunctionType *ProcOpaqueHandleFuncTyTy =
+      FunctionType::get(OpaquePtrTy, {I32Ty, OpaquePtrTy}, false);
+  FunctionCallee ProcOpaqueHandleFuncTy =
+      Mod->getOrInsertFunction("ProcOpaqueHandle", ProcOpaqueHandleFuncTyTy);
+
+  IRBuilder<> Builder{Context};
+  Builder.SetInsertPoint(getEntryBlock());
+
+  // Create a dummy global variable of type %OpaqueTy*
+  GlobalVariable *GV = new GlobalVariable(
+      *Mod, OpaqueTy, false, GlobalValue::PrivateLinkage, nullptr, "handle");
+  GV->setInitializer(ConstantAggregateZero::get(OpaqueTy));
+  Value *Op2 = GV;
+
+  // Create a constant value (e.g., 123)
+  Value *Op1 = ConstantInt::get(I32Ty, 123);
+
+  // Build the call to ProcOpaqueHandle
+  Value *Args[] = {Op1, Op2};
+  const CallInst &CallInst = *Builder.CreateCall(ProcOpaqueHandleFuncTy, Args);
+
+  // Add Instruction::Call to OpMap
+  OpMap<StringRef> map;
+  const OpDescription CallDesc = OpDescription::fromCoreOp(Instruction::Call);
+  map[CallDesc] = "ProcOpaqueHandle";
+
+  // Look up the CallInst in the map and verify it finds the entry for
+  // Instruction::Call
+  EXPECT_EQ(map.lookup(CallInst), "ProcOpaqueHandle");
 }
