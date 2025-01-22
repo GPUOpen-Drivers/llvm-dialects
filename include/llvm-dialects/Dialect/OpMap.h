@@ -605,15 +605,12 @@ template <typename ValueT, bool isConst> class OpMapIteratorBase final {
       invalidate();
   }
 
-  // Do a lookup for a given instruction. Mark the iterator as invalid
-  // if the instruction is a call-like core instruction.
+  // Do a lookup for a given instruction.
   OpMapIteratorBase(OpMapT *map, const llvm::Instruction &inst) : m_map{map} {
     if (auto *CI = llvm::dyn_cast<llvm::CallInst>(&inst)) {
       const llvm::Function *callee = CI->getCalledFunction();
-      if (callee) {
-        if (createFromFunc(*callee))
-          return;
-      }
+      if (callee && createFromFunc(*callee))
+        return;
     }
 
     const unsigned op = inst.getOpcode();

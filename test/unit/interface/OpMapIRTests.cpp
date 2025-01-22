@@ -254,22 +254,24 @@ TEST_F(OpMapIRTestFixture, DialectOpOverloadTests) {
   EXPECT_EQ(map.lookup(Op2), "DialectOp4");
 }
 
-TEST_F(OpMapIRTestFixture, CallInstCoreOpMatchesInstructionTest) {
-  // Declare %OpaqueTy = type opaque
-  StructType *OpaqueTy = StructType::create(Context, "OpaqueTy");
+TEST_F(OpMapIRTestFixture, CallCoreOpMatchesInstructionTest) {
+  OpMap<StringRef> map;
+  llvm_dialects::Builder B{Context};
 
   // Define types
-  PointerType *OpaquePtrTy = PointerType::get(OpaqueTy, 0);
+  PointerType *PtrTy = B.getPtrTy();
   IntegerType *I32Ty = Type::getInt32Ty(Context);
 
-  // Declare: %OpaqueTy* @ProcOpaqueHandle(i32, %OpaqueTy*)
-  FunctionType *ProcOpaqueHandleFuncTyTy =
-      FunctionType::get(OpaquePtrTy, {I32Ty, OpaquePtrTy}, false);
-  FunctionCallee ProcOpaqueHandleFuncTy =
-      Mod->getOrInsertFunction("ProcOpaqueHandle", ProcOpaqueHandleFuncTyTy);
+  // Declare: %ptr @ProcOpaqueHandle(i32, %ptr)
+  FunctionType *ProcOpaqueHandleFuncTy =
+      FunctionType::get(PtrTy, {I32Ty, PtrTy}, false);
+  FunctionCallee ProcOpaqueHandleFunc =
+      Mod->getOrInsertFunction("ProcOpaqueHandle", ProcOpaqueHandleFuncTy);
 
-  IRBuilder<> Builder{Context};
-  Builder.SetInsertPoint(getEntryBlock());
+  B.SetInsertPoint(getEntryBlock());
+
+  // Declare %OpaqueTy = type opaque
+  StructType *OpaqueTy = StructType::create(Context, "OpaqueTy");
 
   // Create a dummy global variable of type %OpaqueTy*
   GlobalVariable *GV = new GlobalVariable(
@@ -278,18 +280,38 @@ TEST_F(OpMapIRTestFixture, CallInstCoreOpMatchesInstructionTest) {
   Value *Op2 = GV;
 
   // Create a constant value (e.g., 123)
-  Value *Op1 = ConstantInt::get(I32Ty, 123);
+  Value *Op1 = B.getInt32(123);
 
-  // Build the call to ProcOpaqueHandle
+  // Build a call instruction
   Value *Args[] = {Op1, Op2};
-  const CallInst &CallInst = *Builder.CreateCall(ProcOpaqueHandleFuncTy, Args);
+  const CallInst &Call = *B.CreateCall(ProcOpaqueHandleFunc, Args);
+
+  // Create basic blocks for the function  
+  auto *FC = getEntryBlock()->getParent();
+  BasicBlock *Label1BB = BasicBlock::Create(Context, "label1", FC);  
+  BasicBlock *Label2BB = BasicBlock::Create(Context, "label2", FC);  
+  BasicBlock *ContinueBB = BasicBlock::Create(Context, "continue", FC);  
+  
+  // Simulate a function that can branch to multiple labels  
+  // For demonstration purposes, we'll create a placeholder function that represents this behavior  
+  FunctionType *BranchFuncTy = FunctionType::get(Type::getVoidTy(Context), false);  
+  FunctionCallee BranchFunc = Mod->getOrInsertFunction("Branch", BranchFuncTy);
+  
+  // Create the CallBr instruction  
+  const CallBrInst &CallBr = *B.CreateCallBr(BranchFunc, ContinueBB, {Label1BB, Label2BB}); 
+
+  // Load and test OpMap with Call and CallBr
 
   // Add Instruction::Call to OpMap
-  OpMap<StringRef> map;
   const OpDescription CallDesc = OpDescription::fromCoreOp(Instruction::Call);
-  map[CallDesc] = "ProcOpaqueHandle";
+  map[CallDesc] = "Call";
 
-  // Look up the CallInst in the map and verify it finds the entry for
-  // Instruction::Call
-  EXPECT_EQ(map.lookup(CallInst), "ProcOpaqueHandle");
+  // Add Instruction::CallBr to OpMap
+  const OpDescription CallBrDesc = OpDescription::fromCoreOp(Instruction::CallBr);
+  map[CallBrDesc] = "CallBr";
+
+  // Look up the Call and CallBr in the map and verify it finds the entries for
+  // Instruction::Call and Instruction::CallBr
+  EXPECT_EQ(map.lookup(Call), "Call");
+  EXPECT_EQ(map.lookup(CallBr), "CallBr");
 }
