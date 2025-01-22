@@ -262,7 +262,7 @@ TEST_F(OpMapIRTestFixture, CallCoreOpMatchesInstructionTest) {
   PointerType *PtrTy = B.getPtrTy();
   IntegerType *I32Ty = Type::getInt32Ty(Context);
 
-  // Declare: %ptr @ProcOpaqueHandle(i32, %ptr)
+  // Declare: ptr @ProcOpaqueHandle(i32, ptr)
   FunctionType *ProcOpaqueHandleFuncTy =
       FunctionType::get(PtrTy, {I32Ty, PtrTy}, false);
   FunctionCallee ProcOpaqueHandleFunc =
