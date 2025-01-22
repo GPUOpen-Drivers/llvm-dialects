@@ -264,6 +264,12 @@ template <bool rpot> const Visitor<VisitorContainer> &getExampleVisitor() {
               b.add<ReturnInst>([](raw_ostream &out, ReturnInst &ret) {
                 out << "visiting ReturnInst: " << ret << '\n';
               });
+              b.add<CallInst>([](raw_ostream &out, CallInst &ret) {
+                out << "visiting CallInst: " << ret << '\n';
+              });
+              b.add<CallBrInst>([](raw_ostream &out, CallBrInst &ret) {
+                out << "visiting CallBrInst: " << ret << '\n';
+              });
               b.addIntrinsic(
                   Intrinsic::umax, [](raw_ostream &out, IntrinsicInst &umax) {
                     out << "visiting umax intrinsic: " << umax << '\n';
