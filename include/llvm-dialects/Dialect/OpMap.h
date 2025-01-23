@@ -595,33 +595,25 @@ template <typename ValueT, bool isConst> class OpMapIteratorBase final {
         if (std::get<BaseIteratorT>(m_iterator) == map->m_intrinsics.end())
           invalidate();
       }
-    } else {
-      createFromDialectOp(desc.getMnemonic());
+    } else if (!createFromDialectOp(desc.getMnemonic())) {
+      invalidate();
     }
   }
 
   OpMapIteratorBase(OpMapT *map, const llvm::Function &func) : m_map{map} {
-    createFromFunc(func);
+    if (!createFromFunc(func))
+      invalidate();
   }
 
-  // Do a lookup for a given instruction. Mark the iterator as invalid
-  // if the instruction is a call-like core instruction.
+  // Do a lookup for a given instruction.
   OpMapIteratorBase(OpMapT *map, const llvm::Instruction &inst) : m_map{map} {
     if (auto *CI = llvm::dyn_cast<llvm::CallInst>(&inst)) {
       const llvm::Function *callee = CI->getCalledFunction();
-      if (callee) {
-        createFromFunc(*callee);
+      if (callee && createFromFunc(*callee))
         return;
-      }
     }
 
     const unsigned op = inst.getOpcode();
-
-    // Construct an invalid iterator.
-    if (op == llvm::Instruction::Call || op == llvm::Instruction::CallBr) {
-      invalidate();
-      return;
-    }
 
     BaseIteratorT it = m_map->m_coreOpcodes.find(op);
     if (it != m_map->m_coreOpcodes.end()) {
@@ -699,20 +691,20 @@ protected:
 private:
   void invalidate() { m_isInvalid = true; }
 
-  void createFromFunc(const llvm::Function &func) {
+  bool createFromFunc(const llvm::Function &func) {
     if (func.isIntrinsic()) {
       m_iterator = m_map->m_intrinsics.find(func.getIntrinsicID());
 
       if (std::get<BaseIteratorT>(m_iterator) != m_map->m_intrinsics.end()) {
         m_desc = OpDescription::fromIntrinsic(func.getIntrinsicID());
-        return;
+        return true;
       }
     }
 
-    createFromDialectOp(func.getName());
+    return createFromDialectOp(func.getName());
   }
 
-  void createFromDialectOp(llvm::StringRef funcName) {
+  bool createFromDialectOp(llvm::StringRef funcName) {
     size_t idx = 0;
     bool found = false;
     for (auto &dialectOpKV : m_map->m_dialectOps) {
@@ -729,8 +721,7 @@ private:
       ++idx;
     }
 
-    if (!found)
-      invalidate();
+    return found;
   }
 
   // Re-construct base OpDescription from the stored iterator.

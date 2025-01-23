@@ -17,6 +17,9 @@
 ; DEFAULT-NEXT:   %q =
 ; DEFAULT-NEXT: visiting umin (set): %vm = call i32 @llvm.umin.i32(i32 %v1, i32 %q) 
 ; DEFAULT-NEXT: visiting StringAttrOp: Hello world!
+; DEFAULT-NEXT: visiting CallInst:   %0 = call i32 @op.func(i32 %v1, i32 %q)
+; DEFAULT-NEXT: visiting CallBrInst:   callbr void @callee()
+; DEFAULT-NEXT: to label %continueBB [label %label1BB, label %label2BB]
 ; DEFAULT-NEXT: visiting Ret (set): ret void
 ; DEFAULT-NEXT: visiting ReturnInst: ret void
 ; DEFAULT-NEXT: inner.counter = 1
@@ -40,9 +43,21 @@ entry:
   call void (...) @xd.ir.write.vararg(i8 %t, i32 %v2, i32 %q)
   %vm = call i32 @llvm.umin.i32(i32 %v1, i32 %q)
   call void @xd.ir.string.attr.op(ptr @0)
+  call i32 @op.func(i32 %v1, i32 %q)
+  callbr void @callee() to label %continueBB [label %label1BB, label %label2BB]
   ret void
+
+continueBB:
+  br label %entry
+
+label1BB:
+  br label %entry
+
+label2BB:
+  br label %entry
 }
 
+declare void @callee()
 declare i32 @xd.ir.read__i32()
 declare i1 @xd.ir.set.read__i1()
 declare i32 @xd.ir.set.read__i32()
@@ -53,3 +68,4 @@ declare i8 @xd.ir.itrunc__i8(...)
 declare void @xd.ir.string.attr.op(ptr)
 declare i32 @llvm.umax.i32(i32, i32)
 declare i32 @llvm.umin.i32(i32, i32)
+declare void @op.func(i32, i32)
