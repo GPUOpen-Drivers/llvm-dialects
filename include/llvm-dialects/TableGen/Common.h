@@ -20,6 +20,7 @@
 
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
+#include <string>
 
 #if !defined(LLVM_MAIN_REVISION) || LLVM_MAIN_REVISION >= 513628
 using RecordKeeperTy = const llvm::RecordKeeper;
@@ -34,5 +35,9 @@ namespace llvm_dialects {
 void emitHeader(llvm::raw_ostream& out);
 
 bool shouldEmitComments();
+
+/// Prefix an incoming multi-line string with a single-line comment string line
+/// by line.
+std::string createCommentFromString(const std::string &input);
 
 } // namespace llvm_dialects

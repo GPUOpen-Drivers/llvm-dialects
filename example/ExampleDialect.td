@@ -320,3 +320,19 @@ def StringAttrOp : Op<ExampleDialect, "string.attr.op", [WillReturn]> {
     The argument should not have a setter method
   }];
 }
+
+def NoSummaryOp : Op<ExampleDialect, "no.summary.op", [WillReturn]> {
+  let results = (outs);
+  let arguments = (ins);
+
+  let description = [{
+    Some description
+  }];
+}
+
+def NoDescriptionOp : Op<ExampleDialect, "no.description.op", [WillReturn]> {
+  let results = (outs);
+  let arguments = (ins);
+
+  let summary = "Some summary";
+}

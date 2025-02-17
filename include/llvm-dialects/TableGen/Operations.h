@@ -103,6 +103,8 @@ class Operation : public OperationBase {
 public:
   std::string name;
   std::string mnemonic;
+  std::string summary;
+  std::string description;
   std::vector<Trait *> traits;
 
   std::vector<NamedValue> results;
