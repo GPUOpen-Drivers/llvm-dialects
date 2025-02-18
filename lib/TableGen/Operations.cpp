@@ -360,6 +360,11 @@ bool Operation::parse(raw_ostream &errs, GenDialectsContext *context,
 
   op->name = record->getName();
   op->mnemonic = record->getValueAsString("mnemonic");
+  if (!record->isValueUnset("summary"))
+    op->summary = record->getValueAsString("summary");
+
+  if (!record->isValueUnset("description"))
+    op->description = record->getValueAsString("description");
   for (RecordTy *traitRec : record->getValueAsListOfDefs("traits"))
     op->traits.push_back(context->getTrait(traitRec));
 

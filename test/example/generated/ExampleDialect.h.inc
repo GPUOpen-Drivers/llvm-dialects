@@ -111,6 +111,13 @@ Initial = 2,
 };};
       };
     
+      /// Add32Op
+/// add two numbers, and a little extra
+/// 
+///     For those times when you want a little extra, this operation adds two
+///     numbers and puts a constant on top.
+///   
+
       class Add32Op : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.add32"};
 
@@ -142,6 +149,12 @@ Extra = 2,
 
       };
     
+      /// CombineOp
+/// combine two pieces of data
+/// 
+///     Longer description of... well, you know by now how this goes.
+///   
+
       class CombineOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.combine"};
 
@@ -170,6 +183,12 @@ Rhs = 1,
 
       };
     
+      /// ExtractElementOp
+/// extract an element from a vector
+/// 
+///     Return the element of `vector` with the given `index`.
+///   
+
       class ExtractElementOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.extractelement"};
 
@@ -198,6 +217,12 @@ Index = 1,
 
       };
     
+      /// FromFixedVectorOp
+/// convert <n x T> to our custom vector type
+/// 
+///     Demonstrate a more complex unification case.
+///   
+
       class FromFixedVectorOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.fromfixedvector"};
 
@@ -223,6 +248,12 @@ Source = 0,
 
       };
     
+      /// HandleGetOp
+/// obtain a handle
+/// 
+///     Use a dialect type without type arguments.
+///   
+
       class HandleGetOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.handle.get"};
 
@@ -244,6 +275,13 @@ bool verifier(::llvm::raw_ostream &errs);
 
       };
     
+      /// IExtOp
+/// custom ext operation that only works on integers
+/// 
+///     Demonstrates the use of the same unevaluatable `le` predicate in a valued
+///     position.
+///   
+
       class IExtOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.iext"};
 
@@ -269,6 +307,12 @@ Source = 0,
 
       };
     
+      /// ITruncOp
+/// custom trunc operation that only works on integers
+/// 
+///     Demonstrates the use of a predicate in an unvalued position.
+///   
+
       class ITruncOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.itrunc"};
 
@@ -294,6 +338,12 @@ Source = 0,
 
       };
     
+      /// ImmutableOp
+/// demonstrate how an argument will not get a setter method
+/// 
+///     Make an argument immutable
+///   
+
       class ImmutableOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.immutable.op"};
 
@@ -316,6 +366,13 @@ Val = 0,
 
       };
     
+      /// InsertElementOp
+/// insert an element into a vector
+/// 
+///     Insert the given `value` into the given `vector` at the given `index` and
+///     returns the result.
+///   
+
       class InsertElementOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.insertelement"};
 
@@ -347,6 +404,13 @@ Index = 2,
 
       };
     
+      /// InstNameConflictDoubleOp
+/// demonstrate how name conflict will be avoided
+/// 
+///     Like InstNameConflictOp but this has a second parameter named like the
+///     dialect compiler's first choice
+///   
+
       class InstNameConflictDoubleOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.inst.name.conflict.double"};
 
@@ -375,6 +439,14 @@ InstName_0 = 1,
 
       };
     
+      /// InstNameConflictOp
+/// demonstrate how name conflict will be avoided
+/// 
+///     The builder accepts an additional argument to set the name of the created
+///     value like IRBuilder methods. This op produces a conflict so the parameter
+///     will be renamed.
+///   
+
       class InstNameConflictOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.inst.name.conflict"};
 
@@ -400,6 +472,12 @@ InstName = 0,
 
       };
     
+      /// InstNameConflictVarargsOp
+/// demonstrate how name conflict will be avoided
+/// 
+///     Like InstNameConflictOp but with varargs
+///   
+
       class InstNameConflictVarargsOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.inst.name.conflict.varargs"};
 
@@ -427,6 +505,60 @@ InstName_0Start = 0,
 
       };
     
+      /// NoDescriptionOp
+/// Some summary
+
+      class NoDescriptionOp : public ::llvm::CallInst {
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.no.description.op"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isSimpleOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static NoDescriptionOp* create(::llvm_dialects::Builder& b, const llvm::Twine &instName = "");
+
+bool verifier(::llvm::raw_ostream &errs);
+
+
+
+
+      };
+    
+      /// NoSummaryOp
+/// 
+///     Some description
+///   
+
+      class NoSummaryOp : public ::llvm::CallInst {
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.no.summary.op"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isSimpleOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static NoSummaryOp* create(::llvm_dialects::Builder& b, const llvm::Twine &instName = "");
+
+bool verifier(::llvm::raw_ostream &errs);
+
+
+
+
+      };
+    
+      /// ReadOp
+/// read a piece of data
+/// 
+///     Longer description of how this operation reads a piece of data.
+///   
+
       class ReadOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.read"};
 
@@ -448,6 +580,12 @@ bool verifier(::llvm::raw_ostream &errs);
 
       };
     
+      /// SetReadOp
+/// read a piece of data
+/// 
+///     Longer description of how this operation reads a piece of data.
+///   
+
       class SetReadOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.set.read"};
 
@@ -469,6 +607,12 @@ bool verifier(::llvm::raw_ostream &errs);
 
       };
     
+      /// SetWriteOp
+/// write a data element
+/// 
+///     Longer description of how this operation writes pieces of data.
+///   
+
       class SetWriteOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.set.write"};
 
@@ -493,6 +637,12 @@ Data = 0,
 
       };
     
+      /// SizeOfOp
+/// size of a given type
+/// 
+///     Returns the store size of the given type in bytes.
+///   
+
       class SizeOfOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.sizeof"};
 
@@ -518,6 +668,12 @@ SizeofType = 0,
 
       };
     
+      /// StreamAddOp
+/// perform the add operation streaming from memory
+/// 
+///     Illustrate the use of the OpClass feature.
+///   
+
       class StreamAddOp : public StreamReduceOp {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.stream.add"};
 
@@ -539,6 +695,12 @@ bool verifier(::llvm::raw_ostream &errs);
 
       };
     
+      /// StreamMaxOp
+/// perform the max operation streaming from memory
+/// 
+///     Illustrate the use of the OpClass feature.
+///   
+
       class StreamMaxOp : public StreamReduceOp {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.stream.max"};
 
@@ -560,6 +722,12 @@ bool verifier(::llvm::raw_ostream &errs);
 
       };
     
+      /// StreamMinOp
+/// perform the min operation streaming from memory
+/// 
+///     Illustrate the use of the OpClass feature.
+///   
+
       class StreamMinOp : public StreamReduceOp {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.stream.min"};
 
@@ -581,6 +749,12 @@ bool verifier(::llvm::raw_ostream &errs);
 
       };
     
+      /// StringAttrOp
+/// demonstrate an argument that takes in a StringRef
+/// 
+///     The argument should not have a setter method
+///   
+
       class StringAttrOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.string.attr.op"};
 
@@ -603,6 +777,12 @@ Val = 0,
 
       };
     
+      /// WriteOp
+/// write a piece of data
+/// 
+///     Longer description of how this operation writes a piece of data.
+///   
+
       class WriteOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.write"};
 
@@ -627,6 +807,12 @@ Data = 0,
 
       };
     
+      /// WriteVarArgOp
+/// write one or more data elements
+/// 
+///     Longer description of how this operation writes pieces of data.
+///   
+
       class WriteVarArgOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.write.vararg"};
 

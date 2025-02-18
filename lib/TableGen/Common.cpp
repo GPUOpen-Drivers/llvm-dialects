@@ -17,6 +17,8 @@
  */
 
 #include "llvm-dialects/TableGen/Common.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 
 #include "llvm/Support/CommandLine.h"
 
@@ -33,3 +35,18 @@ void llvm_dialects::emitHeader(raw_ostream& out) {
 }
 
 bool llvm_dialects::shouldEmitComments() { return g_emitComments; }
+
+std::string llvm_dialects::createCommentFromString(const std::string &input) {
+  StringRef inRef{input};
+  if (inRef.trim().empty())
+    return input;
+
+  SmallVector<StringRef> lines;
+  inRef.split(lines, '\n');
+
+  std::string outStr;
+  for (auto line : lines)
+    outStr += "/// " + line.str() + '\n';
+
+  return outStr;
+}

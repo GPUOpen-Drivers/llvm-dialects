@@ -172,7 +172,16 @@ class Builder;
     fmt.withOp(op.name);
     fmt.addSubst("mnemonic", op.mnemonic);
 
+    std::string description = "/// " + op.name + '\n';
+
+    if (!op.summary.empty())
+      description += createCommentFromString(op.summary);
+
+    if (!op.description.empty())
+      description += createCommentFromString(op.description);
+
     out << tgfmt(R"(
+      $2
       class $_op : public $0 {
         static const ::llvm::StringLiteral s_name; //{"$dialect.$mnemonic"};
 
@@ -188,7 +197,8 @@ class Builder;
                  &fmt,
                  op.superclass() ? op.superclass()->name : "::llvm::CallInst",
                  !op.haveResultOverloads() ? "isSimpleOperation"
-                                           : "isOverloadedOperation");
+                                           : "isOverloadedOperation",
+                 description);
 
     for (const auto &builder : op.builders())
       builder.emitDeclaration(out, fmt);
