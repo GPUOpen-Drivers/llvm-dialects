@@ -112,6 +112,16 @@ namespace xd::cpp {
             state.setError();
         });
       
+        builder.add<NoDescriptionOp>([](::llvm_dialects::VerifierState &state, NoDescriptionOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
+        builder.add<NoSummaryOp>([](::llvm_dialects::VerifierState &state, NoSummaryOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
         builder.add<ReadOp>([](::llvm_dialects::VerifierState &state, ReadOp &op) {
           if (!op.verifier(state.out()))
             state.setError();
@@ -1519,6 +1529,108 @@ instName
 
 
 
+      const ::llvm::StringLiteral NoDescriptionOp::s_name{"xd.ir.no.description.op"};
+
+    NoDescriptionOp* NoDescriptionOp::create(llvm_dialects::Builder& b, const llvm::Twine &instName) {
+    ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(4);
+    auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), {
+}, false);
+
+    auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << s_name << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
+
+  return ::llvm::cast<NoDescriptionOp>(b.CreateCall(fn, std::nullopt, instName));
+}
+
+
+    bool NoDescriptionOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      using ::llvm_dialects::printable;
+  
+      if (arg_size() != 0) {
+        errs << "  wrong number of arguments: " << arg_size()
+               << ", expected 0\n";
+        return false;
+      }
+    return true;
+}
+
+
+
+
+
+      const ::llvm::StringLiteral NoSummaryOp::s_name{"xd.ir.no.summary.op"};
+
+    NoSummaryOp* NoSummaryOp::create(llvm_dialects::Builder& b, const llvm::Twine &instName) {
+    ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(4);
+    auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), {
+}, false);
+
+    auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << s_name << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
+
+  return ::llvm::cast<NoSummaryOp>(b.CreateCall(fn, std::nullopt, instName));
+}
+
+
+    bool NoSummaryOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      using ::llvm_dialects::printable;
+  
+      if (arg_size() != 0) {
+        errs << "  wrong number of arguments: " << arg_size()
+               << ", expected 0\n";
+        return false;
+      }
+    return true;
+}
+
+
+
+
+
       const ::llvm::StringLiteral ReadOp::s_name{"xd.ir.read"};
 
     ReadOp* ReadOp::create(llvm_dialects::Builder& b, ::llvm::Type* dataType, const llvm::Twine &instName) {
@@ -2353,6 +2465,22 @@ data
       const ::llvm_dialects::OpDescription &
       ::llvm_dialects::OpDescription::get<xd::cpp::InstNameConflictVarargsOp>() {
         static const ::llvm_dialects::OpDescription desc{false, "xd.ir.inst.name.conflict.varargs"};
+        return desc;
+      }
+
+    
+      template <>
+      const ::llvm_dialects::OpDescription &
+      ::llvm_dialects::OpDescription::get<xd::cpp::NoDescriptionOp>() {
+        static const ::llvm_dialects::OpDescription desc{false, "xd.ir.no.description.op"};
+        return desc;
+      }
+
+    
+      template <>
+      const ::llvm_dialects::OpDescription &
+      ::llvm_dialects::OpDescription::get<xd::cpp::NoSummaryOp>() {
+        static const ::llvm_dialects::OpDescription desc{false, "xd.ir.no.summary.op"};
         return desc;
       }
 
