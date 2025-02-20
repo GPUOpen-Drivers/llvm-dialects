@@ -180,6 +180,13 @@ class Builder;
     if (!op.description.empty())
       description += createCommentFromString(op.description);
 
+    if (op.getNumFullArguments() > 0) {
+      description += "/// Arguments\n";
+      for (const auto &[idx, arg] : llvm::enumerate(op.getFullArguments()))
+        description += "/// " + arg.type->getBuilderCppType().str() + " " +
+                       arg.name + "\n";
+    }
+
     out << tgfmt(R"(
       $2
       class $_op : public $0 {
