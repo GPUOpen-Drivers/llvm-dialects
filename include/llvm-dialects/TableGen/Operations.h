@@ -106,6 +106,7 @@ public:
   std::string summary;
   std::string description;
   std::vector<Trait *> traits;
+  std::map<llvm::StringRef, std::vector<Trait *>> value_traits;
 
   std::vector<NamedValue> results;
 
