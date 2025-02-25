@@ -1552,7 +1552,7 @@ instName
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(4);
+          = ExampleDialect::get(context).getAttributeList(5);
     auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), {
 }, false);
 
@@ -1603,7 +1603,7 @@ instName
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(4);
+          = ExampleDialect::get(context).getAttributeList(5);
     auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), {
 }, false);
 
