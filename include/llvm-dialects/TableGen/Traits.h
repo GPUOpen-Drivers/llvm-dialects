@@ -40,6 +40,7 @@ public:
   enum class Kind : uint8_t {
     LlvmAttributeTrait_First,
     LlvmEnumAttributeTrait = LlvmAttributeTrait_First,
+    LlvmEnumArgAttributeTrait,
     LlvmMemoryAttributeTrait,
     LlvmAttributeTrait_Last = LlvmMemoryAttributeTrait,
   };

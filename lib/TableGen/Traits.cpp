@@ -36,7 +36,7 @@ static cl::opt<bool> NoMemoryEffects(
 
 class LlvmEnumAttributeTrait : public LlvmAttributeTrait {
 public:
-  LlvmEnumAttributeTrait() : LlvmAttributeTrait(Kind::LlvmEnumAttributeTrait) {}
+  LlvmEnumAttributeTrait(Kind kind) : LlvmAttributeTrait(kind) {}
 
   void init(GenDialectsContext *context, RecordTy *record) override;
 
@@ -50,6 +50,24 @@ public:
 
 private:
   std::string m_llvmEnum;
+};
+
+class LlvmEnumArgAttributeTrait : public LlvmEnumAttributeTrait {
+public:
+  LlvmEnumArgAttributeTrait() : LlvmEnumAttributeTrait(Kind::LlvmEnumArgAttributeTrait) {}
+
+  void init(GenDialectsContext *context, RecordTy *record) override;
+
+  void addAttribute(llvm::raw_ostream &out, FmtContext &fmt) const override;
+
+  int getIdx() const { return m_idx; }
+
+  static bool classof(const Trait *t) {
+    return t->getKind() == Kind::LlvmEnumArgAttributeTrait;
+  }
+
+private:
+  int m_idx;
 };
 
 class LlvmMemoryAttributeTrait : public LlvmAttributeTrait {
@@ -85,8 +103,10 @@ bool llvm_dialects::noMemoryEffects() {
 std::unique_ptr<Trait> Trait::fromRecord(GenDialectsContext *context,
                                          RecordTy *traitRec) {
   std::unique_ptr<Trait> result;
-  if (traitRec->isSubClassOf("LlvmEnumAttributeTrait")) {
-    result = std::make_unique<LlvmEnumAttributeTrait>();
+  if (traitRec->isSubClassOf("LlvmEnumArgAttributeTrait")) {
+    result = std::make_unique<LlvmEnumArgAttributeTrait>();
+  } else if (traitRec->isSubClassOf("LlvmEnumAttributeTrait")) {
+    result = std::make_unique<LlvmEnumAttributeTrait>(Kind::LlvmEnumAttributeTrait);
   } else if (traitRec->isSubClassOf("Memory")) {
     result = std::make_unique<LlvmMemoryAttributeTrait>();
   } else {
@@ -108,10 +128,22 @@ void LlvmEnumAttributeTrait::init(GenDialectsContext *context,
   m_llvmEnum = record->getValueAsString("llvmEnum");
 }
 
+void LlvmEnumArgAttributeTrait::init(GenDialectsContext *context,
+  RecordTy *record) {
+  LlvmEnumAttributeTrait::init(context, record);
+  m_idx = record->getValueAsInt("idx");
+}
+
 void LlvmEnumAttributeTrait::addAttribute(raw_ostream &out,
                                           FmtContext &fmt) const {
   out << tgfmt("$attrBuilder.addAttribute(::llvm::Attribute::$0);\n", &fmt,
                getLlvmEnum());
+}
+
+void LlvmEnumArgAttributeTrait::addAttribute(raw_ostream &out,
+  FmtContext &fmt) const {
+  out << tgfmt("$argAttrList = $argAttrList.addParamAttribute(context, $0, ::llvm::Attribute::$1);\n",
+               &fmt, getIdx(), getLlvmEnum());
 }
 
 void LlvmMemoryAttributeTrait::init(GenDialectsContext *context,

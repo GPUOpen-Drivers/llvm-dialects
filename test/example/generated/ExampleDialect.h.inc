@@ -47,7 +47,7 @@ namespace xd::cpp {
         }
 
       private:
-        ::std::array<::llvm::AttributeList, 5> m_attributeLists;
+        ::std::array<::llvm::AttributeList, 6> m_attributeLists;
     };
 
     class XdHandleType : public ::llvm::TargetExtType {

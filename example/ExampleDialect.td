@@ -148,7 +148,7 @@ def Add32Op : ExampleOp<"add32", [Memory<[]>, NoUnwind, WillReturn]> {
   }];
 }
 
-def SizeOfOp : ExampleOp<"sizeof", [Memory<[]>, NoUnwind, WillReturn]> {
+def SizeOfOp : ExampleOp<"sizeof", [Memory<[]>, NoUnwind, WillReturn, NoCapture<ArgIndex<0>>]> {
   let results = (outs I64:$result);
   let arguments = (ins type:$sizeof_type);
 

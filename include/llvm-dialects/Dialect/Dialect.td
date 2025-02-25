@@ -328,6 +328,10 @@ class LlvmEnumAttributeTrait<string llvmEnum_> : Trait {
   string llvmEnum = llvmEnum_;
 }
 
+class LlvmEnumArgAttributeTrait<string llvmEnum_> : LlvmEnumAttributeTrait<llvmEnum_> {
+  int idx;
+}
+
 def NoUnwind : LlvmEnumAttributeTrait<"NoUnwind">;
 def WillReturn : LlvmEnumAttributeTrait<"WillReturn">;
 def NoReturn : LlvmEnumAttributeTrait<"NoReturn">;
@@ -345,6 +349,14 @@ def Cold : LlvmEnumAttributeTrait<"Cold">;
 def Hot : LlvmEnumAttributeTrait<"Hot">;
 def Convergent : LlvmEnumAttributeTrait<"Convergent">;
 def Speculatable : LlvmEnumAttributeTrait<"Speculatable">;
+
+class ArgIndex<int argNo_> {
+  int argNo = argNo_;
+}
+
+class NoCapture <ArgIndex argIdx> : LlvmEnumArgAttributeTrait<"NoCapture"> {
+  let idx = argIdx.argNo;
+}
 
 /// Represent the LLVM `memory(...)` attribute as the OR (or union) of memory
 /// effects. An empty effects list means the operation does not access memory
