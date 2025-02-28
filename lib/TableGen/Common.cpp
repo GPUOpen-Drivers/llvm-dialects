@@ -22,6 +22,9 @@
 
 #include "llvm/Support/CommandLine.h"
 
+#include <regex>
+#include <string>
+
 using namespace llvm_dialects;
 using namespace llvm;
 
@@ -36,8 +39,14 @@ void llvm_dialects::emitHeader(raw_ostream& out) {
 
 bool llvm_dialects::shouldEmitComments() { return g_emitComments; }
 
+std::string llvm_dialects::replaceSubstring(const std::string &haystack,
+                                            const std::string &needle,
+                                            const std::string &replacement) {
+  return std::regex_replace(haystack, std::regex(needle), replacement);
+}
+
 std::string llvm_dialects::createCommentFromString(const std::string &input) {
-  StringRef inRef{input};
+  const StringRef inRef{input};
   if (inRef.trim().empty())
     return input;
 
