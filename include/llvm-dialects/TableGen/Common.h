@@ -36,6 +36,12 @@ void emitHeader(llvm::raw_ostream& out);
 
 bool shouldEmitComments();
 
+/// Replace all occurrences of needle in haystack with replacement and return
+/// the new string.
+std::string replaceSubstring(const std::string &haystack,
+                             const std::string &needle,
+                             const std::string &replacement = "");
+
 /// Prefix an incoming multi-line string with a single-line comment string line
 /// by line.
 std::string createCommentFromString(const std::string &input);
