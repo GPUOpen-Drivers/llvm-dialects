@@ -175,35 +175,61 @@ namespace xd::cpp {
     ExampleDialect::ExampleDialect(::llvm::LLVMContext& context) : DialectImpl(context) {
   {
   ::llvm::AttrBuilder attrBuilder{context};
+ ::llvm::AttributeList argAttrList;
+argAttrList = argAttrList.addParamAttribute(context, 0, ::llvm::Attribute::NoCapture);
+argAttrList = argAttrList.addParamAttribute(context, 1, ::llvm::Attribute::NoCapture);
+argAttrList = argAttrList.addParamAttribute(context, 0, ::llvm::Attribute::NoUndef);
+argAttrList = argAttrList.addRetAttribute(context, ::llvm::Attribute::NoUndef);
 attrBuilder.addAttribute(::llvm::Attribute::NoUnwind);
 attrBuilder.addAttribute(::llvm::Attribute::WillReturn);
 attrBuilder.addMemoryAttr(::llvm::MemoryEffects::none());
-m_attributeLists[0] = ::llvm::AttributeList::get(context, ::llvm::AttributeList::FunctionIndex, attrBuilder);
+m_attributeLists[0] = argAttrList.addFnAttributes(context, attrBuilder);
 }
 {
   ::llvm::AttrBuilder attrBuilder{context};
+ ::llvm::AttributeList argAttrList;
+argAttrList = argAttrList.addParamAttribute(context, 0, ::llvm::Attribute::NoCapture);
+attrBuilder.addAttribute(::llvm::Attribute::NoUnwind);
+attrBuilder.addAttribute(::llvm::Attribute::WillReturn);
+attrBuilder.addMemoryAttr(::llvm::MemoryEffects::none());
+m_attributeLists[1] = argAttrList.addFnAttributes(context, attrBuilder);
+}
+{
+  ::llvm::AttrBuilder attrBuilder{context};
+ ::llvm::AttributeList argAttrList;
+attrBuilder.addAttribute(::llvm::Attribute::NoUnwind);
+attrBuilder.addAttribute(::llvm::Attribute::WillReturn);
+attrBuilder.addMemoryAttr(::llvm::MemoryEffects::none());
+m_attributeLists[2] = argAttrList.addFnAttributes(context, attrBuilder);
+}
+{
+  ::llvm::AttrBuilder attrBuilder{context};
+ ::llvm::AttributeList argAttrList;
 attrBuilder.addAttribute(::llvm::Attribute::NoUnwind);
 attrBuilder.addAttribute(::llvm::Attribute::WillReturn);
 attrBuilder.addMemoryAttr(::llvm::MemoryEffects(::llvm::ModRefInfo::Ref));
-m_attributeLists[1] = ::llvm::AttributeList::get(context, ::llvm::AttributeList::FunctionIndex, attrBuilder);
+m_attributeLists[3] = argAttrList.addFnAttributes(context, attrBuilder);
 }
 {
   ::llvm::AttrBuilder attrBuilder{context};
+ ::llvm::AttributeList argAttrList;
 attrBuilder.addAttribute(::llvm::Attribute::NoUnwind);
 attrBuilder.addAttribute(::llvm::Attribute::WillReturn);
 attrBuilder.addMemoryAttr(::llvm::MemoryEffects(::llvm::MemoryEffects::Location::InaccessibleMem, ::llvm::ModRefInfo::Mod));
-m_attributeLists[2] = ::llvm::AttributeList::get(context, ::llvm::AttributeList::FunctionIndex, attrBuilder);
+m_attributeLists[4] = argAttrList.addFnAttributes(context, attrBuilder);
 }
 {
   ::llvm::AttrBuilder attrBuilder{context};
+ ::llvm::AttributeList argAttrList;
 attrBuilder.addAttribute(::llvm::Attribute::NoUnwind);
 attrBuilder.addMemoryAttr(::llvm::MemoryEffects(::llvm::MemoryEffects::Location::InaccessibleMem, ::llvm::ModRefInfo::ModRef));
-m_attributeLists[3] = ::llvm::AttributeList::get(context, ::llvm::AttributeList::FunctionIndex, attrBuilder);
+m_attributeLists[5] = argAttrList.addFnAttributes(context, attrBuilder);
 }
 {
   ::llvm::AttrBuilder attrBuilder{context};
+ ::llvm::AttributeList argAttrList;
 attrBuilder.addAttribute(::llvm::Attribute::WillReturn);
-m_attributeLists[4] = ::llvm::AttributeList::get(context, ::llvm::AttributeList::FunctionIndex, attrBuilder);
+m_attributeLists[6] = argAttrList.addFnAttributes(context, attrBuilder);
 }
 }
 
@@ -474,7 +500,7 @@ uint32_t const extra = getExtra();
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(0);
+          = ExampleDialect::get(context).getAttributeList(2);
     
       std::string mangledName =
           ::llvm_dialects::getMangledName(s_name, {lhs->getType()});
@@ -569,7 +595,7 @@ rhs
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(0);
+          = ExampleDialect::get(context).getAttributeList(2);
     
       std::string mangledName =
           ::llvm_dialects::getMangledName(s_name, {::llvm::cast<XdVectorType>(vector->getType())->getElementType()});
@@ -673,7 +699,7 @@ index
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(0);
+          = ExampleDialect::get(context).getAttributeList(2);
     
       std::string mangledName =
           ::llvm_dialects::getMangledName(s_name, {resultType});
@@ -843,7 +869,7 @@ source
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(0);
+          = ExampleDialect::get(context).getAttributeList(2);
     auto fnType = ::llvm::FunctionType::get(XdHandleType::get(context), {
 }, false);
 
@@ -905,7 +931,7 @@ source
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(0);
+          = ExampleDialect::get(context).getAttributeList(2);
     
       std::string mangledName =
           ::llvm_dialects::getMangledName(s_name, {resultType});
@@ -1003,7 +1029,7 @@ source
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(0);
+          = ExampleDialect::get(context).getAttributeList(2);
     
       std::string mangledName =
           ::llvm_dialects::getMangledName(s_name, {resultType});
@@ -1101,7 +1127,7 @@ source
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(4);
+          = ExampleDialect::get(context).getAttributeList(6);
     auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), {
 ::llvm::IntegerType::get(context, 1),
 }, false);
@@ -1170,7 +1196,7 @@ source
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(0);
+          = ExampleDialect::get(context).getAttributeList(2);
     
       std::string mangledName =
           ::llvm_dialects::getMangledName(s_name, {vector->getType()});
@@ -1292,7 +1318,7 @@ index
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(4);
+          = ExampleDialect::get(context).getAttributeList(6);
     auto fnType = ::llvm::FunctionType::get(::llvm::IntegerType::get(context, 32), true);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
@@ -1376,7 +1402,7 @@ instName_0
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(4);
+          = ExampleDialect::get(context).getAttributeList(6);
     auto fnType = ::llvm::FunctionType::get(::llvm::IntegerType::get(context, 32), true);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
@@ -1450,7 +1476,7 @@ instName
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(4);
+          = ExampleDialect::get(context).getAttributeList(6);
     auto fnType = ::llvm::FunctionType::get(::llvm::IntegerType::get(context, 32), true);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
@@ -1528,7 +1554,7 @@ instName
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(3);
+          = ExampleDialect::get(context).getAttributeList(5);
     
       std::string mangledName =
           ::llvm_dialects::getMangledName(s_name, {dataType});
@@ -1585,7 +1611,7 @@ instName
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(3);
+          = ExampleDialect::get(context).getAttributeList(5);
     
       std::string mangledName =
           ::llvm_dialects::getMangledName(s_name, {dataType});
@@ -1642,7 +1668,7 @@ instName
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(2);
+          = ExampleDialect::get(context).getAttributeList(4);
     auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), true);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
@@ -1705,7 +1731,7 @@ data
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(0);
+          = ExampleDialect::get(context).getAttributeList(1);
     auto fnType = ::llvm::FunctionType::get(::llvm::IntegerType::get(context, 64), true);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
@@ -1779,7 +1805,7 @@ data
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(1);
+          = ExampleDialect::get(context).getAttributeList(3);
     
       std::string mangledName =
           ::llvm_dialects::getMangledName(s_name, {initial->getType()});
@@ -1871,7 +1897,7 @@ initial
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(1);
+          = ExampleDialect::get(context).getAttributeList(3);
     
       std::string mangledName =
           ::llvm_dialects::getMangledName(s_name, {initial->getType()});
@@ -1963,7 +1989,7 @@ initial
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(1);
+          = ExampleDialect::get(context).getAttributeList(3);
     
       std::string mangledName =
           ::llvm_dialects::getMangledName(s_name, {initial->getType()});
@@ -2055,7 +2081,7 @@ initial
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(4);
+          = ExampleDialect::get(context).getAttributeList(6);
     auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), {
 ::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0),
 }, false);
@@ -2124,7 +2150,7 @@ initial
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(2);
+          = ExampleDialect::get(context).getAttributeList(4);
     auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), true);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
@@ -2187,7 +2213,7 @@ data
   
   
       const ::llvm::AttributeList attrs
-          = ExampleDialect::get(context).getAttributeList(2);
+          = ExampleDialect::get(context).getAttributeList(4);
     auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), true);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
