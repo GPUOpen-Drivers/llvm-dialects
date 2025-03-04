@@ -368,6 +368,47 @@ bool Operation::parse(raw_ostream &errs, GenDialectsContext *context,
   for (RecordTy *traitRec : record->getValueAsListOfDefs("traits"))
     op->traits.push_back(context->getTrait(traitRec));
 
+
+  const RecordVal *insVal = record->getValue("arguments");
+  std::unordered_map<std::string, unsigned> nameToIndexMap;
+  if (const DagInit *DI = dyn_cast<DagInit>(insVal->getValue())){
+    for (unsigned i = 0; i < DI->getNumArgs(); ++i) {
+      StringRef name = DI->getArgNameStr(i);
+      nameToIndexMap[name.str()] = i + 1;
+    }
+  }
+
+  const RecordVal *outsVal = record->getValue("results");
+  if (const DagInit *DI = dyn_cast<DagInit>(outsVal->getValue())) {
+    if (DI->getNumArgs() > 0) {
+      StringRef name = DI->getArgNameStr(0);
+      nameToIndexMap[name.str()] = 0;
+    }
+  }
+
+  const ListInit *List = record->getValueAsListInit("value_traits");
+  for (const Init *I : List->getValues()) {
+    if (const DagInit *DI = dyn_cast<DagInit>(I)) {
+      if (DI->getNumArgs() != 1) {
+        errs << "value_traits " << *DI << " is missing argument name";
+        return false;
+      }
+
+      StringRef name = DI->getArgNameStr(0);
+
+      if (const DefInit *Op = dyn_cast<DefInit>(DI->getOperator())) {
+        op->traits.push_back(
+            context->getTrait(Op->getDef(), nameToIndexMap[name.str()]));
+      } else {
+        errs << "value_traits " << *DI << " is not of form (Trait $arg)";
+        return false;
+      }
+    } else {
+      errs << "value_traits was not a list of DAG's";
+      return false;
+    }
+  }
+
   EvaluationPlanner evaluation(op->m_system);
 
   for (const auto &arg : op->getFullArguments()) {

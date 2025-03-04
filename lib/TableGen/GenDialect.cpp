@@ -353,9 +353,11 @@ void llvm_dialects::genDialectDefs(raw_ostream &out, RecordKeeperTy &records) {
   if (!dialect->attribute_lists_empty()) {
     FmtContextScope scope{fmt};
     fmt.addSubst("attrBuilder", "attrBuilder");
+    fmt.addSubst("argAttrList", "argAttrList");
 
     for (const auto &enumeratedTraits : enumerate(dialect->attribute_lists())) {
       out << tgfmt("{\n  ::llvm::AttrBuilder $attrBuilder{context};\n", &fmt);
+      out << tgfmt(" ::llvm::AttributeList $argAttrList;\n", &fmt);
 
       for (const Trait *trait : enumeratedTraits.value()) {
         if (auto *llvmAttribute = dyn_cast<LlvmAttributeTrait>(trait)) {
@@ -365,8 +367,8 @@ void llvm_dialects::genDialectDefs(raw_ostream &out, RecordKeeperTy &records) {
         }
       }
 
-      out << tgfmt("m_attributeLists[$0] = ::llvm::AttributeList::get(context, "
-                   "::llvm::AttributeList::FunctionIndex, $attrBuilder);\n}\n",
+      out << tgfmt("m_attributeLists[$0] = "
+                   "$argAttrList.addFnAttributes(context, $attrBuilder);\n}\n",
                    &fmt, enumeratedTraits.index());
     }
   }

@@ -141,6 +141,13 @@ def Add32Op : ExampleOp<"add32", [Memory<[]>, NoUnwind, WillReturn]> {
   let results = (outs I32:$result);
   let arguments = (ins I32:$lhs, I32:$rhs, AttrI32:$extra);
 
+  let value_traits = [
+    (NoCapture $lhs),
+    (NoCapture $rhs),
+    (NoUndef $lhs),
+    (NoUndef $result),
+  ];
+
   let summary = "add two numbers, and a little extra";
   let description = [{
     For those times when you want a little extra, this operation adds two
@@ -151,6 +158,10 @@ def Add32Op : ExampleOp<"add32", [Memory<[]>, NoUnwind, WillReturn]> {
 def SizeOfOp : ExampleOp<"sizeof", [Memory<[]>, NoUnwind, WillReturn]> {
   let results = (outs I64:$result);
   let arguments = (ins type:$sizeof_type);
+
+  let value_traits = [
+    (NoCapture $sizeof_type),
+  ];
 
   let summary = "size of a given type";
   let description = [{
