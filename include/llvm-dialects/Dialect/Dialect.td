@@ -407,6 +407,8 @@ class OpClass<Dialect dialect_> : OpClassBase {
 
   dag arguments = ?;
 
+  list<dag> value_traits = [];
+
   string summary = ?;
   string description = ?;
 }

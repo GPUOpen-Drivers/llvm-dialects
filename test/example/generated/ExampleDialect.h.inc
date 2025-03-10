@@ -153,6 +153,40 @@ Extra = 2,
 
       };
     
+      /// BufferCompareOp
+/// demonstrate how multiple parameter attributes are added
+/// 
+///     Both arguments get a parameter attribute, as well as return value
+///   
+
+      class BufferCompareOp : public ::llvm::CallInst {
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.buffer.compare.op"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isSimpleOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static BufferCompareOp* create(::llvm_dialects::Builder& b, ::llvm::Value * lhs, ::llvm::Value * rhs, const llvm::Twine &instName = "");
+
+bool verifier(::llvm::raw_ostream &errs);
+
+::llvm::Value * getLhs() const;
+          void setLhs(::llvm::Value * lhs);
+        ::llvm::Value * getRhs() const;
+          void setRhs(::llvm::Value * rhs);
+        struct ArgumentIndex { enum Enum : uint32_t {
+Lhs = 0,
+Rhs = 1,
+};};
+::llvm::Value * getRet();
+
+
+      };
+    
       /// CombineOp
 /// combine two pieces of data
 /// 

@@ -141,13 +141,6 @@ def Add32Op : ExampleOp<"add32", [Memory<[]>, NoUnwind, WillReturn]> {
   let results = (outs I32:$result);
   let arguments = (ins I32:$lhs, I32:$rhs, AttrI32:$extra);
 
-  let value_traits = [
-    (NoCapture $lhs),
-    (NoCapture $rhs),
-    (NoUndef $lhs),
-    (NoUndef $result),
-  ];
-
   let summary = "add two numbers, and a little extra";
   let description = [{
     For those times when you want a little extra, this operation adds two
@@ -245,6 +238,10 @@ def IExtOp : ExampleOp<"iext", [Memory<[]>, NoUnwind, WillReturn]> {
 
 def StreamReduceOp : OpClass<ExampleDialect> {
   let arguments = (ins Ptr:$ptr, I64:$count, value:$initial);
+
+  let value_traits = [
+    (NoCapture $ptr)
+  ];
 
   let summary = "family of operations that reduce some array in memory";
   let description = [{
@@ -346,4 +343,21 @@ def NoDescriptionOp : Op<ExampleDialect, "no.description.op", [WillReturn]> {
   let arguments = (ins);
 
   let summary = "Some summary";
+}
+
+def BufferCompareOp : Op<ExampleDialect, "buffer.compare.op", [WillReturn, NoUnwind]> {
+  let results = (outs I32:$ret);
+  let arguments = (ins Ptr:$lhs, Ptr:$rhs);
+
+  let value_traits = [
+    (NoCapture $lhs),
+    (NoCapture $rhs),
+    (NoUndef $lhs),
+    (NoUndef $ret),
+  ];
+
+  let summary = "demonstrate how multiple parameter attributes are added";
+  let description = [{
+    Both arguments get a parameter attribute, as well as return value
+  }];
 }
