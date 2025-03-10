@@ -26,6 +26,7 @@
 #include "llvm-dialects/TableGen/SymbolTable.h"
 #include "llvm-dialects/TableGen/Traits.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -179,6 +180,15 @@ class Builder;
 
     if (!op.description.empty())
       description += createCommentFromString(op.description);
+
+    if (op.getNumFullArguments() > 0) {
+      description += "/// Arguments\n";
+      for (const auto &[idx, arg] : llvm::enumerate(op.getFullArguments())) {
+        const std::string sanitizedName =
+            replaceSubstring(arg.type->getBuilderCppType().str(), "::llvm::");
+        description += "/// * " + sanitizedName + " " + arg.name + "\n";
+      }
+    }
 
     out << tgfmt(R"(
       $2

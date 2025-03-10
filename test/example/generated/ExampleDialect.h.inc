@@ -117,6 +117,10 @@ Initial = 2,
 ///     For those times when you want a little extra, this operation adds two
 ///     numbers and puts a constant on top.
 ///   
+/// Arguments
+/// * Value * lhs
+/// * Value * rhs
+/// * uint32_t extra
 
       class Add32Op : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.add32"};
@@ -154,6 +158,9 @@ Extra = 2,
 /// 
 ///     Longer description of... well, you know by now how this goes.
 ///   
+/// Arguments
+/// * Value * lhs
+/// * Value * rhs
 
       class CombineOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.combine"};
@@ -188,6 +195,9 @@ Rhs = 1,
 /// 
 ///     Return the element of `vector` with the given `index`.
 ///   
+/// Arguments
+/// * Value * vector
+/// * Value * index
 
       class ExtractElementOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.extractelement"};
@@ -222,6 +232,8 @@ Index = 1,
 /// 
 ///     Demonstrate a more complex unification case.
 ///   
+/// Arguments
+/// * Value * source
 
       class FromFixedVectorOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.fromfixedvector"};
@@ -281,6 +293,8 @@ bool verifier(::llvm::raw_ostream &errs);
 ///     Demonstrates the use of the same unevaluatable `le` predicate in a valued
 ///     position.
 ///   
+/// Arguments
+/// * Value * source
 
       class IExtOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.iext"};
@@ -312,6 +326,8 @@ Source = 0,
 /// 
 ///     Demonstrates the use of a predicate in an unvalued position.
 ///   
+/// Arguments
+/// * Value * source
 
       class ITruncOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.itrunc"};
@@ -343,6 +359,8 @@ Source = 0,
 /// 
 ///     Make an argument immutable
 ///   
+/// Arguments
+/// * bool val
 
       class ImmutableOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.immutable.op"};
@@ -372,6 +390,10 @@ Val = 0,
 ///     Insert the given `value` into the given `vector` at the given `index` and
 ///     returns the result.
 ///   
+/// Arguments
+/// * Value * vector
+/// * Value * value
+/// * Value * index
 
       class InsertElementOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.insertelement"};
@@ -410,6 +432,9 @@ Index = 2,
 ///     Like InstNameConflictOp but this has a second parameter named like the
 ///     dialect compiler's first choice
 ///   
+/// Arguments
+/// * Value * instName
+/// * Value * instName_0
 
       class InstNameConflictDoubleOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.inst.name.conflict.double"};
@@ -446,6 +471,8 @@ InstName_0 = 1,
 ///     value like IRBuilder methods. This op produces a conflict so the parameter
 ///     will be renamed.
 ///   
+/// Arguments
+/// * Value * instName
 
       class InstNameConflictOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.inst.name.conflict"};
@@ -612,6 +639,8 @@ bool verifier(::llvm::raw_ostream &errs);
 /// 
 ///     Longer description of how this operation writes pieces of data.
 ///   
+/// Arguments
+/// * Value * data
 
       class SetWriteOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.set.write"};
@@ -642,6 +671,8 @@ Data = 0,
 /// 
 ///     Returns the store size of the given type in bytes.
 ///   
+/// Arguments
+/// * Type * sizeof_type
 
       class SizeOfOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.sizeof"};
@@ -673,6 +704,10 @@ SizeofType = 0,
 /// 
 ///     Illustrate the use of the OpClass feature.
 ///   
+/// Arguments
+/// * Value * ptr
+/// * Value * count
+/// * Value * initial
 
       class StreamAddOp : public StreamReduceOp {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.stream.add"};
@@ -700,6 +735,10 @@ bool verifier(::llvm::raw_ostream &errs);
 /// 
 ///     Illustrate the use of the OpClass feature.
 ///   
+/// Arguments
+/// * Value * ptr
+/// * Value * count
+/// * Value * initial
 
       class StreamMaxOp : public StreamReduceOp {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.stream.max"};
@@ -727,6 +766,10 @@ bool verifier(::llvm::raw_ostream &errs);
 /// 
 ///     Illustrate the use of the OpClass feature.
 ///   
+/// Arguments
+/// * Value * ptr
+/// * Value * count
+/// * Value * initial
 
       class StreamMinOp : public StreamReduceOp {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.stream.min"};
@@ -754,6 +797,8 @@ bool verifier(::llvm::raw_ostream &errs);
 /// 
 ///     The argument should not have a setter method
 ///   
+/// Arguments
+/// * StringRef val
 
       class StringAttrOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.string.attr.op"};
@@ -782,6 +827,8 @@ Val = 0,
 /// 
 ///     Longer description of how this operation writes a piece of data.
 ///   
+/// Arguments
+/// * Value * data
 
       class WriteOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.write"};
@@ -812,6 +859,9 @@ Data = 0,
 /// 
 ///     Longer description of how this operation writes pieces of data.
 ///   
+/// Arguments
+/// * Value * data
+/// * ArrayRef<Value *> args
 
       class WriteVarArgOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.write.vararg"};
