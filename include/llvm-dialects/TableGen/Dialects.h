@@ -19,6 +19,7 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
 
 #include "llvm-dialects/TableGen/Common.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -75,7 +76,7 @@ public:
   void init(RecordKeeperTy &records,
             const llvm::DenseSet<llvm::StringRef> &dialects);
 
-  Trait *getTrait(RecordTy *traitRec);
+  Trait *getTrait(RecordTy *traitRec, int idx = -1);
   Predicate *getPredicate(const llvm::Init *init, llvm::raw_ostream &errs);
   Attr *getAttr(RecordTy *record, llvm::raw_ostream &errs);
   OpClass *getOpClass(RecordTy *opClassRec);
@@ -97,6 +98,7 @@ private:
   const llvm::Init *m_any = nullptr;
   bool m_attrsComplete = false;
   llvm::DenseMap<RecordTy *, std::unique_ptr<Trait>> m_traits;
+  llvm::DenseMap<RecordTy *, std::unordered_map<int, std::unique_ptr<Trait>>> m_valueTraits;
   llvm::DenseMap<const llvm::Init *, std::unique_ptr<Predicate>> m_predicates;
   llvm::DenseMap<RecordTy *, std::unique_ptr<Attr>> m_attrs;
   llvm::DenseMap<RecordTy *, std::unique_ptr<OpClass>> m_opClasses;

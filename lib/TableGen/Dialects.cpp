@@ -79,14 +79,14 @@ void GenDialect::finalize(raw_ostream &errs) {
 GenDialectsContext::GenDialectsContext() = default;
 GenDialectsContext::~GenDialectsContext() = default;
 
-Trait *GenDialectsContext::getTrait(RecordTy *traitRec) {
+Trait *GenDialectsContext::getTrait(RecordTy *traitRec, int idx) {
   if (!traitRec->isSubClassOf("Trait"))
     report_fatal_error(Twine("Trying to use '") + traitRec->getName() +
                        "' as a trait, but it is not a subclass of 'Trait'");
 
-  auto &result = m_traits[traitRec];
+  auto &result = idx < 0 ? m_traits[traitRec] : m_valueTraits[traitRec][idx];
   if (!result)
-    result = Trait::fromRecord(this, traitRec);
+    result = Trait::fromRecord(this, traitRec, idx);
   return result.get();
 }
 
