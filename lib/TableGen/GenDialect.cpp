@@ -186,7 +186,7 @@ class Builder;
       for (const auto &[idx, arg] : llvm::enumerate(op.getFullArguments())) {
         const std::string sanitizedName =
             replaceSubstring(arg.type->getBuilderCppType().str(), "::llvm::");
-        description += "/// " + sanitizedName + " " + arg.name + "\n";
+        description += "/// * " + sanitizedName + " " + arg.name + "\n";
       }
     }
 
