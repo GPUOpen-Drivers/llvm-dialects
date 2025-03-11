@@ -191,8 +191,8 @@ namespace xd::cpp {
   {
   ::llvm::AttrBuilder attrBuilder{context};
  ::llvm::AttributeList argAttrList;
-argAttrList = argAttrList.addParamAttribute(context, 0, ::llvm::Attribute::NoCapture);
-argAttrList = argAttrList.addParamAttribute(context, 1, ::llvm::Attribute::NoCapture);
+argAttrList = argAttrList.addParamAttribute(context, 0, ::llvm::Attribute::getWithCaptureInfo(context, llvm::CaptureInfo::none()));
+argAttrList = argAttrList.addParamAttribute(context, 1, ::llvm::Attribute::getWithCaptureInfo(context, llvm::CaptureInfo::none()));
 argAttrList = argAttrList.addParamAttribute(context, 0, ::llvm::Attribute::NoUndef);
 argAttrList = argAttrList.addRetAttribute(context, ::llvm::Attribute::NoUndef);
 attrBuilder.addAttribute(::llvm::Attribute::NoUnwind);
@@ -202,7 +202,7 @@ m_attributeLists[0] = argAttrList.addFnAttributes(context, attrBuilder);
 {
   ::llvm::AttrBuilder attrBuilder{context};
  ::llvm::AttributeList argAttrList;
-argAttrList = argAttrList.addParamAttribute(context, 0, ::llvm::Attribute::NoCapture);
+argAttrList = argAttrList.addParamAttribute(context, 0, ::llvm::Attribute::getWithCaptureInfo(context, llvm::CaptureInfo::none()));
 attrBuilder.addAttribute(::llvm::Attribute::NoUnwind);
 attrBuilder.addAttribute(::llvm::Attribute::WillReturn);
 attrBuilder.addMemoryAttr(::llvm::MemoryEffects::none());
@@ -211,7 +211,7 @@ m_attributeLists[1] = argAttrList.addFnAttributes(context, attrBuilder);
 {
   ::llvm::AttrBuilder attrBuilder{context};
  ::llvm::AttributeList argAttrList;
-argAttrList = argAttrList.addParamAttribute(context, 0, ::llvm::Attribute::NoCapture);
+argAttrList = argAttrList.addParamAttribute(context, 0, ::llvm::Attribute::getWithCaptureInfo(context, llvm::CaptureInfo::none()));
 attrBuilder.addAttribute(::llvm::Attribute::NoUnwind);
 attrBuilder.addAttribute(::llvm::Attribute::WillReturn);
 attrBuilder.addMemoryAttr(::llvm::MemoryEffects(::llvm::ModRefInfo::Ref));

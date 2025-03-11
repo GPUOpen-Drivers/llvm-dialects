@@ -115,20 +115,28 @@ void LlvmEnumAttributeTrait::init(GenDialectsContext *context,
 
 void LlvmEnumAttributeTrait::addAttribute(raw_ostream &out,
                                           FmtContext &fmt) const {
-  // Function attribute.
-  if (m_idx < 0)
+  if (m_idx < 0) {
+    // Function attribute.
     out << tgfmt("$attrBuilder.addAttribute(::llvm::Attribute::$0);\n", &fmt,
                  getLlvmEnum());
-  // Return attribute.
-  else if (m_idx == 0)
+  } else if (m_idx == 0) {
+    // Return attribute.
     out << tgfmt("$argAttrList = $argAttrList.addRetAttribute(context, "
                  "::llvm::Attribute::$0);\n",
                  &fmt, getLlvmEnum());
-  // Param attribute.
-  else
-    out << tgfmt("$argAttrList = $argAttrList.addParamAttribute(context, $0, "
-                       "::llvm::Attribute::$1);\n",
-                       &fmt, getIdx(), getLlvmEnum());
+  } else {
+    // Param attribute.
+    if (getLlvmEnum() == "NoCapture") {
+      out << tgfmt("$argAttrList = $argAttrList.addParamAttribute(context, $0, "
+                   "::llvm::Attribute::getWithCaptureInfo(context, "
+                   "llvm::CaptureInfo::none()));\n",
+                   &fmt, getIdx());
+    } else {
+      out << tgfmt("$argAttrList = $argAttrList.addParamAttribute(context, $0, "
+                   "::llvm::Attribute::$1);\n",
+                   &fmt, getIdx(), getLlvmEnum());
+    }
+  }
 }
 
 void LlvmMemoryAttributeTrait::init(GenDialectsContext *context,
