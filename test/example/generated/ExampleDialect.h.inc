@@ -158,6 +158,9 @@ Extra = 2,
 /// 
 ///     Both arguments get a parameter attribute, as well as return value
 ///   
+/// Arguments
+/// * Value * lhs
+/// * Value * rhs
 
       class BufferCompareOp : public ::llvm::CallInst {
         static const ::llvm::StringLiteral s_name; //{"xd.ir.buffer.compare.op"};
