@@ -40,16 +40,19 @@ public:
   enum class Kind : uint8_t {
     LlvmAttributeTrait_First,
     LlvmEnumAttributeTrait = LlvmAttributeTrait_First,
+    LlvmEnumFnAttributeTrait,
+    LlvmEnumRetAttributeTrait,
+    LlvmEnumParamAttributeTrait,
     LlvmMemoryAttributeTrait,
     LlvmAttributeTrait_Last = LlvmMemoryAttributeTrait,
   };
 
   static std::unique_ptr<Trait> fromRecord(GenDialectsContext *context,
-                                           RecordTy *record);
+                                           RecordTy *record, int idx = 0);
 
   virtual ~Trait() = default;
 
-  virtual void init(GenDialectsContext *context, RecordTy *record);
+  virtual void init(GenDialectsContext *context, RecordTy *record, int idx);
 
   Kind getKind() const { return m_kind; }
   RecordTy *getRecord() const { return m_record; }

@@ -22,6 +22,7 @@
 #include "llvm-dialects/TableGen/Dialects.h"
 #include "llvm-dialects/TableGen/Format.h"
 
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace llvm;
@@ -89,6 +90,11 @@ bool OperationBase::init(raw_ostream &errs, GenDialectsContext &context,
     return false;
 
   m_arguments = std::move(*arguments);
+
+  if (m_superclass && m_superclass->traits.size() > 0)
+    traits = m_superclass->traits;
+
+  parseValueTraits(errs, record, context);
 
   // Don't allow any other arguments if the superclass already uses
   // variadic arguments, as the arguments will be appended to the arguments of
@@ -294,6 +300,47 @@ void OperationBase::emitArgumentAccessorDefinitions(llvm::raw_ostream &out,
     builder.emitAccessorDefinitions();
     if (!arg.type->isImmutable() && arg.type->isVarArgList())
       builder.emitVarArgReplacementDefinition();
+  }
+}
+
+void OperationBase::parseValueTraits(raw_ostream &errs, RecordTy *record,
+                                     GenDialectsContext &context) {
+  const DagInit *insDag = record->getValueAsDag("arguments");
+  std::unordered_map<std::string, unsigned> nameToIndexMap;
+  for (unsigned i = 0; i < insDag->getNumArgs(); ++i) {
+    StringRef name = insDag->getArgNameStr(i);
+    nameToIndexMap[name.str()] = i + 1;
+  }
+
+  const RecordVal *outsVal = record->getValue("results");
+  if (outsVal) {
+    const DagInit *DI = cast<DagInit>(outsVal->getValue());
+    if (DI->getNumArgs() > 0) {
+      StringRef name = DI->getArgNameStr(0);
+      nameToIndexMap[name.str()] = 0;
+    }
+  }
+
+  const ListInit *List = record->getValueAsListInit("value_traits");
+  for (const Init *I : List->getValues()) {
+    if (const DagInit *DI = dyn_cast<DagInit>(I)) {
+      if (DI->getNumArgs() != 1) {
+        errs << "value_traits " << *DI << " is missing argument name";
+        return;
+      }
+
+      StringRef name = DI->getArgNameStr(0);
+
+      if (const DefInit *Op = dyn_cast<DefInit>(DI->getOperator())) {
+        traits.push_back(
+            context.getTrait(Op->getDef(), nameToIndexMap[name.str()]));
+      } else {
+        errs << "value_traits " << *DI << " is not of form (Trait $arg)";
+        return;
+      }
+    } else {
+      report_fatal_error("value_traits was not a list of DAG's");
+    }
   }
 }
 

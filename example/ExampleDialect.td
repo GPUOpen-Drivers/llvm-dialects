@@ -152,6 +152,10 @@ def SizeOfOp : ExampleOp<"sizeof", [Memory<[]>, NoUnwind, WillReturn]> {
   let results = (outs I64:$result);
   let arguments = (ins type:$sizeof_type);
 
+  let value_traits = [
+    (NoCapture $sizeof_type),
+  ];
+
   let summary = "size of a given type";
   let description = [{
     Returns the store size of the given type in bytes.
@@ -234,6 +238,10 @@ def IExtOp : ExampleOp<"iext", [Memory<[]>, NoUnwind, WillReturn]> {
 
 def StreamReduceOp : OpClass<ExampleDialect> {
   let arguments = (ins Ptr:$ptr, I64:$count, value:$initial);
+
+  let value_traits = [
+    (NoCapture $ptr)
+  ];
 
   let summary = "family of operations that reduce some array in memory";
   let description = [{
@@ -335,4 +343,21 @@ def NoDescriptionOp : Op<ExampleDialect, "no.description.op", [WillReturn]> {
   let arguments = (ins);
 
   let summary = "Some summary";
+}
+
+def BufferCompareOp : Op<ExampleDialect, "buffer.compare.op", [WillReturn, NoUnwind]> {
+  let results = (outs I32:$ret);
+  let arguments = (ins Ptr:$lhs, Ptr:$rhs);
+
+  let value_traits = [
+    (NoCapture $lhs),
+    (NoCapture $rhs),
+    (NoUndef $lhs),
+    (NoUndef $ret),
+  ];
+
+  let summary = "demonstrate how multiple parameter attributes are added";
+  let description = [{
+    Both arguments get a parameter attribute, as well as return value
+  }];
 }

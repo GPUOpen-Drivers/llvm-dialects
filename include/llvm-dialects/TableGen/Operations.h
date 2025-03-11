@@ -67,6 +67,11 @@ public:
   void emitArgumentAccessorDefinitions(llvm::raw_ostream &out,
                                        FmtContext &fmt) const;
 
+  void parseValueTraits(llvm::raw_ostream &errs, RecordTy *record,
+                        GenDialectsContext &context);
+
+  std::vector<Trait *> traits;
+
 protected:
   bool init(llvm::raw_ostream &errs, GenDialectsContext &context,
             RecordTy *record);
@@ -105,7 +110,6 @@ public:
   std::string mnemonic;
   std::string summary;
   std::string description;
-  std::vector<Trait *> traits;
 
   std::vector<NamedValue> results;
 

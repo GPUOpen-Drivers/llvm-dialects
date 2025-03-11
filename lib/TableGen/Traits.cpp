@@ -38,11 +38,14 @@ class LlvmEnumAttributeTrait : public LlvmAttributeTrait {
 public:
   LlvmEnumAttributeTrait() : LlvmAttributeTrait(Kind::LlvmEnumAttributeTrait) {}
 
-  void init(GenDialectsContext *context, RecordTy *record) override;
+  void init(GenDialectsContext *context, RecordTy *record, int idx) override;
 
-  void addAttribute(llvm::raw_ostream &out, FmtContext &fmt) const override;
+  virtual void addAttribute(llvm::raw_ostream &out,
+                            FmtContext &fmt) const override;
 
   llvm::StringRef getLlvmEnum() const { return m_llvmEnum; }
+
+  int getIdx() const { return m_idx - 1; }
 
   static bool classof(const Trait *t) {
     return t->getKind() == Kind::LlvmEnumAttributeTrait;
@@ -50,6 +53,7 @@ public:
 
 private:
   std::string m_llvmEnum;
+  int m_idx;
 };
 
 class LlvmMemoryAttributeTrait : public LlvmAttributeTrait {
@@ -57,7 +61,7 @@ public:
   LlvmMemoryAttributeTrait()
       : LlvmAttributeTrait(Kind::LlvmMemoryAttributeTrait) {}
 
-  void init(GenDialectsContext *context, RecordTy *record) override;
+  void init(GenDialectsContext *context, RecordTy *record, int idx) override;
 
   void addAttribute(llvm::raw_ostream &out, FmtContext &fmt) const override;
 
@@ -83,7 +87,7 @@ bool llvm_dialects::noMemoryEffects() {
 }
 
 std::unique_ptr<Trait> Trait::fromRecord(GenDialectsContext *context,
-                                         RecordTy *traitRec) {
+                                         RecordTy *traitRec, int idx) {
   std::unique_ptr<Trait> result;
   if (traitRec->isSubClassOf("LlvmEnumAttributeTrait")) {
     result = std::make_unique<LlvmEnumAttributeTrait>();
@@ -92,31 +96,52 @@ std::unique_ptr<Trait> Trait::fromRecord(GenDialectsContext *context,
   } else {
     report_fatal_error(Twine("unsupported trait: ") + traitRec->getName());
   }
-  result->init(context, traitRec);
+  result->init(context, traitRec, idx);
   return result;
 }
 
-void Trait::init(GenDialectsContext *context, RecordTy *record) {
+void Trait::init(GenDialectsContext *context, RecordTy *record, int idx) {
   m_record = record;
 }
 
 StringRef Trait::getName() const { return m_record->getName(); }
 
 void LlvmEnumAttributeTrait::init(GenDialectsContext *context,
-                                  RecordTy *record) {
-  LlvmAttributeTrait::init(context, record);
+                                  RecordTy *record, int idx) {
+  LlvmAttributeTrait::init(context, record, idx);
   m_llvmEnum = record->getValueAsString("llvmEnum");
+  m_idx = idx;
 }
 
 void LlvmEnumAttributeTrait::addAttribute(raw_ostream &out,
                                           FmtContext &fmt) const {
-  out << tgfmt("$attrBuilder.addAttribute(::llvm::Attribute::$0);\n", &fmt,
-               getLlvmEnum());
+  if (m_idx < 0) {
+    // Function attribute.
+    out << tgfmt("$attrBuilder.addAttribute(::llvm::Attribute::$0);\n", &fmt,
+                 getLlvmEnum());
+  } else if (m_idx == 0) {
+    // Return attribute.
+    out << tgfmt("$argAttrList = $argAttrList.addRetAttribute(context, "
+                 "::llvm::Attribute::$0);\n",
+                 &fmt, getLlvmEnum());
+  } else {
+    // Param attribute.
+    if (getLlvmEnum() == "NoCapture") {
+      out << tgfmt("$argAttrList = $argAttrList.addParamAttribute(context, $0, "
+                   "::llvm::Attribute::getWithCaptureInfo(context, "
+                   "llvm::CaptureInfo::none()));\n",
+                   &fmt, getIdx());
+    } else {
+      out << tgfmt("$argAttrList = $argAttrList.addParamAttribute(context, $0, "
+                   "::llvm::Attribute::$1);\n",
+                   &fmt, getIdx(), getLlvmEnum());
+    }
+  }
 }
 
 void LlvmMemoryAttributeTrait::init(GenDialectsContext *context,
-                                    RecordTy *record) {
-  LlvmAttributeTrait::init(context, record);
+                                    RecordTy *record, int idx) {
+  LlvmAttributeTrait::init(context, record, idx);
 
   auto *effects = record->getValueAsListInit("effects");
   for (auto *effectInit : *effects) {

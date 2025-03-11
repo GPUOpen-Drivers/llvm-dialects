@@ -322,29 +322,42 @@ multiclass AttrEnum<string cppType_> {
 /// Traits generally map to llvm::Attributes.
 // ============================================================================
 
-class Trait;
+class TraitProperty;
+def FnTrait : TraitProperty;
+def ParamTrait : TraitProperty;
+def RetTrait : TraitProperty;
 
-class LlvmEnumAttributeTrait<string llvmEnum_> : Trait {
+class Trait<list<TraitProperty> P> {
+  list<TraitProperty> Properties = P;
+}
+
+class LlvmEnumAttributeTrait<string llvmEnum_, list<TraitProperty> P> : Trait<P> {
   string llvmEnum = llvmEnum_;
 }
 
-def NoUnwind : LlvmEnumAttributeTrait<"NoUnwind">;
-def WillReturn : LlvmEnumAttributeTrait<"WillReturn">;
-def NoReturn : LlvmEnumAttributeTrait<"NoReturn">;
-def NoRecurse : LlvmEnumAttributeTrait<"NoRecurse">;
-def NoSync : LlvmEnumAttributeTrait<"NoSync">;
-def NoFree : LlvmEnumAttributeTrait<"NoFree">;
-def MustProgress : LlvmEnumAttributeTrait<"MustProgress">;
-def NoCallback : LlvmEnumAttributeTrait<"NoCallback">;
-def NoDuplicate : LlvmEnumAttributeTrait<"NoDuplicate">;
-def NoBuiltin : LlvmEnumAttributeTrait<"NoBuiltin">;
-def Builtin : LlvmEnumAttributeTrait<"Builtin">;
-def InlineHint : LlvmEnumAttributeTrait<"InlineHint">;
-def AlwaysInline : LlvmEnumAttributeTrait<"AlwaysInline">;
-def Cold : LlvmEnumAttributeTrait<"Cold">;
-def Hot : LlvmEnumAttributeTrait<"Hot">;
-def Convergent : LlvmEnumAttributeTrait<"Convergent">;
-def Speculatable : LlvmEnumAttributeTrait<"Speculatable">;
+def NoUnwind : LlvmEnumAttributeTrait<"NoUnwind", [FnTrait]>;
+def WillReturn : LlvmEnumAttributeTrait<"WillReturn", [FnTrait]>;
+def NoReturn : LlvmEnumAttributeTrait<"NoReturn", [FnTrait]>;
+def NoRecurse : LlvmEnumAttributeTrait<"NoRecurse", [FnTrait]>;
+def NoSync : LlvmEnumAttributeTrait<"NoSync", [FnTrait]>;
+def NoFree : LlvmEnumAttributeTrait<"NoFree", [FnTrait]>;
+def MustProgress : LlvmEnumAttributeTrait<"MustProgress", [FnTrait]>;
+def NoCallback : LlvmEnumAttributeTrait<"NoCallback", [FnTrait]>;
+def NoDuplicate : LlvmEnumAttributeTrait<"NoDuplicate", [FnTrait]>;
+def NoBuiltin : LlvmEnumAttributeTrait<"NoBuiltin", [FnTrait]>;
+def Builtin : LlvmEnumAttributeTrait<"Builtin", [FnTrait]>;
+def InlineHint : LlvmEnumAttributeTrait<"InlineHint", [FnTrait]>;
+def AlwaysInline : LlvmEnumAttributeTrait<"AlwaysInline", [FnTrait]>;
+def Cold : LlvmEnumAttributeTrait<"Cold", [FnTrait]>;
+def Hot : LlvmEnumAttributeTrait<"Hot", [FnTrait]>;
+def Convergent : LlvmEnumAttributeTrait<"Convergent", [FnTrait]>;
+def Speculatable : LlvmEnumAttributeTrait<"Speculatable", [FnTrait]>;
+
+def NoCapture : LlvmEnumAttributeTrait<"NoCapture", [ParamTrait]>;
+def ReadOnly : LlvmEnumAttributeTrait<"ReadOnly", [ParamTrait]>;
+
+def NoUndef : LlvmEnumAttributeTrait<"NoUndef", [ParamTrait, RetTrait]>;
+def NonNull : LlvmEnumAttributeTrait<"NonNull", [ParamTrait, RetTrait]>;
 
 /// Represent the LLVM `memory(...)` attribute as the OR (or union) of memory
 /// effects. An empty effects list means the operation does not access memory
@@ -358,7 +371,7 @@ def Speculatable : LlvmEnumAttributeTrait<"Speculatable">;
 /// Example: `Memory<[(ref), (mod ArgMem, InaccessibleMem)]>` means the
 /// operation may read from any kind of memory and write to argument and
 /// inaccessible memory.
-class Memory<list<dag> effects_> : Trait {
+class Memory<list<dag> effects_> : Trait<[FnTrait]> {
   list<dag> effects = effects_;
 }
 
@@ -394,6 +407,8 @@ class OpClass<Dialect dialect_> : OpClassBase {
 
   dag arguments = ?;
 
+  list<dag> value_traits = [];
+
   string summary = ?;
   string description = ?;
 }
@@ -411,6 +426,8 @@ class Op<Dialect dialect_, string mnemonic_, list<Trait> traits_> {
 
   dag arguments = ?;
   dag results = ?;
+
+  list<dag> value_traits = [];
 
   list<dag> verifier = [];
 
