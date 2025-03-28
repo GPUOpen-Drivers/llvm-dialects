@@ -91,6 +91,20 @@ struct VisitorPayloadProjection {
     static constexpr std::size_t offset = offsetof(PayloadT, field);           \
   };
 
+/// Identical to the previous macro except this one handles complex data types
+///
+/// offsetof() should not be used with complex types that have a non-standard
+/// layout, such as classes. Here we set useOffsetof = false to avoid using
+/// offsetof() on the field.
+#define LLVM_DIALECTS_VISITOR_PAYLOAD_PROJECT_COMPLEX_FIELD(PayloadT, field)   \
+  template <>                                                                  \
+  struct llvm_dialects::detail::VisitorPayloadOffsetProjection<                \
+      PayloadT,                                                                \
+      std::remove_reference_t<decltype(std::declval<PayloadT>().field)>> {     \
+    static constexpr bool useOffsetof = false;                                 \
+    static constexpr std::size_t offset = 0;                                   \
+  };
+
 /// @brief Possible result states of visitor callbacks
 ///
 /// A visitor may have multiple callbacks registered that match on the same
