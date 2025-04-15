@@ -29,6 +29,7 @@
 using namespace llvm_dialects;
 using namespace llvm;
 
+#if LLVM_MAIN_REVISION && LLVM_MAIN_REVISION < 533951
 namespace llvm {
 cl::opt<bool> EmitLongStrLiterals(
     "long-string-literals",
@@ -37,6 +38,7 @@ cl::opt<bool> EmitLongStrLiterals(
              "compile-time performance win, but upsets some compilers"),
     cl::Hidden, cl::init(true));
 } // end namespace llvm
+#endif // LLVM_MAIN_REVISION && LLVM_MAIN_REVISION < 533951
 
 namespace {
 
