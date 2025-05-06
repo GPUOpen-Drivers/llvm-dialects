@@ -204,7 +204,9 @@ HANDLE_INTRINSIC_DESC_OPCODE_SET(MemIntrinsic, Intrinsic::memcpy,
 HANDLE_INTRINSIC_DESC_OPCODE_SET(MemSetInst, Intrinsic::memset,
                                  Intrinsic::memset_inline)
 
+#if LLVM_MAIN_REVISION && LLVM_MAIN_REVISION < 536364
 HANDLE_INTRINSIC_DESC(MemSetInlineInst, memset_inline)
+#endif
 
 HANDLE_INTRINSIC_DESC_OPCODE_SET(MemTransferInst, Intrinsic::memcpy,
                                  Intrinsic::memmove, Intrinsic::memcpy_inline)
@@ -213,7 +215,9 @@ HANDLE_INTRINSIC_DESC_OPCODE_SET(MemCpyInst, Intrinsic::memcpy,
                                  Intrinsic::memcpy_inline)
 
 HANDLE_INTRINSIC_DESC(MemMoveInst, memmove)
+#if LLVM_MAIN_REVISION && LLVM_MAIN_REVISION < 536364
 HANDLE_INTRINSIC_DESC(MemCpyInlineInst, memcpy_inline)
+#endif
 
 HANDLE_INTRINSIC_DESC_OPCODE_SET(AnyMemIntrinsic, Intrinsic::memcpy,
                                  Intrinsic::memcpy_inline, Intrinsic::memmove,
