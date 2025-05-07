@@ -183,6 +183,7 @@ HANDLE_INTRINSIC_DESC(DbgAssignIntrinsic, dbg_assign)
 #endif
 HANDLE_INTRINSIC_DESC(DbgLabelInst, dbg_label)
 
+#if LLVM_MAIN_REVISION && LLVM_MAIN_REVISION < 536496
 HANDLE_INTRINSIC_DESC_OPCODE_SET(AtomicMemIntrinsic,
                                  Intrinsic::memcpy_element_unordered_atomic,
                                  Intrinsic::memmove_element_unordered_atomic,
@@ -196,6 +197,7 @@ HANDLE_INTRINSIC_DESC_OPCODE_SET(AtomicMemTransferInst,
 
 HANDLE_INTRINSIC_DESC(AtomicMemCpyInst, memcpy_element_unordered_atomic)
 HANDLE_INTRINSIC_DESC(AtomicMemMoveInst, memmove_element_unordered_atomic)
+#endif
 HANDLE_INTRINSIC_DESC_OPCODE_SET(MemIntrinsic, Intrinsic::memcpy,
                                  Intrinsic::memmove, Intrinsic::memset,
                                  Intrinsic::memset_inline,
