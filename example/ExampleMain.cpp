@@ -105,7 +105,7 @@ void createFunctionExample(Module &module, const Twine &name) {
 
   y6->setIndex(b.getInt32(1));
 
-  Value *p1 = b.create<xd::cpp::ReadOp>(b.getPtrTy(0));
+  Value *p1 = b.create<xd::cpp::ReadOp>(b.getPtrTy());
   p1->setName("p1");
   Value *p2 = b.create<xd::cpp::StreamAddOp>(p1, b.getInt64(14), b.getInt8(0));
   p2->setName("p2");

@@ -564,17 +564,17 @@ rhs
 ::llvm::Type * const retType = getRet()->getType();
 (void)retType;
 
-        if (::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0) != lhsType) {
+        if (::llvm::PointerType::get(context, 0) != lhsType) {
           errs << "  unexpected value of $lhs:\n";
-          errs << "    expected:  " << printable(::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0)) << '\n';
+          errs << "    expected:  " << printable(::llvm::PointerType::get(context, 0)) << '\n';
           errs << "    actual:    " << printable(lhsType) << '\n';
         
           return false;
         }
       
-        if (::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0) != rhsType) {
+        if (::llvm::PointerType::get(context, 0) != rhsType) {
           errs << "  unexpected value of $rhs:\n";
-          errs << "    expected:  " << printable(::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0)) << '\n';
+          errs << "    expected:  " << printable(::llvm::PointerType::get(context, 0)) << '\n';
           errs << "    actual:    " << printable(rhsType) << '\n';
         
           return false;
@@ -2077,9 +2077,9 @@ initial
 ::llvm::Type * const resultType = getResult()->getType();
 (void)resultType;
 
-        if (::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0) != ptrType) {
+        if (::llvm::PointerType::get(context, 0) != ptrType) {
           errs << "  unexpected value of $ptr:\n";
-          errs << "    expected:  " << printable(::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0)) << '\n';
+          errs << "    expected:  " << printable(::llvm::PointerType::get(context, 0)) << '\n';
           errs << "    actual:    " << printable(ptrType) << '\n';
         
           return false;
@@ -2169,9 +2169,9 @@ initial
 ::llvm::Type * const resultType = getResult()->getType();
 (void)resultType;
 
-        if (::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0) != ptrType) {
+        if (::llvm::PointerType::get(context, 0) != ptrType) {
           errs << "  unexpected value of $ptr:\n";
-          errs << "    expected:  " << printable(::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0)) << '\n';
+          errs << "    expected:  " << printable(::llvm::PointerType::get(context, 0)) << '\n';
           errs << "    actual:    " << printable(ptrType) << '\n';
         
           return false;
@@ -2261,9 +2261,9 @@ initial
 ::llvm::Type * const resultType = getResult()->getType();
 (void)resultType;
 
-        if (::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0) != ptrType) {
+        if (::llvm::PointerType::get(context, 0) != ptrType) {
           errs << "  unexpected value of $ptr:\n";
-          errs << "    expected:  " << printable(::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0)) << '\n';
+          errs << "    expected:  " << printable(::llvm::PointerType::get(context, 0)) << '\n';
           errs << "    actual:    " << printable(ptrType) << '\n';
         
           return false;
@@ -2303,7 +2303,7 @@ initial
       const ::llvm::AttributeList attrs
           = ExampleDialect::get(context).getAttributeList(6);
     auto fnType = ::llvm::FunctionType::get(::llvm::Type::getVoidTy(context), {
-::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0),
+::llvm::PointerType::get(context, 0),
 }, false);
 
     auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
@@ -2343,10 +2343,10 @@ initial
         return false;
       }
   
-        if (getArgOperand(0)->getType() != ::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0)) {
+        if (getArgOperand(0)->getType() != ::llvm::PointerType::get(context, 0)) {
           errs << "  argument 0 (val) has type: "
                  << *getArgOperand(0)->getType() << '\n';
-          errs << "  expected: " << *::llvm::PointerType::get(::llvm::Type::getInt8Ty(context), 0) << '\n';
+          errs << "  expected: " << *::llvm::PointerType::get(context, 0) << '\n';
           return false;
         }
       ::llvm::StringRef const val = getVal();
