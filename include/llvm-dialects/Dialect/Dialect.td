@@ -175,7 +175,7 @@ def I64 : TgConstant<(IntegerType 64)>, Type;
 def PointerType : BuiltinType {
   let arguments = (args type:$self, AttrI32:$address_space);
   // Supports both typed and opaque pointers.
-  let evaluate = "::llvm::PointerType::get(::llvm::Type::getInt8Ty($_context), $address_space)";
+  let evaluate = "::llvm::PointerType::get($_context, $address_space)";
   let check = "$self->isPointerTy()";
   let capture = ["$self->getPointerAddressSpace()"];
 }
