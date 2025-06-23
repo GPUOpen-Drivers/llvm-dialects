@@ -102,7 +102,6 @@ if (llvm_dialects_is_in_llvm_build_tree)
     add_tablegen(llvm-dialects-tblgen LLVM_DIALECTS
         DESTINATION "${LLVM_TOOLS_INSTALL_DIR}"
         EXPORT LLVM
-        ${LLVM_DIALECTS_TABLEGEN_SOURCES}
     )
     if(CMAKE_CROSSCOMPILING)
         set(LLVM_DIALECTS_TABLEGEN_EXE_HOST "${LLVM_DIALECTS_TABLEGEN_EXE}" CACHE
