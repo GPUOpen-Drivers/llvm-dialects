@@ -322,7 +322,7 @@ void OperationBase::parseValueTraits(raw_ostream &errs, RecordTy *record,
   }
 
   const ListInit *List = record->getValueAsListInit("value_traits");
-  for (const Init *I : List->getValues()) {
+  for (const Init *I : List->getElements()) {
     if (const DagInit *DI = dyn_cast<DagInit>(I)) {
       if (DI->getNumArgs() != 1) {
         errs << "value_traits " << *DI << " is missing argument name";
@@ -840,7 +840,7 @@ void BuilderMethod::emitDefinition(raw_ostream &out, FmtContext &fmt,
     )",
                  &fmt);
   } else {
-    out << tgfmt("return ::llvm::cast<$_op>($_builder.CreateCall($fn, std::nullopt, $_instname));\n",
+    out << tgfmt("return ::llvm::cast<$_op>($_builder.CreateCall($fn, {}, $_instname));\n",
                  &fmt);
   }
 

@@ -1007,7 +1007,7 @@ source
     assert(fn.getFunctionType() == fnType);
     assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
-  return ::llvm::cast<HandleGetOp>(b.CreateCall(fn, std::nullopt, instName));
+  return ::llvm::cast<HandleGetOp>(b.CreateCall(fn, {}, instName));
 }
 
 
@@ -1692,7 +1692,7 @@ instName
     assert(fn.getFunctionType() == fnType);
     assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
-  return ::llvm::cast<NoDescriptionOp>(b.CreateCall(fn, std::nullopt, instName));
+  return ::llvm::cast<NoDescriptionOp>(b.CreateCall(fn, {}, instName));
 }
 
 
@@ -1743,7 +1743,7 @@ instName
     assert(fn.getFunctionType() == fnType);
     assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
-  return ::llvm::cast<NoSummaryOp>(b.CreateCall(fn, std::nullopt, instName));
+  return ::llvm::cast<NoSummaryOp>(b.CreateCall(fn, {}, instName));
 }
 
 
@@ -1797,7 +1797,7 @@ instName
     assert(fn.getFunctionType() == fnType);
     assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
-  return ::llvm::cast<ReadOp>(b.CreateCall(fn, std::nullopt, instName));
+  return ::llvm::cast<ReadOp>(b.CreateCall(fn, {}, instName));
 }
 
 
@@ -1854,7 +1854,7 @@ instName
     assert(fn.getFunctionType() == fnType);
     assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
 
-  return ::llvm::cast<SetReadOp>(b.CreateCall(fn, std::nullopt, instName));
+  return ::llvm::cast<SetReadOp>(b.CreateCall(fn, {}, instName));
 }
 
 
