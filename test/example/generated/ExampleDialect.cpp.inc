@@ -67,6 +67,16 @@ namespace xd::cpp {
             state.setError();
         });
       
+        builder.add<DummyStructBackedInpOp>([](::llvm_dialects::VerifierState &state, DummyStructBackedInpOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
+        builder.add<DummyStructBackedOutpOp>([](::llvm_dialects::VerifierState &state, DummyStructBackedOutpOp &op) {
+          if (!op.verifier(state.out()))
+            state.setError();
+        });
+      
         builder.add<ExtractElementOp>([](::llvm_dialects::VerifierState &state, ExtractElementOp &op) {
           if (!op.verifier(state.out()))
             state.setError();
@@ -248,6 +258,44 @@ m_attributeLists[6] = argAttrList.addFnAttributes(context, attrBuilder);
 }
 }
 
+StructBackedType* StructBackedType::get(::llvm::LLVMContext & ctx, uint32_t field0, uint32_t field1, uint32_t field2) {
+
+
+
+  std::string __name; ::llvm::raw_string_ostream __os(__name);
+  __os << "sb_";
+  __os << (uint64_t)field0 << '.';
+  __os << (uint64_t)field1 << '.';
+  __os << (uint64_t)field2 << '.';
+  ::std::vector<::llvm::Type*> __fields;
+  __fields.push_back(::llvm::IntegerType::get(ctx, 41));
+
+  if (field0 == 0)
+    __fields.push_back(::llvm::StructType::get(ctx));
+  else
+    __fields.push_back(::llvm::IntegerType::get(ctx, field0));
+
+  if (field1 == 0)
+    __fields.push_back(::llvm::StructType::get(ctx));
+  else
+    __fields.push_back(::llvm::IntegerType::get(ctx, field1));
+
+  if (field2 == 0)
+    __fields.push_back(::llvm::StructType::get(ctx));
+  else
+    __fields.push_back(::llvm::IntegerType::get(ctx, field2));
+  auto *__st = ::llvm::StructType::create(ctx, __fields, __os.str(), /*isPacked=*/false);
+  return static_cast<StructBackedType *>(__st);
+}
+
+
+bool StructBackedType::classof(const ::llvm::Type *t) {
+  auto *st = ::llvm::dyn_cast<::llvm::StructType>(t);
+  if (!st)
+    return false;
+  return st->getNumElements() &&
+         st->getElementType(0)->isIntegerTy(41);
+}
 XdHandleType* XdHandleType::get(::llvm::LLVMContext & ctx) {
 ::std::array<::llvm::Type *, 0> types = {
 
@@ -701,6 +749,177 @@ rhs
         setArgOperand(ArgumentIndex::Rhs, rhs);
       }
 ::llvm::Value *CombineOp::getResult() {return this;}
+
+
+
+      const ::llvm::StringLiteral DummyStructBackedInpOp::s_name{"xd.ir.struct.backed.inp.op"};
+
+    DummyStructBackedInpOp* DummyStructBackedInpOp::create(llvm_dialects::Builder& b, ::llvm::Value * inp, const llvm::Twine &instName) {
+    ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(6);
+    auto fnType = ::llvm::FunctionType::get(::llvm::IntegerType::get(context, 32), true);
+
+    auto fn = module.getOrInsertFunction(s_name, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << s_name << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
+
+  ::llvm::SmallVector<::llvm::Value*, 1> args = {
+inp
+      };
+      
+      return ::llvm::cast<DummyStructBackedInpOp>(b.CreateCall(fn, args, instName));
+    }
+
+
+    bool DummyStructBackedInpOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      using ::llvm_dialects::printable;
+  
+      if (arg_size() != 1) {
+        errs << "  wrong number of arguments: " << arg_size()
+               << ", expected 1\n";
+        return false;
+      }
+  ::llvm::Type * const inpType = getInp()->getType();
+(void)inpType;
+::llvm::Type * const retType = getRet()->getType();
+(void)retType;
+
+        if (::llvm::IntegerType::get(context, 32) != retType) {
+          errs << "  unexpected value of $ret:\n";
+          errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 32)) << '\n';
+          errs << "    actual:    " << printable(retType) << '\n';
+        
+          return false;
+        }
+      
+        if (!(::llvm::isa<::llvm::StructType>(inpType))) {
+          errs << "  failed check for StructBackedType:$inp\n";
+          
+      errs << "  with $inp = " << printable(inpType) << '\n';
+    
+        
+          return false;
+        }
+        return true;
+}
+
+
+      ::llvm::Value * DummyStructBackedInpOp::getInp() const {
+        return getArgOperand(ArgumentIndex::Inp);
+      }
+
+      void DummyStructBackedInpOp::setInp(::llvm::Value * inp) {
+        setArgOperand(ArgumentIndex::Inp, inp);
+      }
+::llvm::Value *DummyStructBackedInpOp::getRet() {return this;}
+
+
+
+      const ::llvm::StringLiteral DummyStructBackedOutpOp::s_name{"xd.ir.struct.backed.outp.op"};
+
+    DummyStructBackedOutpOp* DummyStructBackedOutpOp::create(llvm_dialects::Builder& b, ::llvm::Type* outpType, ::llvm::Value * extraArg, const llvm::Twine &instName) {
+    ::llvm::LLVMContext& context = b.getContext();
+    (void)context;
+    ::llvm::Module& module = *b.GetInsertBlock()->getModule();
+  
+  
+      const ::llvm::AttributeList attrs
+          = ExampleDialect::get(context).getAttributeList(6);
+    
+      std::string mangledName =
+          ::llvm_dialects::getMangledName(s_name, {outpType});
+    auto fnType = ::llvm::FunctionType::get(outpType, {
+extraArg->getType(),
+}, false);
+
+    auto fn = module.getOrInsertFunction(mangledName, fnType, attrs);
+    ::llvm::SmallString<32> newName;
+    for (unsigned i = 0; !::llvm::isa<::llvm::Function>(fn.getCallee()) ||
+                         ::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() != fn.getFunctionType(); i++) {
+      // If a function with the same name but a different types already exists,
+      // we get a bitcast of a function or a function with the wrong type.
+      // Try new names until we get one with the correct type.
+      newName = "";
+      ::llvm::raw_svector_ostream newNameStream(newName);
+      newNameStream << mangledName << "_" << i;
+      fn = module.getOrInsertFunction(newNameStream.str(), fnType, attrs);
+    }
+    assert(::llvm::isa<::llvm::Function>(fn.getCallee()));
+    assert(fn.getFunctionType() == fnType);
+    assert(::llvm::cast<::llvm::Function>(fn.getCallee())->getFunctionType() == fn.getFunctionType());
+
+  ::llvm::SmallVector<::llvm::Value*, 1> args = {
+extraArg
+      };
+      
+      return ::llvm::cast<DummyStructBackedOutpOp>(b.CreateCall(fn, args, instName));
+    }
+
+
+    bool DummyStructBackedOutpOp::verifier(::llvm::raw_ostream &errs) {
+      ::llvm::LLVMContext &context = getModule()->getContext();
+      (void)context;
+
+      using ::llvm_dialects::printable;
+  
+      if (arg_size() != 1) {
+        errs << "  wrong number of arguments: " << arg_size()
+               << ", expected 1\n";
+        return false;
+      }
+  ::llvm::Type * const extraArgType = getExtraArg()->getType();
+(void)extraArgType;
+::llvm::Type * const outpType = getOutp()->getType();
+(void)outpType;
+
+        if (::llvm::IntegerType::get(context, 32) != extraArgType) {
+          errs << "  unexpected value of $extra_arg:\n";
+          errs << "    expected:  " << printable(::llvm::IntegerType::get(context, 32)) << '\n';
+          errs << "    actual:    " << printable(extraArgType) << '\n';
+        
+          return false;
+        }
+      
+        if (!(::llvm::isa<::llvm::StructType>(outpType))) {
+          errs << "  failed check for StructBackedType:$outp\n";
+          
+      errs << "  with $outp = " << printable(outpType) << '\n';
+    
+        
+          return false;
+        }
+        return true;
+}
+
+
+      ::llvm::Value * DummyStructBackedOutpOp::getExtraArg() const {
+        return getArgOperand(ArgumentIndex::ExtraArg);
+      }
+
+      void DummyStructBackedOutpOp::setExtraArg(::llvm::Value * extra_arg) {
+        setArgOperand(ArgumentIndex::ExtraArg, extra_arg);
+      }
+::llvm::Value *DummyStructBackedOutpOp::getOutp() {return this;}
 
 
 
@@ -2527,6 +2746,22 @@ data
       const ::llvm_dialects::OpDescription &
       ::llvm_dialects::OpDescription::get<xd::cpp::CombineOp>() {
         static const ::llvm_dialects::OpDescription desc{true, "xd.ir.combine"};
+        return desc;
+      }
+
+    
+      template <>
+      const ::llvm_dialects::OpDescription &
+      ::llvm_dialects::OpDescription::get<xd::cpp::DummyStructBackedInpOp>() {
+        static const ::llvm_dialects::OpDescription desc{false, "xd.ir.struct.backed.inp.op"};
+        return desc;
+      }
+
+    
+      template <>
+      const ::llvm_dialects::OpDescription &
+      ::llvm_dialects::OpDescription::get<xd::cpp::DummyStructBackedOutpOp>() {
+        static const ::llvm_dialects::OpDescription desc{true, "xd.ir.struct.backed.outp.op"};
         return desc;
       }
 

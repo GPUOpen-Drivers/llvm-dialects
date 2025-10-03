@@ -215,6 +215,9 @@ def F64 : SpecialBuiltinType<"Double">;
 def F32 : SpecialBuiltinType<"Float">;
 def F16 : SpecialBuiltinType<"Half">;
 
+def repr_targetext;
+def repr_struct;
+
 /// All types that are defined by a dialect are derived from this class.
 class DialectType<Dialect dialect_, string mnemonic_> : Type, Predicate {
   dag typeArguments = ?;
@@ -229,6 +232,14 @@ class DialectType<Dialect dialect_, string mnemonic_> : Type, Predicate {
 
   string summary = ?;
   string description = ?;
+
+  /// How the dialect type is represented in LLVM IR:
+  ///  - (repr_targetext): use a TargetExtType (the default)
+  ///  - (repr_struct <type>): use a StructType with the given type as the
+  ///    discriminant; the discriminant should be a type that cannot naturally
+  ///    appear elsewhere, e.g. (repr_struct (IntegerType 41))
+  dag representation = (repr_targetext);
+  string structPrefix = "";
 }
 
 def and;

@@ -149,6 +149,10 @@ void createFunctionExample(Module &module, const Twine &name) {
 
   b.create<xd::cpp::StringAttrOp>("Hello world!");
 
+  xd::cpp::StructBackedType *structBackedTy = xd::cpp::StructBackedType::get(bb->getContext(), 1, 0, 2);
+  auto *structBackedVal = b.create<xd::cpp::DummyStructBackedOutpOp>(structBackedTy, b.getInt32(42), "gen.struct.backed.val");
+  b.create<xd::cpp::DummyStructBackedInpOp>(structBackedVal, "consume.struct.backed.val");
+
   b.CreateRetVoid();
 }
 

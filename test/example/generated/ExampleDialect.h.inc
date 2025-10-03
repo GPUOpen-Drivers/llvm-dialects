@@ -50,6 +50,39 @@ namespace xd::cpp {
         ::std::array<::llvm::AttributeList, 7> m_attributeLists;
     };
 
+    class StructBackedType : public ::llvm::StructType {
+      using ::llvm::StructType::StructType;
+    public:
+      static constexpr ::llvm::StringLiteral s_prefix{"xd.ir.struct.backed."};
+
+      using ::llvm::StructType::getElementType;
+
+      static StructBackedType *get(
+  ::llvm::LLVMContext & ctx, uint32_t field0, uint32_t field1, uint32_t field2);
+
+      static bool classof(const ::llvm::Type *t);
+
+      unsigned getField0() const {
+        ::llvm::Type *elt = getElementType(1);
+        if (elt->isStructTy())
+          return 0;
+        return ::llvm::cast<::llvm::IntegerType>(elt)->getBitWidth();
+      }
+      unsigned getField1() const {
+        ::llvm::Type *elt = getElementType(2);
+        if (elt->isStructTy())
+          return 0;
+        return ::llvm::cast<::llvm::IntegerType>(elt)->getBitWidth();
+      }
+      unsigned getField2() const {
+        ::llvm::Type *elt = getElementType(3);
+        if (elt->isStructTy())
+          return 0;
+        return ::llvm::cast<::llvm::IntegerType>(elt)->getBitWidth();
+      }
+    };
+
+
     class XdHandleType : public ::llvm::TargetExtType {
       static constexpr ::llvm::StringLiteral s_name{"xd.ir.handle"};
 
@@ -223,6 +256,72 @@ Lhs = 0,
 Rhs = 1,
 };};
 ::llvm::Value * getResult();
+
+
+      };
+    
+      /// DummyStructBackedInpOp
+/// a custom op using input arg with struct-backed type
+/// 
+///     Test that an operation that takes argument with struct-backed type works correctly.
+///   
+/// Arguments
+/// * Value * inp
+
+      class DummyStructBackedInpOp : public ::llvm::CallInst {
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.struct.backed.inp.op"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isSimpleOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static DummyStructBackedInpOp* create(::llvm_dialects::Builder& b, ::llvm::Value * inp, const llvm::Twine &instName = "");
+
+bool verifier(::llvm::raw_ostream &errs);
+
+::llvm::Value * getInp() const;
+          void setInp(::llvm::Value * inp);
+        struct ArgumentIndex { enum Enum : uint32_t {
+Inp = 0,
+};};
+::llvm::Value * getRet();
+
+
+      };
+    
+      /// DummyStructBackedOutpOp
+/// a custom op returning value with struct-backed type
+/// 
+///     Test that an operation that returns value with struct-backed type works correctly.
+///   
+/// Arguments
+/// * Value * extra_arg
+
+      class DummyStructBackedOutpOp : public ::llvm::CallInst {
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.struct.backed.outp.op"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isOverloadedOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static DummyStructBackedOutpOp* create(::llvm_dialects::Builder& b, ::llvm::Type* outpType, ::llvm::Value * extraArg, const llvm::Twine &instName = "");
+
+bool verifier(::llvm::raw_ostream &errs);
+
+::llvm::Value * getExtraArg() const;
+          void setExtraArg(::llvm::Value * extra_arg);
+        struct ArgumentIndex { enum Enum : uint32_t {
+ExtraArg = 0,
+};};
+::llvm::Value * getOutp();
 
 
       };

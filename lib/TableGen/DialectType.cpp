@@ -44,6 +44,28 @@ bool DialectType::init(raw_ostream &errs, GenDialectsContext &context,
   m_summary = record->getValueAsString("summary");
   m_description = record->getValueAsString("description");
 
+  if (auto *dag =
+          cast<DagInit>(record->getValue("representation")->getValue())) {
+    if (cast<DefInit>(dag->getOperator())->getDef()->getName() ==
+        "repr_struct") {
+      m_structBacked = true;
+
+      if (dag->getNumArgs() != 1) {
+        errs << "'repr_struct' expects exactly one type argument\n";
+        return false;
+      }
+      m_structSentinelBitWidth =
+          llvm::cast<llvm::IntInit>(
+              llvm::cast<llvm::DagInit>(dag->getArg(0))->getArg(0))
+              ->getValue();
+    }
+  }
+  if (auto *p = record->getValue("structPrefix"))
+    m_structPrefix = record->getValueAsString("structPrefix").str();
+  else
+    m_structPrefix =
+        (m_dialectRec->getValueAsString("name").str() + "." + m_mnemonic + ".");
+
   for (unsigned argIdx = 0; argIdx < m_arguments.size(); ++argIdx)
     m_canDerive.push_back(true);
   m_canCheckFromSelf = true;
@@ -72,8 +94,11 @@ bool DialectType::init(raw_ostream &errs, GenDialectsContext &context,
 
     evaluate << ')';
   }
-
-  m_check = tgfmt("::llvm::isa<$_type>($$self)", &fmt);
+  if (m_structBacked) {
+    m_check = tgfmt("::llvm::isa<::llvm::StructType>($$self)", &fmt);
+  } else {
+    m_check = tgfmt("::llvm::isa<$_type>($$self)", &fmt);
+  }
 
   if (!m_arguments[0].type || !m_arguments[0].type->isTypeArg() ||
       m_arguments[0].constraint) {
@@ -150,7 +175,56 @@ void DialectType::emitDeclaration(raw_ostream &out, GenDialect *dialect) const {
   fmt.addSubst("_type", getName());
   fmt.addSubst("mnemonic", getMnemonic());
 
-  out << tgfmt(R"(
+  if (m_structBacked) {
+    out << tgfmt(R"(
+    class $_type : public ::llvm::StructType {
+      using ::llvm::StructType::StructType;
+    public:
+      static constexpr ::llvm::StringLiteral s_prefix{"$dialect.$mnemonic."};
+
+      using ::llvm::StructType::getElementType;
+
+      static $_type *get(
+  )",
+                 &fmt);
+
+    bool contextPresent =
+        !m_getterArguments.empty() && m_getterArguments.front().cppType.find(
+                                          "LLVMContext") != std::string::npos;
+    if (!contextPresent) {
+      out << "::llvm::LLVMContext &" << m_context;
+      if (!m_getterArguments.empty())
+        out << ", ";
+    }
+    for (const auto &argument : llvm::enumerate(m_getterArguments)) {
+      if (argument.index() != 0)
+        out << ", ";
+      out << argument.value().cppType << ' ' << argument.value().name;
+    }
+    out << ");\n\n";
+
+    out << "      static bool classof(const ::llvm::Type *t);\n\n";
+
+    unsigned fieldIdx = 1; // sentinel
+    for (const auto &argument : typeArguments()) {
+      std::string camel = convertToCamelFromSnakeCase(argument.name, true);
+      out << tgfmt(
+          R"(      unsigned get$0() const {
+        ::llvm::Type *elt = getElementType($1);
+        if (elt->isStructTy())
+          return 0;
+        return ::llvm::cast<::llvm::IntegerType>(elt)->getBitWidth();
+      }
+)",
+          &fmt, camel, fieldIdx++);
+    }
+
+    out << "    };\n\n";
+  } else {
+
+    // TargetExtType
+
+    out << tgfmt(R"(
     class $_type : public ::llvm::TargetExtType {
       static constexpr ::llvm::StringLiteral s_name{"$dialect.$mnemonic"};
 
@@ -166,22 +240,23 @@ void DialectType::emitDeclaration(raw_ostream &out, GenDialect *dialect) const {
       bool verifier(::llvm::raw_ostream &errs) const;
 
   )",
-               &fmt);
+                 &fmt);
 
-  out << tgfmt("static $_type *get(", &fmt);
-  for (const auto &argument : llvm::enumerate(m_getterArguments)) {
-    if (argument.index() != 0)
-      out << ", ";
-    out << argument.value().cppType << ' ' << argument.value().name;
+    out << tgfmt("static $_type *get(", &fmt);
+    for (const auto &argument : llvm::enumerate(m_getterArguments)) {
+      if (argument.index() != 0)
+        out << ", ";
+      out << argument.value().cppType << ' ' << argument.value().name;
+    }
+    out << ");\n\n";
+
+    for (const auto &argument : typeArguments()) {
+      out << tgfmt("$0 get$1() const;\n", &fmt, argument.type->getCppType(),
+                   convertToCamelFromSnakeCase(argument.name, true));
+    }
+
+    out << "};\n\n";
   }
-  out << ");\n\n";
-
-  for (const auto &argument : typeArguments()) {
-    out << tgfmt("$0 get$1() const;\n", &fmt, argument.type->getCppType(),
-                 convertToCamelFromSnakeCase(argument.name, true));
-  }
-
-  out << "};\n\n";
 }
 
 void DialectType::emitDefinition(raw_ostream &out, GenDialect *dialect) const {
@@ -195,76 +270,141 @@ void DialectType::emitDefinition(raw_ostream &out, GenDialect *dialect) const {
   fmt.addSubst("ints", symbols.chooseName("ints"));
   fmt.addSubst("_errs", symbols.chooseName("errs"));
 
-  // Output the type argument getters.
-  unsigned typeIdx = 0;
-  unsigned intIdx = 0;
-  for (const auto &argument : typeArguments()) {
-    std::string expr;
-    if (argument.type->isTypeArg()) {
-      expr = tgfmt("type_params()[$0]", &fmt, typeIdx);
-      ++typeIdx;
-    } else {
-      expr = tgfmt("int_params()[$0]", &fmt, intIdx);
-      expr = tgfmt(cast<Attr>(argument.type)->getFromUnsigned(), &fmt, expr);
-      ++intIdx;
+  if (m_structBacked) {
+    out << tgfmt("$_type* $_type::get(", &fmt);
+    bool contextPresent =
+        !m_getterArguments.empty() && m_getterArguments.front().cppType.find(
+                                          "LLVMContext") != std::string::npos;
+    if (!contextPresent) {
+      out << "::llvm::LLVMContext &" << m_context;
+      if (!m_getterArguments.empty())
+        out << ", ";
+    }
+    for (auto argument : llvm::enumerate(m_getterArguments)) {
+      if (argument.index() != 0)
+        out << ", ";
+      out << argument.value().cppType << ' ' << argument.value().name;
+    }
+    out << ") {\n";
+
+    auto getterArgs =
+        ArrayRef<GetterArg>(m_getterArguments).drop_front(m_argBegin);
+
+    for (const auto &[argument, getterArg] :
+         llvm::zip(typeArguments(), getterArgs)) {
+      if (auto *attr = dyn_cast<Attr>(argument.type)) {
+        out << tgfmt(attr->getCheck(), &fmt, getterArg.name) << '\n';
+      }
     }
 
-    FmtContextScope scope{fmt};
-    fmt.addSubst("type", argument.type->getCppType());
-    fmt.addSubst("name", convertToCamelFromSnakeCase(argument.name, true));
-    fmt.addSubst("expr", expr);
+    out << "  std::string __name; ::llvm::raw_string_ostream __os(__name);\n";
+    out << tgfmt("  __os << \"$0\";\n", &fmt, m_structPrefix);
+    for (const auto &getterArg : getterArgs)
+      out << "  __os << (uint64_t)" << getterArg.name << " << '.';\n";
+
+    out << tgfmt("  ::std::vector<::llvm::Type*> __fields;\n", &fmt);
+    out << tgfmt(
+        "  __fields.push_back(::llvm::IntegerType::get($_context, $0));\n",
+        &fmt, Twine(m_structSentinelBitWidth));
+
+    for (const auto &getterArg : getterArgs) {
+      out << tgfmt(R"(
+  if ($0 == 0)
+    __fields.push_back(::llvm::StructType::get($_context));
+  else
+    __fields.push_back(::llvm::IntegerType::get($_context, $0));
+)",
+                   &fmt, getterArg.name);
+    }
+    out << tgfmt("  auto *__st = ::llvm::StructType::create($_context, "
+                 "__fields, __os.str(), /*isPacked=*/false);\n",
+                 &fmt);
+    out << tgfmt("  return static_cast<$_type *>(__st);\n}\n\n", &fmt);
 
     out << tgfmt(R"(
+bool $_type::classof(const ::llvm::Type *t) {
+  auto *st = ::llvm::dyn_cast<::llvm::StructType>(t);
+  if (!st)
+    return false;
+  return st->getNumElements() &&
+         st->getElementType(0)->isIntegerTy($0);
+}
+)",
+                 &fmt, Twine(m_structSentinelBitWidth));
+  } else {
+    // TargetExtType
+
+    // Output the type argument getters.
+    unsigned typeIdx = 0;
+    unsigned intIdx = 0;
+    for (const auto &argument : typeArguments()) {
+      std::string expr;
+      if (argument.type->isTypeArg()) {
+        expr = tgfmt("type_params()[$0]", &fmt, typeIdx);
+        ++typeIdx;
+      } else {
+        expr = tgfmt("int_params()[$0]", &fmt, intIdx);
+        expr = tgfmt(cast<Attr>(argument.type)->getFromUnsigned(), &fmt, expr);
+        ++intIdx;
+      }
+
+      FmtContextScope scope{fmt};
+      fmt.addSubst("type", argument.type->getCppType());
+      fmt.addSubst("name", convertToCamelFromSnakeCase(argument.name, true));
+      fmt.addSubst("expr", expr);
+
+      out << tgfmt(R"(
       $type $_type::get$name() const {
         return $expr;
       }
 
     )",
-                 &fmt, expr);
-  }
-
-  // Output the default getter.
-  out << tgfmt("$_type* $_type::get(", &fmt);
-  for (auto argument : llvm::enumerate(m_getterArguments)) {
-    if (argument.index() != 0)
-      out << ", ";
-    out << argument.value().cppType << ' ' << argument.value().name;
-  }
-  out << ") {\n";
-
-  out << m_prelude;
-
-  auto getterArgs =
-      ArrayRef<GetterArg>(m_getterArguments).drop_front(m_argBegin);
-
-  for (const auto &[argument, getterArg] :
-       llvm::zip(typeArguments(), getterArgs)) {
-    if (auto *attr = dyn_cast<Attr>(argument.type)) {
-      out << tgfmt(attr->getCheck(), &fmt, getterArg.name) << '\n';
+                   &fmt, expr);
     }
-  }
 
-  out << tgfmt("::std::array<::llvm::Type *, $0> $types = {\n", &fmt, typeIdx);
-  for (const auto &[argument, getterArg] :
-       llvm::zip(typeArguments(), getterArgs)) {
-    if (argument.type->isTypeArg())
-      out << getterArg.name << ",\n";
-  }
-  out << tgfmt(R"(
+    // Output the default getter.
+    out << tgfmt("$_type* $_type::get(", &fmt);
+    for (auto argument : llvm::enumerate(m_getterArguments)) {
+      if (argument.index() != 0)
+        out << ", ";
+      out << argument.value().cppType << ' ' << argument.value().name;
+    }
+    out << ") {\n";
+
+    out << m_prelude;
+
+    auto getterArgs =
+        ArrayRef<GetterArg>(m_getterArguments).drop_front(m_argBegin);
+
+    for (const auto &[argument, getterArg] :
+         llvm::zip(typeArguments(), getterArgs)) {
+      if (auto *attr = dyn_cast<Attr>(argument.type)) {
+        out << tgfmt(attr->getCheck(), &fmt, getterArg.name) << '\n';
+      }
+    }
+
+    out << tgfmt("::std::array<::llvm::Type *, $0> $types = {\n", &fmt,
+                 typeIdx);
+    for (const auto &[argument, getterArg] :
+         llvm::zip(typeArguments(), getterArgs)) {
+      if (argument.type->isTypeArg())
+        out << getterArg.name << ",\n";
+    }
+    out << tgfmt(R"(
     };
     ::std::array<unsigned, $0> $ints = {
   )",
-               &fmt, intIdx);
-  for (const auto &[argument, getterArg] :
-       llvm::zip(typeArguments(), getterArgs)) {
-    if (!argument.type->isTypeArg()) {
-      std::string expr = tgfmt(cast<Attr>(argument.type)->getToUnsigned(), &fmt,
-                               getterArg.name);
-      out << expr << ",\n";
+                 &fmt, intIdx);
+    for (const auto &[argument, getterArg] :
+         llvm::zip(typeArguments(), getterArgs)) {
+      if (!argument.type->isTypeArg()) {
+        std::string expr = tgfmt(cast<Attr>(argument.type)->getToUnsigned(),
+                                 &fmt, getterArg.name);
+        out << expr << ",\n";
+      }
     }
-  }
 
-  out << tgfmt(R"(
+    out << tgfmt(R"(
       };
 
       auto *$type = ::llvm::cast<$_type>(::llvm::TargetExtType::get($_context, s_name, $types, $ints));
@@ -274,10 +414,10 @@ void DialectType::emitDefinition(raw_ostream &out, GenDialect *dialect) const {
       return $type;
     }
   )",
-               &fmt);
+                 &fmt);
 
-  // Output the verifier.
-  out << tgfmt(R"(
+    // Output the verifier.
+    out << tgfmt(R"(
     bool $_type::verifier(::llvm::raw_ostream &$_errs) const {
       ::llvm::LLVMContext &$_context = getContext();
       (void)$_context;
@@ -298,23 +438,24 @@ void DialectType::emitDefinition(raw_ostream &out, GenDialect *dialect) const {
         return false;
       }
   )",
-               &fmt, typeIdx, intIdx);
+                 &fmt, typeIdx, intIdx);
 
-  Assignment assignment;
-  Evaluator eval(symbols, assignment, m_system, out, fmt);
+    Assignment assignment;
+    Evaluator eval(symbols, assignment, m_system, out, fmt);
 
-  for (const auto &[argument, getterArg] :
-       llvm::zip(typeArguments(), getterArgs)) {
-    FmtContextScope scope{fmt};
-    fmt.addSubst("getter", convertToCamelFromSnakeCase(argument.name, true));
-    fmt.addSubst("name", getterArg.name);
-    out << tgfmt("auto $name = get$getter();\n(void)$name;\n", &fmt);
+    for (const auto &[argument, getterArg] :
+         llvm::zip(typeArguments(), getterArgs)) {
+      FmtContextScope scope{fmt};
+      fmt.addSubst("getter", convertToCamelFromSnakeCase(argument.name, true));
+      fmt.addSubst("name", getterArg.name);
+      out << tgfmt("auto $name = get$getter();\n(void)$name;\n", &fmt);
 
-    auto variable = m_scope.findVariable(argument.name);
-    assignment.assign(variable, fmt.getSubstFor("name").value());
+      auto variable = m_scope.findVariable(argument.name);
+      assignment.assign(variable, fmt.getSubstFor("name").value());
+    }
+
+    eval.check(true);
+
+    out << "return true;\n}\n\n";
   }
-
-  eval.check(true);
-
-  out << "return true;\n}\n\n";
 }

@@ -75,6 +75,10 @@ private:
   std::string m_context;
   std::vector<GetterArg> m_getterArguments;
   unsigned m_argBegin = 0;
+
+  bool m_structBacked = false;
+  unsigned m_structSentinelBitWidth;
+  std::string m_structPrefix;
 };
 
 } // namespace llvm_dialects
