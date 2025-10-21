@@ -239,7 +239,6 @@ class DialectType<Dialect dialect_, string mnemonic_> : Type, Predicate {
   ///    discriminant; the discriminant should be a type that cannot naturally
   ///    appear elsewhere, e.g. (repr_struct (IntegerType 41))
   dag representation = (repr_targetext);
-  string structPrefix = "";
 }
 
 def and;

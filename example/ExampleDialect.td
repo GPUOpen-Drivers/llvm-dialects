@@ -369,7 +369,6 @@ def StructBackedType : DialectType<ExampleDialect, "struct.backed"> {
   }];
   let typeArguments = (args AttrI32:$field0, AttrI32:$field1, AttrI32:$field2);
   let representation = (repr_struct (IntegerType 41));
-  let structPrefix = "sb_";
 
   let defaultGetterHasExplicitContextArgument = 1;
 }

@@ -60,11 +60,6 @@ bool DialectType::init(raw_ostream &errs, GenDialectsContext &context,
               ->getValue();
     }
   }
-  if (auto *p = record->getValue("structPrefix"))
-    m_structPrefix = record->getValueAsString("structPrefix").str();
-  else
-    m_structPrefix =
-        (m_dialectRec->getValueAsString("name").str() + "." + m_mnemonic + ".");
 
   for (unsigned argIdx = 0; argIdx < m_arguments.size(); ++argIdx)
     m_canDerive.push_back(true);
@@ -269,6 +264,10 @@ void DialectType::emitDefinition(raw_ostream &out, GenDialect *dialect) const {
   fmt.addSubst("types", symbols.chooseName("types"));
   fmt.addSubst("ints", symbols.chooseName("ints"));
   fmt.addSubst("_errs", symbols.chooseName("errs"));
+  fmt.addSubst("os", symbols.chooseName("os"));
+  fmt.addSubst("name", symbols.chooseName("name"));
+  fmt.addSubst("fields", symbols.chooseName("fields"));
+  fmt.addSubst("st", symbols.chooseName("st"));
 
   if (m_structBacked) {
     out << tgfmt("$_type* $_type::get(", &fmt);
@@ -297,29 +296,30 @@ void DialectType::emitDefinition(raw_ostream &out, GenDialect *dialect) const {
       }
     }
 
-    out << "  std::string __name; ::llvm::raw_string_ostream __os(__name);\n";
-    out << tgfmt("  __os << \"$0\";\n", &fmt, m_structPrefix);
-    for (const auto &getterArg : getterArgs)
-      out << "  __os << (uint64_t)" << getterArg.name << " << '.';\n";
-
-    out << tgfmt("  ::std::vector<::llvm::Type*> __fields;\n", &fmt);
     out << tgfmt(
-        "  __fields.push_back(::llvm::IntegerType::get($_context, $0));\n",
-        &fmt, Twine(m_structSentinelBitWidth));
+        "  std::string $name; ::llvm::raw_string_ostream $os($name);\n", &fmt);
+    out << tgfmt("  $os << \"$0\";\n", &fmt, m_mnemonic);
+    for (const auto &getterArg : getterArgs)
+      out << tgfmt("  $os << '.' << (uint64_t)$0;\n", &fmt, getterArg.name);
+
+    out << tgfmt("  ::std::vector<::llvm::Type*> $fields;\n", &fmt);
+    out << tgfmt(
+        "  $fields.push_back(::llvm::IntegerType::get($_context, $0));\n", &fmt,
+        Twine(m_structSentinelBitWidth));
 
     for (const auto &getterArg : getterArgs) {
       out << tgfmt(R"(
   if ($0 == 0)
-    __fields.push_back(::llvm::StructType::get($_context));
+    $fields.push_back(::llvm::StructType::get($_context));
   else
-    __fields.push_back(::llvm::IntegerType::get($_context, $0));
+    $fields.push_back(::llvm::IntegerType::get($_context, $0));
 )",
                    &fmt, getterArg.name);
     }
-    out << tgfmt("  auto *__st = ::llvm::StructType::create($_context, "
-                 "__fields, __os.str(), /*isPacked=*/false);\n",
+    out << tgfmt("  auto *$st = ::llvm::StructType::create($_context, "
+                 "$fields, $os.str(), /*isPacked=*/false);\n",
                  &fmt);
-    out << tgfmt("  return static_cast<$_type *>(__st);\n}\n\n", &fmt);
+    out << tgfmt("  return static_cast<$_type *>($st);\n}\n\n", &fmt);
 
     out << tgfmt(R"(
 bool $_type::classof(const ::llvm::Type *t) {

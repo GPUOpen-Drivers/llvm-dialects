@@ -262,30 +262,30 @@ StructBackedType* StructBackedType::get(::llvm::LLVMContext & ctx, uint32_t fiel
 
 
 
-  std::string __name; ::llvm::raw_string_ostream __os(__name);
-  __os << "sb_";
-  __os << (uint64_t)field0 << '.';
-  __os << (uint64_t)field1 << '.';
-  __os << (uint64_t)field2 << '.';
-  ::std::vector<::llvm::Type*> __fields;
-  __fields.push_back(::llvm::IntegerType::get(ctx, 41));
+  std::string name; ::llvm::raw_string_ostream os(name);
+  os << "struct.backed";
+  os << '.' << (uint64_t)field0;
+  os << '.' << (uint64_t)field1;
+  os << '.' << (uint64_t)field2;
+  ::std::vector<::llvm::Type*> fields;
+  fields.push_back(::llvm::IntegerType::get(ctx, 41));
 
   if (field0 == 0)
-    __fields.push_back(::llvm::StructType::get(ctx));
+    fields.push_back(::llvm::StructType::get(ctx));
   else
-    __fields.push_back(::llvm::IntegerType::get(ctx, field0));
+    fields.push_back(::llvm::IntegerType::get(ctx, field0));
 
   if (field1 == 0)
-    __fields.push_back(::llvm::StructType::get(ctx));
+    fields.push_back(::llvm::StructType::get(ctx));
   else
-    __fields.push_back(::llvm::IntegerType::get(ctx, field1));
+    fields.push_back(::llvm::IntegerType::get(ctx, field1));
 
   if (field2 == 0)
-    __fields.push_back(::llvm::StructType::get(ctx));
+    fields.push_back(::llvm::StructType::get(ctx));
   else
-    __fields.push_back(::llvm::IntegerType::get(ctx, field2));
-  auto *__st = ::llvm::StructType::create(ctx, __fields, __os.str(), /*isPacked=*/false);
-  return static_cast<StructBackedType *>(__st);
+    fields.push_back(::llvm::IntegerType::get(ctx, field2));
+  auto *st = ::llvm::StructType::create(ctx, fields, os.str(), /*isPacked=*/false);
+  return static_cast<StructBackedType *>(st);
 }
 
 
