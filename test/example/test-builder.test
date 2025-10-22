@@ -24,8 +24,8 @@
 ;.
 ; CHECK: @str = private unnamed_addr constant [13 x i8] c"Hello world!\00", align 1
 ;.
-; CHECK-LABEL: @example(
-; CHECK-NEXT:  entry:
+; CHECK-LABEL: define void @example() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @xd.ir.read__i32()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 (...) @xd.ir.sizeof(double poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 (...) @xd.ir.itrunc__i32(i64 [[TMP1]])
@@ -66,6 +66,8 @@
 ; CHECK-NEXT:    [[THREE_VARARGS:%.*]] = call i32 (...) @xd.ir.inst.name.conflict.varargs(ptr [[P1]], i8 [[P2]], i32 3)
 ; CHECK-NEXT:    [[FOUR_VARARGS:%.*]] = call i32 (...) @xd.ir.inst.name.conflict.varargs(ptr [[P1]], i8 [[P2]], i32 3, i32 4)
 ; CHECK-NEXT:    call void @xd.ir.string.attr.op(ptr @str)
+; CHECK-NEXT:    [[GEN_STRUCT_BACKED_VAL:%.*]] = call [[SB_1_0_2_:%.*]] @[[XD_IR_STRUCT_BACKED_OUTP_OP__S_SB_1_0_2_S:[a-zA-Z0-9_$\"\\.-]*[a-zA-Z_$\"\\.-][a-zA-Z0-9_$\"\\.-]*]](i32 42)
+; CHECK-NEXT:    [[CONSUME_STRUCT_BACKED_VAL:%.*]] = call i32 (...) @xd.ir.struct.backed.inp.op([[SB_1_0_2_]] [[GEN_STRUCT_BACKED_VAL]])
 ; CHECK-NEXT:    ret void
 ;
 ;.

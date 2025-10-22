@@ -361,3 +361,41 @@ def BufferCompareOp : Op<ExampleDialect, "buffer.compare.op", [WillReturn, NoUnw
     Both arguments get a parameter attribute, as well as return value
   }];
 }
+
+def StructBackedType : DialectType<ExampleDialect, "struct.backed"> {
+  let summary = "a custom struct-backed type";
+  let description = [{
+    Test that a struct-backed type works correctly.
+  }];
+  let typeArguments = (args AttrI32:$field0, AttrI32:$field1, AttrI32:$field2);
+  let representation = (repr_struct (IntegerType 41));
+
+  let defaultGetterHasExplicitContextArgument = 1;
+}
+
+def DummyStructBackedInpOp : Op<ExampleDialect, "struct.backed.inp.op", [WillReturn]> {
+  let summary = "a custom op using input arg with struct-backed type";
+  let description = [{
+    Test that an operation that takes argument with struct-backed type works correctly.
+  }];
+  let arguments = (ins
+    StructBackedType:$inp
+  );
+  let results = (outs
+    I32:$ret
+  );
+}
+
+def DummyStructBackedOutpOp : Op<ExampleDialect, "struct.backed.outp.op", [WillReturn]> {
+  let summary = "a custom op returning value with struct-backed type";
+  let description = [{
+    Test that an operation that returns value with struct-backed type works correctly.
+  }];
+  let arguments = (ins
+    I32:$extra_arg
+  );
+  let results = (outs
+    StructBackedType:$outp
+  );
+  let defaultBuilderHasExplicitResultType = true;
+}
