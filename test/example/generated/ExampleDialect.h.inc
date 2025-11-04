@@ -58,27 +58,27 @@ namespace xd::cpp {
       using ::llvm::StructType::getElementType;
 
       static StructBackedType *get(
-  ::llvm::LLVMContext & ctx, uint32_t field0, uint32_t field1, uint32_t field2);
+  ::llvm::LLVMContext & ctx, uint32_t field0, uint8_t field1, VectorKind field2);
 
       static bool classof(const ::llvm::Type *t);
 
-      unsigned getField0() const {
+      uint32_t getField0() const {
         ::llvm::Type *elt = getElementType(1);
         if (elt->isStructTy())
           return 0;
         return ::llvm::cast<::llvm::IntegerType>(elt)->getBitWidth();
       }
-      unsigned getField1() const {
+      uint8_t getField1() const {
         ::llvm::Type *elt = getElementType(2);
         if (elt->isStructTy())
           return 0;
         return ::llvm::cast<::llvm::IntegerType>(elt)->getBitWidth();
       }
-      unsigned getField2() const {
+      VectorKind getField2() const {
         ::llvm::Type *elt = getElementType(3);
         if (elt->isStructTy())
-          return 0;
-        return ::llvm::cast<::llvm::IntegerType>(elt)->getBitWidth();
+          return static_cast<VectorKind>(0);
+        return static_cast<VectorKind>(::llvm::cast<::llvm::IntegerType>(elt)->getBitWidth());
       }
     };
 

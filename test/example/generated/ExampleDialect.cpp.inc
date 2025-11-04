@@ -258,10 +258,10 @@ m_attributeLists[6] = argAttrList.addFnAttributes(context, attrBuilder);
 }
 }
 
-StructBackedType* StructBackedType::get(::llvm::LLVMContext & ctx, uint32_t field0, uint32_t field1, uint32_t field2) {
+StructBackedType* StructBackedType::get(::llvm::LLVMContext & ctx, uint32_t field0, uint8_t field1, VectorKind field2) {
 
 
-
+static_assert(sizeof(field2) <= sizeof(unsigned));
   std::string name; ::llvm::raw_string_ostream os(name);
   os << "struct.backed";
   os << '.' << (uint64_t)field0;
@@ -280,10 +280,10 @@ StructBackedType* StructBackedType::get(::llvm::LLVMContext & ctx, uint32_t fiel
   else
     fields.push_back(::llvm::IntegerType::get(ctx, field1));
 
-  if (field2 == 0)
+  if (static_cast<unsigned>(field2) == 0)
     fields.push_back(::llvm::StructType::get(ctx));
   else
-    fields.push_back(::llvm::IntegerType::get(ctx, field2));
+    fields.push_back(::llvm::IntegerType::get(ctx, static_cast<unsigned>(field2)));
   auto *st = ::llvm::StructType::create(ctx, fields, os.str(), /*isPacked=*/false);
   return static_cast<StructBackedType *>(st);
 }

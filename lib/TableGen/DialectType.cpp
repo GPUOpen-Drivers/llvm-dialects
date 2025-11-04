@@ -201,17 +201,24 @@ void DialectType::emitDeclaration(raw_ostream &out, GenDialect *dialect) const {
     out << "      static bool classof(const ::llvm::Type *t);\n\n";
 
     unsigned fieldIdx = 1; // sentinel
+    auto getCastExpr = [&fmt](const NamedValue &argument,
+                              llvm::StringRef expr) -> std::string {
+      return tgfmt(cast<Attr>(argument.type)->getFromUnsigned(), &fmt, expr);
+    };
     for (const auto &argument : typeArguments()) {
       std::string camel = convertToCamelFromSnakeCase(argument.name, true);
       out << tgfmt(
-          R"(      unsigned get$0() const {
-        ::llvm::Type *elt = getElementType($1);
+          R"(      $0 get$1() const {
+        ::llvm::Type *elt = getElementType($2);
         if (elt->isStructTy())
-          return 0;
-        return ::llvm::cast<::llvm::IntegerType>(elt)->getBitWidth();
+          return $3;
+        return $4;
       }
 )",
-          &fmt, camel, fieldIdx++);
+          &fmt, argument.type->getCppType(), camel, fieldIdx++,
+          getCastExpr(argument, "0"),
+          getCastExpr(argument,
+                      "::llvm::cast<::llvm::IntegerType>(elt)->getBitWidth()"));
     }
 
     out << "    };\n\n";
@@ -307,14 +314,17 @@ void DialectType::emitDefinition(raw_ostream &out, GenDialect *dialect) const {
         "  $fields.push_back(::llvm::IntegerType::get($_context, $0));\n", &fmt,
         Twine(m_structSentinelBitWidth));
 
-    for (const auto &getterArg : getterArgs) {
+    for (const auto &[argument, getterArg] :
+         llvm::zip(typeArguments(), getterArgs)) {
+      std::string castExpr = tgfmt(cast<Attr>(argument.type)->getToUnsigned(),
+                                   &fmt, getterArg.name);
       out << tgfmt(R"(
   if ($0 == 0)
     $fields.push_back(::llvm::StructType::get($_context));
   else
     $fields.push_back(::llvm::IntegerType::get($_context, $0));
 )",
-                   &fmt, getterArg.name);
+                   &fmt, castExpr);
     }
     out << tgfmt("  auto *$st = ::llvm::StructType::create($_context, "
                  "$fields, $os.str(), /*isPacked=*/false);\n",

@@ -367,7 +367,7 @@ def StructBackedType : DialectType<ExampleDialect, "struct.backed"> {
   let description = [{
     Test that a struct-backed type works correctly.
   }];
-  let typeArguments = (args AttrI32:$field0, AttrI32:$field1, AttrI32:$field2);
+  let typeArguments = (args AttrI32:$field0, AttrI8:$field1, AttrVectorKind:$field2);
   let representation = (repr_struct (IntegerType 41));
 
   let defaultGetterHasExplicitContextArgument = 1;
