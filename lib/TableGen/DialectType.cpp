@@ -43,6 +43,7 @@ bool DialectType::init(raw_ostream &errs, GenDialectsContext &context,
   m_mnemonic = record->getValueAsString("mnemonic");
   m_summary = record->getValueAsString("summary");
   m_description = record->getValueAsString("description");
+  m_llvmTypeNameOverride = record->getValueAsString("llvmTypeNameOverride");
 
   if (auto *dag =
           cast<DagInit>(record->getValue("representation")->getValue())) {
@@ -170,12 +171,25 @@ void DialectType::emitDeclaration(raw_ostream &out, GenDialect *dialect) const {
   fmt.addSubst("_type", getName());
   fmt.addSubst("mnemonic", getMnemonic());
 
+  std::string typeName;
+  if (!m_llvmTypeNameOverride.empty()) {
+    typeName = m_llvmTypeNameOverride;
+  } else {
+    typeName = (dialect->name + "." + getMnemonic()).str();
+  }
+  // For struct-backed types, add trailing dot for the prefix
+  if (m_structBacked) {
+    typeName += ".";
+  }
+
+  fmt.addSubst("typeName", typeName);
+
   if (m_structBacked) {
     out << tgfmt(R"(
     class $_type : public ::llvm::StructType {
       using ::llvm::StructType::StructType;
     public:
-      static constexpr ::llvm::StringLiteral s_prefix{"$dialect.$mnemonic."};
+      static constexpr ::llvm::StringLiteral s_prefix{"$typeName"};
 
       using ::llvm::StructType::getElementType;
 
@@ -225,10 +239,11 @@ void DialectType::emitDeclaration(raw_ostream &out, GenDialect *dialect) const {
   } else {
 
     // TargetExtType
+    fmt.addSubst("typeName", typeName);
 
     out << tgfmt(R"(
     class $_type : public ::llvm::TargetExtType {
-      static constexpr ::llvm::StringLiteral s_name{"$dialect.$mnemonic"};
+      static constexpr ::llvm::StringLiteral s_name{"$typeName"};
 
     public:
       static bool classof(const ::llvm::TargetExtType *t) {
@@ -276,6 +291,14 @@ void DialectType::emitDefinition(raw_ostream &out, GenDialect *dialect) const {
   fmt.addSubst("fields", symbols.chooseName("fields"));
   fmt.addSubst("st", symbols.chooseName("st"));
 
+  // Compute the type name prefix (without trailing dot for struct-backed types)
+  std::string typeNamePrefix;
+  if (!m_llvmTypeNameOverride.empty()) {
+    typeNamePrefix = m_llvmTypeNameOverride;
+  } else {
+    typeNamePrefix = (dialect->name + "." + getMnemonic()).str();
+  }
+
   if (m_structBacked) {
     out << tgfmt("$_type* $_type::get(", &fmt);
     bool contextPresent =
@@ -305,7 +328,7 @@ void DialectType::emitDefinition(raw_ostream &out, GenDialect *dialect) const {
 
     out << tgfmt(
         "  std::string $name; ::llvm::raw_string_ostream $os($name);\n", &fmt);
-    out << tgfmt("  $os << \"$0\";\n", &fmt, m_mnemonic);
+    out << tgfmt("  $os << \"$0\";\n", &fmt, typeNamePrefix);
     for (const auto &getterArg : getterArgs)
       out << tgfmt("  $os << '.' << (uint64_t)$0;\n", &fmt, getterArg.name);
 
