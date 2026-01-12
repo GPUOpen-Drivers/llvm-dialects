@@ -82,3 +82,56 @@ def InstNameConflictWithExplRetTestOp : Op<TestDialect, "try.conflict.type.suffi
     value like IRBuilder methods. This op tries to produce a conflict
   }];
 }
+
+// Test types with custom llvmTypeNameOverride
+
+// Test TargetExtType with custom name
+def CustomNameTargetExtType : DialectType<TestDialect, "custom.target"> {
+  let typeArguments = (args
+    AttrI32:$param1,
+    AttrI32:$param2
+  );
+
+  let defaultGetterHasExplicitContextArgument = true;
+  let llvmTypeNameOverride = "custom.renamed.target";
+
+  let summary = "TargetExtType with custom name";
+  let description = [{
+    Tests that llvmTypeNameOverride works for TargetExtType.
+    Type name should be "custom.renamed.target" instead of "test.custom.target".
+  }];
+}
+
+// Test struct-backed type with custom name prefix
+def CustomNameStructType : DialectType<TestDialect, "custom.struct"> {
+  let typeArguments = (args
+    AttrI32:$rows,
+    AttrI32:$cols
+  );
+
+  let defaultGetterHasExplicitContextArgument = true;
+  let representation = (repr_struct (IntegerType 73));
+  let llvmTypeNameOverride = "custom.renamed.struct";
+
+  let summary = "Struct-backed type with custom name prefix";
+  let description = [{
+    Tests that llvmTypeNameOverride works for struct-backed types.
+    Type name prefix should be "custom.renamed.struct." instead of "test.custom.struct.".
+    The trailing dot is automatically added for struct types.
+  }];
+}
+
+// Test TargetExtType without custom name (default behavior)
+def DefaultNameTargetExtType : DialectType<TestDialect, "default.target"> {
+  let typeArguments = (args
+    AttrI32:$value
+  );
+
+  let defaultGetterHasExplicitContextArgument = true;
+
+  let summary = "TargetExtType with default name";
+  let description = [{
+    Tests default naming behavior for TargetExtType.
+    Type name should be "test.default.target".
+  }];
+}

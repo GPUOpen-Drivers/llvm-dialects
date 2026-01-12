@@ -46,6 +46,9 @@ public:
   RecordTy *getDialectRec() const { return m_dialectRec; }
   llvm::StringRef getName() const { return m_name; }
   llvm::StringRef getMnemonic() const { return m_mnemonic; }
+  llvm::StringRef getLlvmTypeNameOverride() const {
+    return m_llvmTypeNameOverride;
+  }
   bool defaultGetterHasExplicitContextArgument() const {
     return m_defaultGetterHasExplicitContextArgument;
   }
@@ -64,6 +67,7 @@ private:
   RecordTy *m_dialectRec = nullptr;
   std::string m_name;
   std::string m_mnemonic;
+  std::string m_llvmTypeNameOverride;
   bool m_defaultGetterHasExplicitContextArgument = false;
   std::string m_summary;
   std::string m_description;

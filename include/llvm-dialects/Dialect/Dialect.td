@@ -239,6 +239,10 @@ class DialectType<Dialect dialect_, string mnemonic_> : Type, Predicate {
   ///    discriminant; the discriminant should be a type that cannot naturally
   ///    appear elsewhere, e.g. (repr_struct (IntegerType 41))
   dag representation = (repr_targetext);
+
+  /// Optional custom name for the LLVM IR type. If not set, defaults to
+  /// "<dialect>.<mnemonic>".
+  string llvmTypeNameOverride = "";
 }
 
 def and;

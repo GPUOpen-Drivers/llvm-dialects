@@ -263,7 +263,7 @@ StructBackedType* StructBackedType::get(::llvm::LLVMContext & ctx, uint32_t fiel
 
 static_assert(sizeof(field2) <= sizeof(unsigned));
   std::string name; ::llvm::raw_string_ostream os(name);
-  os << "struct.backed";
+  os << "xd.ir.struct.backed";
   os << '.' << (uint64_t)field0;
   os << '.' << (uint64_t)field1;
   os << '.' << (uint64_t)field2;
