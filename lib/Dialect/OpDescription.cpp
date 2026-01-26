@@ -244,6 +244,10 @@ HANDLE_INTRINSIC_DESC_OPCODE_SET(AnyMemCpyInst, Intrinsic::memcpy,
 HANDLE_INTRINSIC_DESC_OPCODE_SET(AnyMemMoveInst, Intrinsic::memmove,
                                  Intrinsic::memmove_element_unordered_atomic)
 
+#if !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 566206
+HANDLE_INTRINSIC_DESC(StructuredGEPInst, structured_gep)
+#endif
+
 // TODO: Is completing this list worth it?
 
 #undef HANDLE_INTRINSIC_DESC_OPCODE_SET
