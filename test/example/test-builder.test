@@ -22,7 +22,7 @@
 ; RUN: llvm-dialects-example - | FileCheck --check-prefixes=CHECK %s
 
 ;.
-; CHECK: @str = private unnamed_addr constant [13 x i8] c"Hello world!\00", align 1
+; CHECK: @str = private unnamed_addr constant [12 x i8] c"Hello world!", align 1
 ;.
 ; CHECK-LABEL: define void @example() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
