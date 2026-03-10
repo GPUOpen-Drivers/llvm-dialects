@@ -296,7 +296,7 @@ def : AttrLlvmType<AttrI32, I32>;
 def : AttrLlvmType<AttrI64, I64>;
 
 def ImmutableStringAttr : Attr<"::llvm::StringRef"> {
-  let toLlvmValue = [{ $_builder.CreateGlobalString($0, "str") }];
+  let toLlvmValue = [{ $_builder.CreateGlobalString($0, "str", 0, nullptr, /* AddNull */ false) }];
   let fromLlvmValue = [{ ::llvm::cast<::llvm::ConstantDataArray>(::llvm::cast<::llvm::GlobalVariable>($0)->getInitializer())->getAsString() }];
   let isImmutable = true;
 }

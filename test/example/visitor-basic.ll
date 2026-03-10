@@ -43,7 +43,7 @@
 ; DEFAULT-NEXT: visiting ReturnInst: ret void
 ; DEFAULT-NEXT: inner.counter = 1
 
-@0 = private unnamed_addr constant [13 x i8] c"Hello world!\00", align 1
+@0 = private unnamed_addr constant [12 x i8] c"Hello world!", align 1
 
 define void @test1(ptr %p) {
 entry:
