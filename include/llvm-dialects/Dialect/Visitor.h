@@ -414,6 +414,12 @@ public:
     return *this;
   }
 
+  template <typename... OpTs>
+  VisitorBuilder &addSet(void (PayloadT::*fn)(llvm::Instruction &)) {
+    addSetMemberCase(detail::VisitorKey::opSet<OpTs...>(), fn);
+    return *this;
+  }
+
   VisitorBuilder &addSet(const OpSet &opSet,
                          VisitorResult (*fn)(PayloadT &,
                                              llvm::Instruction &I)) {
@@ -506,6 +512,15 @@ private:
   template <typename ReturnT>
   void addSetCase(detail::VisitorKey key,
                   ReturnT (*fn)(PayloadT &, llvm::Instruction &)) {
+    detail::VisitorCallbackData data{};
+    static_assert(sizeof(fn) <= sizeof(data.data));
+    memcpy(&data.data, &fn, sizeof(fn));
+    VisitorBuilderBase::add(key, &VisitorBuilder::setForwarder<ReturnT>, data);
+  }
+
+  template <typename ReturnT>
+  void addSetMemberCase(detail::VisitorKey key,
+                        ReturnT (PayloadT::*fn)(llvm::Instruction &)) {
     detail::VisitorCallbackData data{};
     static_assert(sizeof(fn) <= sizeof(data.data));
     memcpy(&data.data, &fn, sizeof(fn));
