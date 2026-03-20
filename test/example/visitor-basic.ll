@@ -28,13 +28,15 @@
 ; DEFAULT-NEXT: visiting SetReadOp: %v.0 = call i1 @xd.ir.set.read__i1()
 ; DEFAULT-NEXT: visiting SetReadOp: %v.1 = call i32 @xd.ir.set.read__i32()
 ; DEFAULT-NEXT: visiting SetReadOp (set): %v.1 = call i32 @xd.ir.set.read__i32()
+; DEFAULT-NEXT: visiting llvm instruction:   %v.1 = call i32 @xd.ir.set.read__i32()
 ; DEFAULT-NEXT: visiting UnaryInstruction (pre): %v.2 = trunc i32 %v.1 to i8
 ; DEFAULT-NEXT: visiting UnaryInstruction: %v.2 = trunc i32 %v.1 to i8
 ; DEFAULT-NEXT: visiting SetWriteOp (set): call void (...) @xd.ir.set.write(i8 %v.2)
+; DEFAULT-NEXT: visiting llvm instruction:   call void (...) @xd.ir.set.write(i8 %v.2)
 ; DEFAULT-NEXT: visiting WriteVarArgOp: call void (...) @xd.ir.write.vararg(i8 %t, i32 %v2, i32 %q)
 ; DEFAULT-NEXT:   %v2 =
 ; DEFAULT-NEXT:   %q =
-; DEFAULT-NEXT: visiting umin (set): %vm = call i32 @llvm.umin.i32(i32 %v1, i32 %q) 
+; DEFAULT-NEXT: visiting umin (set): %vm = call i32 @llvm.umin.i32(i32 %v1, i32 %q)
 ; DEFAULT-NEXT: visiting StringAttrOp: Hello world!
 ; DEFAULT-NEXT: visiting CallInst:   %0 = call i32 @op.func(i32 %v1, i32 %q)
 ; DEFAULT-NEXT: visiting CallBrInst:   callbr void @callee()

@@ -173,6 +173,10 @@ struct VisitorNest {
   void visitBinaryOperator(BinaryOperator &inst) {
     *out << "visiting BinaryOperator: " << inst << '\n';
   }
+  void visitInst(Instruction &inst) {
+    *out << "visiting llvm instruction: " << inst << '\n';
+  }
+
   VisitorResult visitUnaryInstruction(UnaryInstruction &inst) {
     *out << "visiting UnaryInstruction (pre): " << inst << '\n';
     return isa<LoadInst>(inst) ? VisitorResult::Stop : VisitorResult::Continue;
@@ -212,10 +216,10 @@ template <bool rpot> const Visitor<VisitorContainer> &getExampleVisitor() {
             });
             b.add(&VisitorNest::visitUnaryInstruction);
             b.add<xd::cpp::SetReadOp>([](VisitorNest &self, xd::cpp::SetReadOp &op) {
-              *self.out << "visiting SetReadOp: " << op << '\n';
-              return op.getType()->isIntegerTy(1) ? VisitorResult::Stop
-                                                  : VisitorResult::Continue;
-            });
+                  *self.out << "visiting SetReadOp: " << op << '\n';
+                  return op.getType()->isIntegerTy(1) ? VisitorResult::Stop
+                                                      : VisitorResult::Continue;
+                });
             b.addSet<xd::cpp::SetReadOp, xd::cpp::SetWriteOp>(
                 [](VisitorNest &self, llvm::Instruction &op) {
                   if (isa<xd::cpp::SetReadOp>(op)) {
@@ -224,11 +228,13 @@ template <bool rpot> const Visitor<VisitorContainer> &getExampleVisitor() {
                     *self.out << "visiting SetWriteOp (set): " << op << '\n';
                   }
                 });
+            b.addSet<xd::cpp::SetReadOp, xd::cpp::SetWriteOp>(
+                &VisitorNest::visitInst);
             b.addSet(complexSet, [](VisitorNest &self, llvm::Instruction &op) {
               assert((op.getOpcode() == Instruction::Ret ||
                       (isa<IntrinsicInst>(&op) &&
-                          cast<IntrinsicInst>(&op)->getIntrinsicID() ==
-                              Intrinsic::umin)) &&
+                       cast<IntrinsicInst>(&op)->getIntrinsicID() ==
+                           Intrinsic::umin)) &&
                      "Unexpected operation detected while visiting OpSet!");
 
               if (op.getOpcode() == Instruction::Ret) {
@@ -246,8 +252,8 @@ template <bool rpot> const Visitor<VisitorContainer> &getExampleVisitor() {
             b.add(&VisitorNest::visitBinaryOperator);
             b.nest<raw_ostream>([](VisitorBuilder<raw_ostream> &b) {
               b.add<xd::cpp::WriteOp>([](raw_ostream &out, xd::cpp::WriteOp &op) {
-                out << "visiting WriteOp: " << op << '\n';
-              });
+                    out << "visiting WriteOp: " << op << '\n';
+                  });
               b.add<xd::cpp::WriteVarArgOp>(
                   [](raw_ostream &out, xd::cpp::WriteVarArgOp &op) {
                     out << "visiting WriteVarArgOp: " << op << ":\n";
