@@ -34,17 +34,17 @@ TEST(OpMapBasicTestsName, CoreOpContainsTests) {
   OpMap<StringRef> map;
 
   OpDescription retDesc = OpDescription::fromCoreOp(Instruction::Ret);
-  OpDescription brDesc = OpDescription::fromCoreOp(Instruction::Br);
+  OpDescription callBrDesc = OpDescription::fromCoreOp(Instruction::CallBr);
   map[retDesc] = "RetInst";
 
   EXPECT_TRUE(map.containsCoreOp(Instruction::Ret));
-  EXPECT_FALSE(map.containsCoreOp(Instruction::Br));
+  EXPECT_FALSE(map.containsCoreOp(Instruction::CallBr));
   EXPECT_EQ(map[retDesc], "RetInst");
 
-  map[brDesc] = "BrInst";
+  map[callBrDesc] = "CallBrInst";
   EXPECT_EQ(map[retDesc], "RetInst");
-  EXPECT_TRUE(map.containsCoreOp(Instruction::Br));
-  EXPECT_EQ(map[brDesc], "BrInst");
+  EXPECT_TRUE(map.containsCoreOp(Instruction::CallBr));
+  EXPECT_EQ(map[callBrDesc], "CallBrInst");
 }
 
 TEST(OpMapBasicTestsName, IntrinsicOpContainsTests) {

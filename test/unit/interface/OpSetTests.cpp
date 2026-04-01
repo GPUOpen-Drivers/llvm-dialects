@@ -65,9 +65,9 @@ TEST(DialectsOpSetSizeTestsName, NonEmptyOpDescriptionsTemplatizedMakerTest) {
 }
 
 TEST(DialectsOpSetContainsTestsName, containsCoreOps) {
-  const OpSet set = OpSet::fromCoreOpcodes({1, 2}); // Ret, Br
+  const OpSet set = OpSet::fromCoreOpcodes({Instruction::Ret, Instruction::CallBr});
   EXPECT_TRUE(set.containsCoreOp(Instruction::Ret));
-  EXPECT_TRUE(set.containsCoreOp(Instruction::Br));
+  EXPECT_TRUE(set.containsCoreOp(Instruction::CallBr));
   EXPECT_FALSE(set.containsCoreOp(Instruction::Switch));
 }
 
