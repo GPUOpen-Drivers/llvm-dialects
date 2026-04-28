@@ -271,6 +271,7 @@ void llvm_dialects::genDialectDefs(raw_ostream &out, RecordKeeperTy &records) {
 
   out << R"(
 #include "llvm/Support/raw_ostream.h"
+#include <array>
 #endif // GET_INCLUDES
 
 #ifdef GET_DIALECT_DEFS
@@ -326,10 +327,10 @@ void llvm_dialects::genDialectDefs(raw_ostream &out, RecordKeeperTy &records) {
     }
 
     bool $Dialect::isDialectOp(::llvm::CallInst& op) {
-      ::llvm::Function *calledFunc = op.getCalledFunction(); 
+      ::llvm::Function *calledFunc = op.getCalledFunction();
       if (!calledFunc)
         return false;
-      
+
       return isDialectOp(calledFunc->getName());
     }
 
@@ -448,7 +449,7 @@ void llvm_dialects::genDialectDefs(raw_ostream &out, RecordKeeperTy &records) {
   if (!dialect->cppNamespace.empty())
     out << tgfmt("} // namespace $namespace\n", &fmt);
 
-  // Define specializations of OpDescription::get for reflection
+  // Define specializations of OpDescription::{get, getAll} for reflection
   for (const auto &opPtr : dialect->operations) {
     Operation &op = *opPtr;
 
@@ -456,6 +457,10 @@ void llvm_dialects::genDialectDefs(raw_ostream &out, RecordKeeperTy &records) {
     fmt.withOp(op.name);
     fmt.addSubst("mnemonic", op.mnemonic);
 
+    // We'd prefer fully qualifying the llvm_dialects namespace below in getAll
+    // with leading "::", but this is parsed as oart of the preceding ArrayRef
+    // type as there are just spaces in between. (gcc/clang/MSVC reject this)
+    // The get() variant does not have this problem due to the `&` token.
     out << tgfmt(R"(
       template <>
       const ::llvm_dialects::OpDescription &
@@ -464,8 +469,46 @@ void llvm_dialects::genDialectDefs(raw_ostream &out, RecordKeeperTy &records) {
         return desc;
       }
 
+      template <>
+      ::llvm::ArrayRef<::llvm_dialects::OpDescription>
+      llvm_dialects::OpDescription::getAll<$namespace::$_op>() {
+        return get<$namespace::$_op>();
+      }
+
     )",
                  &fmt, op.haveResultOverloads() ? "true" : "false");
+  }
+
+  // Define specializations of OpDescription::getAll for op classes
+  for (const auto &opClassPtr : dialect->opClasses) {
+    OpClass &opClass = *opClassPtr;
+
+    FmtContextScope scope{fmt};
+    fmt.withOp(opClass.name);
+
+    // We'd prefer fully qualifying the llvm_dialects namespace below with
+    // leading "::", but gcc/clang/MSVC reject this as they interpret the
+    // ::llvm_dialects identifier than within the preceding ArrayRef type. The
+    // get() variant does not have this problem as the `&` token separates the
+    // two.
+    out << tgfmt(R"(
+      template <>
+      ::llvm::ArrayRef<::llvm_dialects::OpDescription>
+      llvm_dialects::OpDescription::getAll<$namespace::$_op>() {
+        static const std::array<::llvm_dialects::OpDescription, $0> desc{)",
+                 &fmt, opClass.operations.size());
+    for (const auto &op : opClass.operations) {
+      fmt.addSubst("mnemonic", op->mnemonic);
+      out << tgfmt(R"(
+          ::llvm_dialects::OpDescription{$0, "$dialect.$mnemonic"},)",
+                   &fmt, op->haveResultOverloads() ? "true" : "false");
+    }
+    out << tgfmt(R"(
+        };
+        return desc;
+      }
+    )",
+                 &fmt, opClass.operations.size());
   }
 
   out << R"(

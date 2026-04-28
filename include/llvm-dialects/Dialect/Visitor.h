@@ -120,9 +120,18 @@ class VisitorKey {
   friend class VisitorTemplate;
 
 public:
+  // OpT may be a concrete dialect op, or an op class.
   template <typename OpT> static VisitorKey op() {
-    VisitorKey key{Kind::OpDescription};
-    key.m_description = &OpDescription::get<OpT>();
+    auto const descriptions = OpDescription::getAll<OpT>();
+    if (descriptions.size() == 1) {
+      VisitorKey key{Kind::OpDescription};
+      key.m_description = &descriptions[0];
+      return key;
+    }
+    // OpT is an op class. Resolve it by all concrete sub ops.
+    static const OpSet set = OpSet::fromOpDescriptions(descriptions);
+    VisitorKey key{Kind::OpSet};
+    key.m_set = &set;
     return key;
   }
 

@@ -85,3 +85,26 @@ TEST_F(VisitorIRTestFixture, VisitOp) {
     EXPECT_TRUE(Op == Mul1 || Op == Mul2);
   }
 }
+
+TEST_F(VisitorIRTestFixture, VisitOpClass) {
+  llvm_dialects::Builder Builder{Context};
+  Builder.SetInsertPoint(getEntryBlock());
+
+  auto *Mul1 = Builder.create<test::MulOp>();
+  auto *Mul2 = Builder.create<test::MulOp>();
+  auto *Add1 = Builder.create<test::AddOp>();
+  auto *Add2 = Builder.create<test::AddOp>();
+  auto *DialectOp1 = Builder.create<test::DialectOp1>();
+
+  DenseSet<test::SomeBaseOpClass *> Ops;
+  static const auto Visitor =
+      llvm_dialects::VisitorBuilder<DenseSet<test::SomeBaseOpClass *>>()
+          .add<test::SomeBaseOpClass>(
+              [](auto &Ops, test::SomeBaseOpClass &Op) { Ops.insert(&Op); })
+          .build();
+  Visitor.visit(Ops, *Mod);
+  EXPECT_EQ(Ops.size(), 4);
+  for (const auto *Op : Ops) {
+    EXPECT_TRUE(Op == Mul1 || Op == Mul2 || Op == Add1 || Op == Add2);
+  }
+}

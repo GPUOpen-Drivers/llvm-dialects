@@ -65,7 +65,13 @@ public:
     return m_kind == Kind::Dialect || m_kind == Kind::DialectWithOverloads;
   }
 
+  // Only supported for concrete ops, not for op classes.
   template <typename OpT> static const OpDescription &get();
+
+  // For concrete ops, returns a 1-element array containing the result of get().
+  // For op classes, returns an array containing the descriptions of all
+  // concrete ops that belong to this op class.
+  template <typename OpT> static llvm::ArrayRef<OpDescription> getAll();
 
   Kind getKind() const { return m_kind; }
 

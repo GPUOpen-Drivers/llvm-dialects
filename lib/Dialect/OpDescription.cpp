@@ -112,6 +112,10 @@ template <> const OpDescription &OpDescription::get<UnaryInstruction>() {
   return desc;
 }
 
+template <> ArrayRef<OpDescription> OpDescription::getAll<UnaryInstruction>() {
+  return get<UnaryInstruction>();
+}
+
 template <> const OpDescription &OpDescription::get<BinaryOperator>() {
   static unsigned opcodes[] = {
 #define HANDLE_BINARY_INST(num, opcode, Class) Instruction::opcode,
@@ -119,6 +123,10 @@ template <> const OpDescription &OpDescription::get<BinaryOperator>() {
   };
   static const OpDescription desc{Kind::Core, opcodes};
   return desc;
+}
+
+template <> ArrayRef<OpDescription> OpDescription::getAll<BinaryOperator>() {
+  return get<BinaryOperator>();
 }
 
 // Generate OpDescription for all dedicate instruction classes.
@@ -129,6 +137,9 @@ template <> const OpDescription &OpDescription::get<BinaryOperator>() {
   template <> const OpDescription &OpDescription::get<Class>() {               \
     static const OpDescription desc{Kind::Core, Instruction::opcode};          \
     return desc;                                                               \
+  }                                                                            \
+  template <> ArrayRef<OpDescription> OpDescription::getAll<Class>() {         \
+    return get<Class>();                                                       \
   }
 #include "llvm/IR/Instruction.def"
 
@@ -136,12 +147,18 @@ template <> const OpDescription &OpDescription::get<BinaryOperator>() {
   template <> const OpDescription &OpDescription::get<Class>() {               \
     static const OpDescription desc{Kind::Intrinsic, Intrinsic::opcode};       \
     return desc;                                                               \
+  }                                                                            \
+  template <> ArrayRef<OpDescription> OpDescription::getAll<Class>() {         \
+    return get<Class>();                                                       \
   }
 #define HANDLE_INTRINSIC_DESC_OPCODE_SET(Class, ...)                           \
   template <> const OpDescription &OpDescription::get<Class>() {               \
     static unsigned opcodes[] = {__VA_ARGS__};                                 \
     static const OpDescription desc{Kind::Intrinsic, opcodes};                 \
     return desc;                                                               \
+  }                                                                            \
+  template <> ArrayRef<OpDescription> OpDescription::getAll<Class>() {         \
+    return get<Class>();                                                       \
   }
 
 // ============================================================================
