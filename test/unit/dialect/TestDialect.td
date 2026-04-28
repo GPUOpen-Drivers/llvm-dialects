@@ -135,3 +135,26 @@ def DefaultNameTargetExtType : DialectType<TestDialect, "default.target"> {
     Type name should be "test.default.target".
   }];
 }
+
+def SomeBaseOpClass : OpClass<TestDialect> {
+  let arguments = (ins);
+  let summary = "family of operations";
+  let description = [{
+    Illustrate the use of the OpClass feature.
+  }];
+}
+
+class ConcreteOpClassMemberOp<string op>
+    : TestOp<"some.op.class.subop." # op, []> {
+  let superclass = SomeBaseOpClass;
+  let results = (outs);
+  let arguments = (ins superclass);
+
+  let summary = "perform the " # op # " operation";
+  let description = [{
+    Illustrate the use of the OpClass feature.
+  }];
+}
+
+def AddOp : ConcreteOpClassMemberOp<"add">;
+def MulOp : ConcreteOpClassMemberOp<"mul">;
