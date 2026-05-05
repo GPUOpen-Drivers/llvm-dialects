@@ -524,7 +524,7 @@ private:
     detail::VisitorCallbackData data{};
     static_assert(sizeof(fn) <= sizeof(data.data));
     memcpy(&data.data, &fn, sizeof(fn));
-    VisitorBuilderBase::add(key, &VisitorBuilder::setForwarder<ReturnT>, data);
+    VisitorBuilderBase::add(key, &VisitorBuilder::setMemberFnForwarder<ReturnT>, data);
   }
 
   template <typename OpT, typename ReturnT>
@@ -574,6 +574,21 @@ private:
       return VisitorResult::Continue;
     } else {
       return (self->*fn)(*llvm::cast<OpT>(op));
+    }
+  }
+
+  template <typename ReturnT>
+  static VisitorResult
+  setMemberFnForwarder(const detail::VisitorCallbackData &data, void *payload,
+                       llvm::Instruction *op) {
+    ReturnT (PayloadT::*fn)(llvm::Instruction &);
+    memcpy(&fn, &data.data, sizeof(fn));
+    PayloadT *self = static_cast<PayloadT *>(payload);
+    if constexpr (std::is_same_v<ReturnT, void>) {
+      (self->*fn)(*op);
+      return VisitorResult::Continue;
+    } else {
+      return (self->*fn)(*op);
     }
   }
 };
