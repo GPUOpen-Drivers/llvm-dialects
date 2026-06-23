@@ -32,6 +32,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <optional>
 
@@ -88,12 +89,16 @@ private:
   struct PHKindInfo : llvm::DenseMapInfo<PHKind> {
     using CharInfo = DenseMapInfo<char>;
 
+#if LLVM_MAIN_REVISION && LLVM_MAIN_REVISION < 583382
     static inline PHKind getEmptyKey() {
       return static_cast<PHKind>(CharInfo::getEmptyKey());
     }
+#endif
+#if LLVM_MAIN_REVISION && LLVM_MAIN_REVISION < 582772
     static inline PHKind getTombstoneKey() {
       return static_cast<PHKind>(CharInfo::getTombstoneKey());
     }
+#endif
     static unsigned getHashValue(const PHKind &val) {
       return CharInfo::getHashValue(static_cast<char>(val));
     }
