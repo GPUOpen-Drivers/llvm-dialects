@@ -218,10 +218,17 @@ void FmtObjectBase::format(raw_ostream &s) const {
         s << repl.spec << kMarkerForNoSubst;
         continue;
       }
+#if !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 586890
+      auto range = ArrayRef<llvm::support::detail::FormatFunctorRef>(adapters);
+      range = range.drop_front(repl.index);
+      llvm::interleaveComma(range, s,
+                            [&](auto &x) { x(s, /*Options=*/""); });
+#else // !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 586890
       auto range = ArrayRef<llvm::support::detail::format_adapter *>(adapters);
       range = range.drop_front(repl.index);
       llvm::interleaveComma(range, s,
                             [&](auto &x) { x->format(s, /*Options=*/""); });
+#endif // LLVM_MAIN_REVISION
       continue;
     }
 
@@ -233,7 +240,11 @@ void FmtObjectBase::format(raw_ostream &s) const {
     if (repl.type == FmtReplacement::Type::IndirectSpecialPH) {
       std::string indirectSpec;
       raw_string_ostream indirectSpecStream(indirectSpec);
+#if !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 586890
+      adapters[repl.index](indirectSpecStream, /*Options=*/"");
+#else // !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 586890
       adapters[repl.index]->format(indirectSpecStream, /*Options=*/"");
+#endif // LLVM_MAIN_REVISION
 
       auto subst = context->getSubstFor(indirectSpec);
       if (subst.has_value())
@@ -245,7 +256,11 @@ void FmtObjectBase::format(raw_ostream &s) const {
 
     assert(repl.type == FmtReplacement::Type::PositionalPH);
 
+#if !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 586890
+    adapters[repl.index](s, /*Options=*/"");
+#else // !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 586890
     adapters[repl.index]->format(s, /*Options=*/"");
+#endif // LLVM_MAIN_REVISION
   }
 }
 
@@ -253,18 +268,34 @@ FmtStrVecObject::FmtStrVecObject(StringRef fmt, const FmtContext *ctx,
                                  ArrayRef<std::string> params)
     : FmtObjectBase(fmt, ctx, params.size()) {
   parameters.reserve(params.size());
+#if !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 586890
   for (std::string p : params)
     parameters.push_back(
+        llvm::support::detail::FormatFunctor(std::move(p)));
+#else // !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 586890
+  for (std::string p : params)
+     parameters.push_back(
         llvm::support::detail::build_format_adapter(std::move(p)));
+#endif // LLVM_MAIN_REVISION
 
   adapters.reserve(parameters.size());
+#if !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 586890
+  for (auto &p : parameters)
+    adapters.push_back(p);
+#else // !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 586890
   for (auto &p : parameters)
     adapters.push_back(&p);
+#endif // LLVM_MAIN_REVISION
 }
 
 FmtStrVecObject::FmtStrVecObject(FmtStrVecObject &&that)
     : FmtObjectBase(std::move(that)), parameters(std::move(that.parameters)) {
   adapters.reserve(parameters.size());
+#if !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 586890
+  for (auto &p : parameters)
+    adapters.push_back(p);
+#else // !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 586890
   for (auto &p : parameters)
     adapters.push_back(&p);
+#endif // LLVM_MAIN_REVISION
 }

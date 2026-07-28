@@ -187,6 +187,16 @@ protected:
   // indexing capabilities.  In order to enable runtime indexing, we use this
   // structure to put the parameters into a std::vector.  Since the parameters
   // are not all the same type, we use some type-erasure by wrapping the
+#if !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 586890
+  // parameters in a template class and refer to them using function_refs.
+  struct CreateAdapters {
+    template <typename... Ts>
+    std::vector<llvm::support::detail::FormatFunctorRef>
+    operator()(Ts &... items) {
+      return std::vector<llvm::support::detail::FormatFunctorRef>{items...};
+    }
+  };
+#else // !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 586890
   // parameters in a template class that derives from a non-template superclass.
   // Essentially, we are converting a std::tuple<Derived<Ts...>> to a
   // std::vector<Base*>.
@@ -197,10 +207,15 @@ protected:
       return std::vector<llvm::support::detail::format_adapter *>{&items...};
     }
   };
+#endif // LLVM_MAIN_REVISION
 
   llvm::StringRef fmt;
   const FmtContext *context;
+#if !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 586890
+  std::vector<llvm::support::detail::FormatFunctorRef> adapters;
+#else // !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 586890
   std::vector<llvm::support::detail::format_adapter *> adapters;
+#endif // LLVM_MAIN_REVISION
   std::vector<FmtReplacement> replacements;
 
 public:
@@ -260,8 +275,13 @@ public:
 
 class FmtStrVecObject : public FmtObjectBase {
 public:
+#if !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 586890
+  using StrFormatAdapter = decltype(
+      llvm::support::detail::FormatFunctor(std::declval<std::string>()));
+#else // !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 586890
   using StrFormatAdapter = decltype(
       llvm::support::detail::build_format_adapter(std::declval<std::string>()));
+#endif // LLVM_MAIN_REVISION
 
   FmtStrVecObject(llvm::StringRef fmt, const FmtContext *ctx,
                   llvm::ArrayRef<std::string> params);
@@ -318,6 +338,20 @@ private:
 ///    because '{' and '}' are frequently used in C++ code.
 /// 2. This utility does not support format layout because it is rarely needed
 ///    in C++ code generation.
+#if !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 586890
+template <typename... Ts>
+inline auto tgfmt(llvm::StringRef fmt, const FmtContext *ctx, Ts &&... vals)
+    -> FmtObject<
+        decltype(std::make_tuple(llvm::support::detail::FormatFunctor(
+            std::forward<Ts>(vals))...))> {
+  using ParamTuple = decltype(std::make_tuple(
+      llvm::support::detail::FormatFunctor(std::forward<Ts>(vals))...));
+  return FmtObject<ParamTuple>(
+      fmt, ctx,
+      std::make_tuple(llvm::support::detail::FormatFunctor(
+          std::forward<Ts>(vals))...));
+}
+#else // !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 586890
 template <typename... Ts>
 inline auto tgfmt(llvm::StringRef fmt, const FmtContext *ctx, Ts &&... vals)
     -> FmtObject<
@@ -330,6 +364,7 @@ inline auto tgfmt(llvm::StringRef fmt, const FmtContext *ctx, Ts &&... vals)
       std::make_tuple(llvm::support::detail::build_format_adapter(
           std::forward<Ts>(vals))...));
 }
+#endif // LLVM_MAIN_REVISION
 
 inline FmtStrVecObject tgfmt(llvm::StringRef fmt, const FmtContext *ctx,
                              llvm::ArrayRef<std::string> params) {
