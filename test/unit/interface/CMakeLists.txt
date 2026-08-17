@@ -18,6 +18,7 @@
 
 
 add_dialects_unit_test(DialectsADTTests
+    AttributesIRTests.cpp
     OpSetTests.cpp
     OpMapTests.cpp
     OpMapIRTests.cpp

@@ -21,6 +21,7 @@
 #include "llvm-dialects/TableGen/Constraints.h"
 #include "llvm-dialects/TableGen/Dialects.h"
 #include "llvm-dialects/TableGen/Format.h"
+#include "llvm-dialects/TableGen/Traits.h"
 
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Record.h"
@@ -420,6 +421,11 @@ bool Operation::parse(raw_ostream &errs, GenDialectsContext *context,
     op->description = record->getValueAsString("description");
   for (RecordTy *traitRec : record->getValueAsListOfDefs("traits"))
     op->traits.push_back(context->getTrait(traitRec));
+
+  for (const Trait *trait : op->traits) {
+    trait->verifyArguments(op->name, op->getNumFullArguments(),
+                           op->hasVariadicArgument());
+  }
 
   EvaluationPlanner evaluation(op->m_system);
 

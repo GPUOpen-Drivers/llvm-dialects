@@ -80,6 +80,44 @@ private:
   std::string m_llvmEnum;
 };
 
+class LlvmAllocSizeAttributeTrait : public LlvmAttributeTrait {
+public:
+  LlvmAllocSizeAttributeTrait()
+      : LlvmAttributeTrait(Kind::LlvmAllocSizeAttributeTrait) {}
+
+  void init(GenDialectsContext *context, RecordTy *record, int idx) override;
+
+  void verifyArguments(StringRef opName, unsigned numFullArgs,
+                       bool hasVariadicArgument) const override;
+
+  void addAttribute(llvm::raw_ostream &out, FmtContext &fmt) const override;
+
+  static bool classof(const Trait *t) {
+    return t->getKind() == Kind::LlvmAllocSizeAttributeTrait;
+  }
+
+private:
+  int64_t m_sizeArgIdx = 0;
+  int64_t m_numElemsArgIdx = -1;
+};
+
+class LlvmAllocKindAttributeTrait : public LlvmAttributeTrait {
+public:
+  LlvmAllocKindAttributeTrait()
+      : LlvmAttributeTrait(Kind::LlvmAllocKindAttributeTrait) {}
+
+  void init(GenDialectsContext *context, RecordTy *record, int idx) override;
+
+  void addAttribute(llvm::raw_ostream &out, FmtContext &fmt) const override;
+
+  static bool classof(const Trait *t) {
+    return t->getKind() == Kind::LlvmAllocKindAttributeTrait;
+  }
+
+private:
+  SmallVector<std::string> m_kinds; // names of llvm::AllocFnKind enumerators
+};
+
 } // anonymous namespace
 
 bool llvm_dialects::noMemoryEffects() {
@@ -93,6 +131,10 @@ std::unique_ptr<Trait> Trait::fromRecord(GenDialectsContext *context,
     result = std::make_unique<LlvmEnumAttributeTrait>();
   } else if (traitRec->isSubClassOf("Memory")) {
     result = std::make_unique<LlvmMemoryAttributeTrait>();
+  } else if (traitRec->isSubClassOf("AllocSize")) {
+    result = std::make_unique<LlvmAllocSizeAttributeTrait>();
+  } else if (traitRec->isSubClassOf("AllocKind")) {
+    result = std::make_unique<LlvmAllocKindAttributeTrait>();
   } else {
     report_fatal_error(Twine("unsupported trait: ") + traitRec->getName());
   }
@@ -234,4 +276,97 @@ void LlvmMemoryAttributeTrait::addAttribute(raw_ostream &out,
   for (const auto &effect : m_effects)
     out << "  effects |= " << EffectWriter(fmt, effect) << ";\n";
   out << tgfmt("  $attrBuilder.addMemoryAttr(effects);\n}\n", &fmt);
+}
+
+void LlvmAllocSizeAttributeTrait::init(GenDialectsContext *context,
+                                       RecordTy *record, int idx) {
+  LlvmAttributeTrait::init(context, record, idx);
+
+  m_sizeArgIdx = record->getValueAsInt("sizeArgIdx");
+  m_numElemsArgIdx = record->getValueAsInt("numElemsArgIdx");
+
+  if (m_sizeArgIdx < 0) {
+    report_fatal_error(Twine("AllocSize: sizeArgIdx must be non-negative, ") +
+                       "but is " + Twine(m_sizeArgIdx));
+  }
+  if (m_numElemsArgIdx < -1) {
+    report_fatal_error(
+        Twine("AllocSize: numElemsArgIdx must be non-negative ") +
+        "or -1 (absent), but is " + Twine(m_numElemsArgIdx));
+  }
+  if (m_numElemsArgIdx == m_sizeArgIdx) {
+    report_fatal_error(
+        Twine("AllocSize: sizeArgIdx and numElemsArgIdx must be ") +
+        "distinct, but both are " + Twine(m_sizeArgIdx));
+  }
+}
+
+void LlvmAllocSizeAttributeTrait::verifyArguments(
+    StringRef opName, unsigned numFullArgs, bool hasVariadicArgument) const {
+  // The declaration of an operation with a variadic argument list has no
+  // fixed parameters at all, and LLVM's IR verifier rejects allocsize
+  // argument indices that do not refer to fixed parameters of the declaration.
+  if (hasVariadicArgument) {
+    report_fatal_error(Twine("AllocSize: cannot be used on operation '") +
+                       opName + "' which has a variadic argument list");
+  }
+  if (m_sizeArgIdx >= numFullArgs) {
+    report_fatal_error(Twine("AllocSize: sizeArgIdx (") + Twine(m_sizeArgIdx) +
+                       ") is out of bounds for operation '" + opName +
+                       "' with " + Twine(numFullArgs) + " argument(s)");
+  }
+  if (m_numElemsArgIdx >= 0 && m_numElemsArgIdx >= numFullArgs) {
+    report_fatal_error(Twine("AllocSize: numElemsArgIdx (") +
+                       Twine(m_numElemsArgIdx) +
+                       ") is out of bounds for operation '" + opName +
+                       "' with " + Twine(numFullArgs) + " argument(s)");
+  }
+}
+
+void LlvmAllocSizeAttributeTrait::addAttribute(raw_ostream &out,
+                                               FmtContext &fmt) const {
+  std::string numElemsArg =
+      m_numElemsArgIdx < 0 ? "std::nullopt" : std::to_string(m_numElemsArgIdx);
+  out << tgfmt("$attrBuilder.addAllocSizeAttr($0, $1);\n", &fmt, m_sizeArgIdx,
+               numElemsArg);
+}
+
+void LlvmAllocKindAttributeTrait::init(GenDialectsContext *context,
+                                       RecordTy *record, int idx) {
+  LlvmAttributeTrait::init(context, record, idx);
+
+  // Map of the allockind(...) names accepted by LLVM IR to the corresponding
+  // llvm::AllocFnKind enumerators.
+  static const std::pair<StringRef, StringRef> kindNames[] = {
+      {"alloc", "Alloc"},   {"realloc", "Realloc"},
+      {"free", "Free"},     {"uninitialized", "Uninitialized"},
+      {"zeroed", "Zeroed"}, {"aligned", "Aligned"},
+  };
+
+  for (StringRef kind : record->getValueAsListOfStrings("kinds")) {
+    const auto *it = llvm::find_if(
+        kindNames, [kind](const std::pair<StringRef, StringRef> &entry) {
+          return entry.first == kind;
+        });
+    if (it == std::end(kindNames)) {
+      report_fatal_error(Twine("AllocKind: unknown allocation kind '") + kind +
+                         "'; valid kinds are: alloc, realloc, free, "
+                         "uninitialized, zeroed, aligned");
+    }
+    m_kinds.emplace_back(it->second);
+  }
+
+  if (m_kinds.empty())
+    report_fatal_error("AllocKind: the list of allocation kinds is empty");
+}
+
+void LlvmAllocKindAttributeTrait::addAttribute(raw_ostream &out,
+                                               FmtContext &fmt) const {
+  std::string kinds;
+  for (const auto &kind : m_kinds) {
+    if (!kinds.empty())
+      kinds += " | ";
+    kinds += "::llvm::AllocFnKind::" + kind;
+  }
+  out << tgfmt("$attrBuilder.addAllocKindAttr($0);\n", &fmt, kinds);
 }
