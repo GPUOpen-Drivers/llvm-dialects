@@ -101,6 +101,34 @@ def WriteVarArgOp : ExampleOp<"write.vararg",
   }];
 }
 
+def AllocOp : ExampleOp<"alloc",
+                        [Memory<[(readwrite InaccessibleMem)]>, NoUnwind,
+                         WillReturn, AllocSize<0>,
+                         AllocKind<["alloc", "uninitialized"]>]> {
+  let results = (outs Ptr:$result);
+  let arguments = (ins I64:$size);
+
+  let summary = "allocate memory";
+  let description = [{
+    Returns a pointer to a newly allocated region of size bytes of
+    uninitialized memory.
+  }];
+}
+
+def AllocArrayOp : ExampleOp<"alloc.array",
+                             [Memory<[(readwrite InaccessibleMem)]>, NoUnwind,
+                              WillReturn, AllocSize<1, 0>,
+                              AllocKind<["alloc", "zeroed"]>]> {
+  let results = (outs Ptr:$result);
+  let arguments = (ins I32:$count, I32:$elem_size);
+
+  let summary = "allocate an array";
+  let description = [{
+    Returns a pointer to a newly allocated, zero-initialized array of count
+    elements of elem_size bytes each.
+  }];
+}
+
 def SetReadOp : ExampleOp<"set.read",
                        [Memory<[(readwrite InaccessibleMem)]>, NoUnwind]> {
   let results = (outs value:$data);

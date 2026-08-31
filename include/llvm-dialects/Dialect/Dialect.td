@@ -401,6 +401,33 @@ def ArgMem : LlvmMemoryLocation<"ArgMem">;
 def InaccessibleMem : LlvmMemoryLocation<"InaccessibleMem">;
 def Other : LlvmMemoryLocation<"Other">;
 
+/// Represent the LLVM `allocsize(<sizeArgIdx>)` or
+/// `allocsize(<sizeArgIdx>, <numElemsArgIdx>)` attribute. The indicated
+/// argument(s) describe how many bytes of memory are allocated by the
+/// operation: either a single argument holding the allocation size in bytes,
+/// or two arguments whose product is the allocation size in bytes.
+///
+/// Argument indices refer to the operation's value arguments (0-based). Leave
+/// numElemsArgIdx at its default of -1 for the single-argument form.
+///
+/// Example: `AllocSize<0>` means the first argument of the operation is the
+/// number of allocated bytes.
+class AllocSize<int sizeArgIdx_, int numElemsArgIdx_ = -1> : Trait<[FnTrait]> {
+  int sizeArgIdx = sizeArgIdx_;
+  int numElemsArgIdx = numElemsArgIdx_;
+}
+
+/// Represent the LLVM `allockind(...)` attribute as the union of the given
+/// allocation kinds. The valid kinds are "alloc", "realloc", "free",
+/// "uninitialized", "zeroed", and "aligned"; see the LLVM Language Reference
+/// for their meaning.
+///
+/// Example: `AllocKind<["alloc", "uninitialized"]>` means the operation
+/// returns a new, uninitialized allocation.
+class AllocKind<list<string> kinds_> : Trait<[FnTrait]> {
+  list<string> kinds = kinds_;
+}
+
 // ============================================================================
 /// Operation classes
 ///
