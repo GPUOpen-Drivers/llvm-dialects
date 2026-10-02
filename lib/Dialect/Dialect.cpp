@@ -45,8 +45,11 @@ class ContextMap {
 
 public:
   static ContextMap &get() {
-    static ContextMap theMap;
-    return theMap;
+    // Never destroyed: DialectContexts can be destroyed from other static
+    // destructors, which may run after a function-local static is destroyed.
+    alignas(ContextMap) static std::byte storage[sizeof(ContextMap)];
+    static ContextMap *theMap = new (storage) ContextMap;
+    return *theMap;
   }
 
   void insert(LLVMContext *llvmContext, DialectContext *dialectContext);
@@ -114,6 +117,11 @@ void ContextMap::remove(LLVMContext *llvmContext,
   std::lock_guard<std::mutex> lock(m_mutex);
   assert(m_map.lookup(llvmContext) == dialectContext);
   m_map.erase(llvmContext);
+
+  // Free the buckets with the last DialectContext, so that a full teardown
+  // leaves nothing allocated.
+  if (m_map.empty())
+    m_map.shrink_and_clear();
 
   // Remove any stale per-thread cache entries.
   //
