@@ -44,7 +44,9 @@ public:
     LlvmEnumRetAttributeTrait,
     LlvmEnumParamAttributeTrait,
     LlvmMemoryAttributeTrait,
-    LlvmAttributeTrait_Last = LlvmMemoryAttributeTrait,
+    LlvmAllocSizeAttributeTrait,
+    LlvmAllocKindAttributeTrait,
+    LlvmAttributeTrait_Last = LlvmAllocKindAttributeTrait,
   };
 
   static std::unique_ptr<Trait> fromRecord(GenDialectsContext *context,
@@ -53,6 +55,13 @@ public:
   virtual ~Trait() = default;
 
   virtual void init(GenDialectsContext *context, RecordTy *record, int idx);
+
+  /// Called for every operation carrying this trait once the operation's
+  /// argument list is known. numFullArgs is the number of value arguments of
+  /// the operation, not counting a variadic argument list. Reports a fatal
+  /// error if the trait cannot be applied to the operation.
+  virtual void verifyArguments(llvm::StringRef opName, unsigned numFullArgs,
+                               bool hasVariadicArgument) const {}
 
   Kind getKind() const { return m_kind; }
   RecordTy *getRecord() const { return m_record; }

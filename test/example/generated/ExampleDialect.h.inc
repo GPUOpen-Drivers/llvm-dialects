@@ -47,7 +47,7 @@ namespace xd::cpp {
         }
 
       private:
-        ::std::array<::llvm::AttributeList, 7> m_attributeLists;
+        ::std::array<::llvm::AttributeList, 9> m_attributeLists;
     };
 
     class StructBackedType : public ::llvm::StructType {
@@ -180,6 +180,78 @@ bool verifier(::llvm::raw_ostream &errs);
 Lhs = 0,
 Rhs = 1,
 Extra = 2,
+};};
+::llvm::Value * getResult();
+
+
+      };
+    
+      /// AllocArrayOp
+/// allocate an array
+/// 
+///     Returns a pointer to a newly allocated, zero-initialized array of count
+///     elements of elem_size bytes each.
+///   
+/// Arguments
+/// * Value * count
+/// * Value * elem_size
+
+      class AllocArrayOp : public ::llvm::CallInst {
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.alloc.array"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isSimpleOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static AllocArrayOp* create(::llvm_dialects::Builder& b, ::llvm::Value * count, ::llvm::Value * elemSize, const llvm::Twine &instName = "");
+
+bool verifier(::llvm::raw_ostream &errs);
+
+::llvm::Value * getCount() const;
+          void setCount(::llvm::Value * count);
+        ::llvm::Value * getElemSize() const;
+          void setElemSize(::llvm::Value * elem_size);
+        struct ArgumentIndex { enum Enum : uint32_t {
+Count = 0,
+ElemSize = 1,
+};};
+::llvm::Value * getResult();
+
+
+      };
+    
+      /// AllocOp
+/// allocate memory
+/// 
+///     Returns a pointer to a newly allocated region of size bytes of
+///     uninitialized memory.
+///   
+/// Arguments
+/// * Value * size
+
+      class AllocOp : public ::llvm::CallInst {
+        static const ::llvm::StringLiteral s_name; //{"xd.ir.alloc"};
+
+      public:
+        static bool classof(const ::llvm::CallInst* i) {
+          return ::llvm_dialects::detail::isSimpleOperation(i, s_name);
+        }
+        static bool classof(const ::llvm::Value* v) {
+          return ::llvm::isa<::llvm::CallInst>(v) &&
+                 classof(::llvm::cast<::llvm::CallInst>(v));
+        }
+    static AllocOp* create(::llvm_dialects::Builder& b, ::llvm::Value * size, const llvm::Twine &instName = "");
+
+bool verifier(::llvm::raw_ostream &errs);
+
+::llvm::Value * getSize() const;
+          void setSize(::llvm::Value * size);
+        struct ArgumentIndex { enum Enum : uint32_t {
+Size = 0,
 };};
 ::llvm::Value * getResult();
 

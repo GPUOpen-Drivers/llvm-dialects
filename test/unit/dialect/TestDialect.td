@@ -83,6 +83,30 @@ def InstNameConflictWithExplRetTestOp : Op<TestDialect, "try.conflict.type.suffi
   }];
 }
 
+def AllocatingOp : TestOp<"allocating.op",
+                          [NoUnwind, AllocSize<0>,
+                           AllocKind<["alloc", "uninitialized"]>]> {
+  let results = (outs Ptr:$result);
+  let arguments = (ins I64:$size);
+
+  let summary = "allocate uninitialized memory";
+  let description = [{
+    Test operation carrying the AllocSize and AllocKind traits.
+  }];
+}
+
+def AllocatingArrayOp : TestOp<"allocating.array.op",
+                               [NoUnwind, AllocSize<1, 0>,
+                                AllocKind<["alloc", "zeroed"]>]> {
+  let results = (outs Ptr:$result);
+  let arguments = (ins I32:$count, I32:$elem_size);
+
+  let summary = "allocate a zeroed array";
+  let description = [{
+    Test operation carrying the two-argument form of the AllocSize trait.
+  }];
+}
+
 // Test types with custom llvmTypeNameOverride
 
 // Test TargetExtType with custom name
