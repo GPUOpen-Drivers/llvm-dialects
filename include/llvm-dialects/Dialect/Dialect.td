@@ -78,7 +78,7 @@ class Attr<string cppType_> : MetaType {
 
 class IntegerAttr<string cppType_> : Attr<cppType_> {
   let toLlvmValue = [{ ::llvm::ConstantInt::get($1, $0) }];
-  let fromLlvmValue = [{ ::llvm::cast<::llvm::ConstantInt>($0)->getZExtValue() }];
+  let fromLlvmValue = "static_cast<" # cppType_ # ">(::llvm::cast<::llvm::ConstantInt>($0)->getZExtValue())";
 }
 
 def AttrI1 : IntegerAttr<"bool">;
