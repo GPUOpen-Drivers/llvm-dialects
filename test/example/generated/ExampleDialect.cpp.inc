@@ -545,7 +545,7 @@ uint32_t const extra = getExtra();
         setArgOperand(ArgumentIndex::Rhs, rhs);
       }
       uint32_t Add32Op::getExtra() const {
-        return  ::llvm::cast<::llvm::ConstantInt>(getArgOperand(ArgumentIndex::Extra))->getZExtValue() ;
+        return  static_cast<uint32_t>(::llvm::cast<::llvm::ConstantInt>(getArgOperand(ArgumentIndex::Extra))->getZExtValue());
       }
 
       void Add32Op::setExtra(uint32_t extra) {
@@ -1520,7 +1520,7 @@ source
 
 
       bool ImmutableOp::getVal() const {
-        return  ::llvm::cast<::llvm::ConstantInt>(getArgOperand(ArgumentIndex::Val))->getZExtValue() ;
+        return static_cast<bool>(::llvm::cast<::llvm::ConstantInt>(getArgOperand(ArgumentIndex::Val))->getZExtValue());
       }
 
 
