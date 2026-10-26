@@ -50,7 +50,11 @@ DialectExtensionPoint<VerifierExtension> &getVerifierExtensionPoint();
 
 bool verify(llvm::Module &module, llvm::raw_ostream &out);
 
+#if !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 579498
+class VerifyModulePass : public llvm::OptionalPassInfoMixin<VerifyModulePass> {
+#else // !LLVM_MAIN_REVISION || LLVM_MAIN_REVISION >= 579498
 class VerifyModulePass : public llvm::PassInfoMixin<VerifyModulePass> {
+#endif // LLVM_MAIN_REVISION
 public:
   llvm::PreservedAnalyses run(llvm::Module &module,
                               llvm::ModuleAnalysisManager &analysisManager);
