@@ -108,3 +108,89 @@ TEST_F(VisitorIRTestFixture, VisitOpClass) {
     EXPECT_TRUE(Op == Mul1 || Op == Mul2 || Op == Add1 || Op == Add2);
   }
 }
+
+// Visiting a nested op class must cover the ops of the nested class itself.
+TEST_F(VisitorIRTestFixture, VisitNestedOpClass) {
+  llvm_dialects::Builder Builder{Context};
+  Builder.SetInsertPoint(getEntryBlock());
+
+  Builder.create<test::MulOp>();
+  Builder.create<test::AddOp>();
+  auto *Sub1 = Builder.create<test::SubOp>();
+  auto *Div1 = Builder.create<test::DivOp>();
+  Builder.create<test::DialectOp1>();
+
+  DenseSet<test::SomeDerivedOpClass *> Ops;
+  static const auto Visitor =
+      llvm_dialects::VisitorBuilder<DenseSet<test::SomeDerivedOpClass *>>()
+          .add<test::SomeDerivedOpClass>(
+              [](auto &Ops, test::SomeDerivedOpClass &Op) { Ops.insert(&Op); })
+          .build();
+  Visitor.visit(Ops, *Mod);
+  EXPECT_EQ(Ops.size(), 2);
+  for (const auto *Op : Ops) {
+    EXPECT_TRUE(Op == Sub1 || Op == Div1);
+  }
+}
+
+// Visiting an op class should cover ops that are members of a nested op class, and not just
+// the ops that are direct members of the visited class.
+//
+// FIXME: This is currently broken, and the test asserts the current (wrong) behavior.
+// OpDescription::getAll, which visiting is based on, only reports the ops that are direct
+// members of the visited op class, because ops are only registered with their immediate
+// superclass. classof does not have this problem, as it recurses into nested op classes, so
+// isa<SomeBaseOpClass> and visiting SomeBaseOpClass currently disagree: the ops of the
+// nested class are silently skipped by the visitor.
+TEST_F(VisitorIRTestFixture, VisitOpClassWithNestedOpClass) {
+  llvm_dialects::Builder Builder{Context};
+  Builder.SetInsertPoint(getEntryBlock());
+
+  auto *Mul1 = Builder.create<test::MulOp>();
+  auto *Add1 = Builder.create<test::AddOp>();
+  auto *Sub1 = Builder.create<test::SubOp>();
+  auto *Div1 = Builder.create<test::DivOp>();
+  Builder.create<test::DialectOp1>();
+
+  // All four ops are members of SomeBaseOpClass as far as isa<> is concerned.
+  EXPECT_TRUE(isa<test::SomeBaseOpClass>(Mul1));
+  EXPECT_TRUE(isa<test::SomeBaseOpClass>(Add1));
+  EXPECT_TRUE(isa<test::SomeBaseOpClass>(Sub1));
+  EXPECT_TRUE(isa<test::SomeBaseOpClass>(Div1));
+
+  DenseSet<test::SomeBaseOpClass *> Ops;
+  static const auto Visitor =
+      llvm_dialects::VisitorBuilder<DenseSet<test::SomeBaseOpClass *>>()
+          .add<test::SomeBaseOpClass>(
+              [](auto &Ops, test::SomeBaseOpClass &Op) { Ops.insert(&Op); })
+          .build();
+  Visitor.visit(Ops, *Mod);
+
+  // FIXME: Should be 4, and should contain Sub1 and Div1 as well.
+  EXPECT_EQ(Ops.size(), 2);
+  for (const auto *Op : Ops) {
+    EXPECT_TRUE(Op == Mul1 || Op == Add1);
+  }
+}
+
+// isa<> must see through the full op class hierarchy, independently of the visitor.
+TEST_F(VisitorIRTestFixture, NestedOpClassIsa) {
+  llvm_dialects::Builder Builder{Context};
+  Builder.SetInsertPoint(getEntryBlock());
+
+  auto *Mul1 = Builder.create<test::MulOp>();
+  auto *Sub1 = Builder.create<test::SubOp>();
+  auto *DialectOp1 = Builder.create<test::DialectOp1>();
+
+  // An op of the nested class is a member of both the nested and the base class.
+  EXPECT_TRUE(isa<test::SomeDerivedOpClass>(Sub1));
+  EXPECT_TRUE(isa<test::SomeBaseOpClass>(Sub1));
+
+  // An op that is a direct member of the base class is not a member of the nested class.
+  EXPECT_FALSE(isa<test::SomeDerivedOpClass>(Mul1));
+  EXPECT_TRUE(isa<test::SomeBaseOpClass>(Mul1));
+
+  // An unrelated op is a member of neither.
+  EXPECT_FALSE(isa<test::SomeDerivedOpClass>(DialectOp1));
+  EXPECT_FALSE(isa<test::SomeBaseOpClass>(DialectOp1));
+}
