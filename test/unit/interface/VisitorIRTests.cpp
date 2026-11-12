@@ -133,15 +133,8 @@ TEST_F(VisitorIRTestFixture, VisitNestedOpClass) {
   }
 }
 
-// Visiting an op class should cover ops that are members of a nested op class, and not just
+// Visiting an op class must cover ops that are members of a nested op class, and not just
 // the ops that are direct members of the visited class.
-//
-// FIXME: This is currently broken, and the test asserts the current (wrong) behavior.
-// OpDescription::getAll, which visiting is based on, only reports the ops that are direct
-// members of the visited op class, because ops are only registered with their immediate
-// superclass. classof does not have this problem, as it recurses into nested op classes, so
-// isa<SomeBaseOpClass> and visiting SomeBaseOpClass currently disagree: the ops of the
-// nested class are silently skipped by the visitor.
 TEST_F(VisitorIRTestFixture, VisitOpClassWithNestedOpClass) {
   llvm_dialects::Builder Builder{Context};
   Builder.SetInsertPoint(getEntryBlock());
@@ -166,10 +159,9 @@ TEST_F(VisitorIRTestFixture, VisitOpClassWithNestedOpClass) {
           .build();
   Visitor.visit(Ops, *Mod);
 
-  // FIXME: Should be 4, and should contain Sub1 and Div1 as well.
-  EXPECT_EQ(Ops.size(), 2);
+  EXPECT_EQ(Ops.size(), 4);
   for (const auto *Op : Ops) {
-    EXPECT_TRUE(Op == Mul1 || Op == Add1);
+    EXPECT_TRUE(Op == Mul1 || Op == Add1 || Op == Sub1 || Op == Div1);
   }
 }
 
