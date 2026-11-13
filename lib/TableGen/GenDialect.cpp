@@ -43,6 +43,26 @@ cl::opt<std::string> g_dialect("dialect", cl::desc("the dialect to generate"), c
 
 } // anonymous namespace
 
+/// Recursively collect all operations that are members of \p opClass, including those that
+/// are members of nested op classes.
+///
+/// Operations are only registered with their immediate superclass, so the `operations`
+/// member alone does not account for nested op classes.
+static void
+collectAllNestedOperations(const OpClass &opClass,
+                           SmallVectorImpl<Operation *> &operations) {
+  for (const OpClass *subclass : opClass.subclasses)
+    collectAllNestedOperations(*subclass, operations);
+
+  operations.append(opClass.operations.begin(), opClass.operations.end());
+}
+
+static SmallVector<Operation *> getAllNestedOperations(const OpClass &opClass) {
+  SmallVector<Operation *> operations;
+  collectAllNestedOperations(opClass, operations);
+  return operations;
+}
+
 static std::pair<std::unique_ptr<GenDialectsContext>, GenDialect *>
 getSelectedDialect(RecordKeeperTy &records) {
   if (g_dialect.empty())
@@ -486,6 +506,11 @@ void llvm_dialects::genDialectDefs(raw_ostream &out, RecordKeeperTy &records) {
     FmtContextScope scope{fmt};
     fmt.withOp(opClass.name);
 
+    // Nested op classes are part of this op class, so their operations must be included
+    // as well.
+    const SmallVector<Operation *> nestedOperations =
+        getAllNestedOperations(opClass);
+
     // We'd prefer fully qualifying the llvm_dialects namespace below with
     // leading "::", but gcc/clang/MSVC reject this as they interpret the
     // ::llvm_dialects identifier than within the preceding ArrayRef type. The
@@ -496,8 +521,8 @@ void llvm_dialects::genDialectDefs(raw_ostream &out, RecordKeeperTy &records) {
       ::llvm::ArrayRef<::llvm_dialects::OpDescription>
       llvm_dialects::OpDescription::getAll<$namespace::$_op>() {
         static const std::array<::llvm_dialects::OpDescription, $0> desc{)",
-                 &fmt, opClass.operations.size());
-    for (const auto &op : opClass.operations) {
+                 &fmt, nestedOperations.size());
+    for (const auto &op : nestedOperations) {
       fmt.addSubst("mnemonic", op->mnemonic);
       out << tgfmt(R"(
           ::llvm_dialects::OpDescription{$0, "$dialect.$mnemonic"},)",
@@ -508,7 +533,7 @@ void llvm_dialects::genDialectDefs(raw_ostream &out, RecordKeeperTy &records) {
         return desc;
       }
     )",
-                 &fmt, opClass.operations.size());
+                 &fmt, nestedOperations.size());
   }
 
   out << R"(

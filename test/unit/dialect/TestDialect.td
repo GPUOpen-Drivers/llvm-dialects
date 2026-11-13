@@ -158,3 +158,30 @@ class ConcreteOpClassMemberOp<string op>
 
 def AddOp : ConcreteOpClassMemberOp<"add">;
 def MulOp : ConcreteOpClassMemberOp<"mul">;
+
+def SomeDerivedOpClass : OpClass<TestDialect> {
+  let superclass = SomeBaseOpClass;
+  let arguments = (ins superclass);
+
+  let summary = "sub-family of operations";
+  let description = [{
+    Illustrate nesting of the OpClass feature: this op class is itself a member of
+    SomeBaseOpClass, and the ops below are members of this class rather than direct
+    members of SomeBaseOpClass.
+  }];
+}
+
+class NestedOpClassMemberOp<string op>
+    : TestOp<"some.op.class.nested.subop." # op, []> {
+  let superclass = SomeDerivedOpClass;
+  let results = (outs);
+  let arguments = (ins superclass);
+
+  let summary = "perform the nested " # op # " operation";
+  let description = [{
+    Illustrate nesting of the OpClass feature.
+  }];
+}
+
+def SubOp : NestedOpClassMemberOp<"sub">;
+def DivOp : NestedOpClassMemberOp<"div">;
